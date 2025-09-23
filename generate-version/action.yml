@@ -151,7 +151,7 @@ runs:
           fi
         fi
 
-        echo "::notice::Input validation completed successfully"
+        echo "✅ Input validation completed successfully"
         echo "::endgroup::"
 
     - name: "🔍 Fetch Git history"
@@ -171,7 +171,7 @@ runs:
 
         # Verify we have access to tags
         TAG_COUNT=$(git tag -l | wc -l)
-        echo "::notice::Found $TAG_COUNT existing tags"
+        echo "✅ Found $TAG_COUNT existing tags"
         echo "::endgroup::"
 
     - name: "🔢 Generate version numbers"
@@ -335,7 +335,7 @@ runs:
             echo "VERSION_BRANCHNAME=$branch_name"
             echo "VERSION_SCRIPTCALLED=true"
           } > "$output_txt"
-          echo "::notice::Generated $output_txt"
+          echo "✅ Generated $output_txt"
           setEnvironmentVariable "VERSION_OUTPUTTXT" "$output_txt"
         fi
 
@@ -362,7 +362,7 @@ runs:
             echo "    </PropertyGroup>"
             echo "</Project>"
           } > "$output_props"
-          echo "::notice::Generated $output_props"
+          echo "✅ Generated $output_props"
           setEnvironmentVariable "VERSION_OUTPUTPROPS" "$output_props"
         fi
 
@@ -387,11 +387,11 @@ runs:
             echo "  \"VERSION_SCRIPTCALLED\": true"
             echo "}"
           } > "$output_json"
-          echo "::notice::Generated $output_json"
+          echo "✅ Generated $output_json"
           setEnvironmentVariable "VERSION_OUTPUTJSON" "$output_json"
         fi
 
-        echo "::notice::Version generation completed successfully"
+        echo "✅ Version generation completed successfully"
         echo "::endgroup::"
 
     - name: "🔍 Verify generated versions"
@@ -412,7 +412,7 @@ runs:
             echo "::error::Required variable $var is not set"
             exit 1
           else
-            echo "::notice::$var=${!var}"
+            echo "✅ $var=${!var}"
           fi
         done
 
@@ -431,7 +431,7 @@ runs:
         # Verify output files if they were requested
         if [ -n "${{ inputs.output-txt }}" ]; then
           if [ -f "${{ inputs.output-txt }}" ]; then
-            echo "::notice::Output txt file created: ${{ inputs.output-txt }}"
+            echo "✅ Output txt file created: ${{ inputs.output-txt }}"
             echo "::debug::Content preview:"
             head -5 "${{ inputs.output-txt }}" | sed 's/^/  /'
           else
@@ -442,7 +442,7 @@ runs:
 
         if [ -n "${{ inputs.output-props }}" ]; then
           if [ -f "${{ inputs.output-props }}" ]; then
-            echo "::notice::Output props file created: ${{ inputs.output-props }}"
+            echo "✅ Output props file created: ${{ inputs.output-props }}"
             echo "::debug::Content preview:"
             head -10 "${{ inputs.output-props }}" | sed 's/^/  /'
           else
@@ -453,20 +453,20 @@ runs:
 
         if [ -n "${{ inputs.output-json }}" ]; then
           if [ -f "${{ inputs.output-json }}" ]; then
-            echo "::notice::Output JSON file created: ${{ inputs.output-json }}"
+            echo "✅ Output JSON file created: ${{ inputs.output-json }}"
             echo "::debug::Content preview:"
             head -10 "${{ inputs.output-json }}" | sed 's/^/  /'
             # Validate JSON format
             if command -v jq >/dev/null 2>&1; then
               if jq empty "${{ inputs.output-json }}" 2>/dev/null; then
-                echo "::notice::JSON file is valid"
+                echo "✅ JSON file is valid"
               else
                 echo "::error::Generated JSON file is invalid"
                 exit 1
               fi
             elif command -v python3 >/dev/null 2>&1; then
               if python3 -m json.tool "${{ inputs.output-json }}" >/dev/null 2>&1; then
-                echo "::notice::JSON file is valid"
+                echo "✅ JSON file is valid"
               else
                 echo "::error::Generated JSON file is invalid"
                 exit 1
@@ -478,7 +478,7 @@ runs:
           fi
         fi
 
-        echo "::notice::Version verification completed successfully"
+        echo "✅ Version verification completed successfully"
         echo "::endgroup::"
         echo "::endgroup::"
 

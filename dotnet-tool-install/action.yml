@@ -107,7 +107,7 @@ runs:
           exit 1
         fi
 
-        echo "::notice::Input validation passed"
+        echo "✅ Input validation passed"
 
     - name: "📝 Create tool manifest if needed"
       id: create-manifest
@@ -126,7 +126,7 @@ runs:
             dotnet new tool-manifest
             if [ $? -eq 0 ]; then
               MANIFEST_CREATED="true"
-              echo "::notice::Tool manifest created successfully"
+              echo "✅ Tool manifest created successfully"
             else
               echo "::error::Failed to create tool manifest"
               exit 1
@@ -212,7 +212,7 @@ runs:
 
         if [ -n "$VERSION_OUTPUT" ]; then
           INSTALLED_VERSION="$VERSION_OUTPUT"
-          echo "::notice::Detected installed version: $INSTALLED_VERSION"
+          echo "✅ Detected installed version: $INSTALLED_VERSION"
         else
           echo "::warning::Could not determine installed version"
         fi

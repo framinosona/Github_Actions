@@ -122,7 +122,7 @@ runs:
           exit 1
         fi
 
-        echo "::notice::Input validation completed successfully"
+        echo "✅ Input validation completed successfully"
         echo "::endgroup::"
 
     - name: "🔧 Build arguments"
@@ -187,7 +187,7 @@ runs:
 
         if echo "$SOURCES_OUTPUT" | grep -q "${{ inputs.name }}"; then
           SOURCE_ADDED="true"
-          echo "::notice::Source '${{ inputs.name }}' was successfully added"
+          echo "✅ Source '${{ inputs.name }}' was successfully added"
 
           # Show the added source details (without sensitive info)
           echo "📋 Source details:"

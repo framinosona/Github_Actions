@@ -115,7 +115,7 @@ runs:
           fi
         fi
 
-        echo "::notice::Input validation passed"
+        echo "✅ Input validation passed"
 
     - name: "🏷️ Generate Badge"
       id: generate
@@ -213,7 +213,7 @@ runs:
           fi
 
           if [ -n "$svg_content" ] && [[ "$svg_content" =~ \<svg ]]; then
-            echo "::notice::SVG content downloaded successfully"
+            echo "✅ SVG content downloaded successfully"
             echo "svg-content=${svg_content}" >> $GITHUB_OUTPUT
           else
             echo "::error::Failed to download valid SVG content"
@@ -251,7 +251,7 @@ runs:
           echo "output-file-path=" >> $GITHUB_OUTPUT
         fi
 
-        echo "::notice::Badge generation completed successfully"
+        echo "✅ Badge generation completed successfully"
 
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'

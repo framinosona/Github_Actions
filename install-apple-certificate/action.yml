@@ -164,7 +164,7 @@ runs:
           fi
         fi
 
-        echo "::notice::Input validation completed successfully"
+        echo "✅ Input validation completed successfully"
         echo "::endgroup::"
 
     - name: "🍎 Install Apple certificate and provisioning profile"
@@ -226,7 +226,7 @@ runs:
 
           echo "certificate-sha1=${CERT_SHA1:-unknown}" >> $GITHUB_OUTPUT
           echo "certificate-name=${CERT_NAME:-unknown}" >> $GITHUB_OUTPUT
-          echo "::notice::Certificate installed: ${CERT_NAME:-unknown}"
+          echo "✅ Certificate installed: ${CERT_NAME:-unknown}"
           echo "::debug::Certificate SHA1: ${CERT_SHA1:-unknown}"
 
           # Extract Team ID from certificate if not provided
@@ -269,7 +269,7 @@ runs:
 
           echo "provisioning-profile-uuid=$PROFILE_UUID" >> $GITHUB_OUTPUT
           echo "provisioning-profile-name=$PROFILE_NAME" >> $GITHUB_OUTPUT
-          echo "::notice::Provisioning profile installed: $PROFILE_NAME"
+          echo "✅ Provisioning profile installed: $PROFILE_NAME"
           echo "🆔 Profile UUID: $PROFILE_UUID"
         fi
 
@@ -286,7 +286,7 @@ runs:
         rm -rf "$TEMP_DIR"
         echo "🧹 Cleaned up temporary files"
 
-        echo "::notice::Apple certificate and provisioning profile installation completed"
+        echo "✅ Apple certificate and provisioning profile installation completed"
 
     - name: "📊 Verify installation"
       id: verify
@@ -297,7 +297,7 @@ runs:
         # Verify certificate installation
         if security find-certificate -a "${{ inputs.keychain-name }}" >/dev/null 2>&1; then
           CERT_COUNT=$(security find-certificate -a "${{ inputs.keychain-name }}" | grep -c "keychain:" || echo "0")
-          echo "::notice::Found $CERT_COUNT certificate(s) in keychain"
+          echo "✅ Found $CERT_COUNT certificate(s) in keychain"
 
           # List certificates for verification
           echo "📋 Installed certificates:"
@@ -310,16 +310,16 @@ runs:
 
         # Verify provisioning profile installation
         PROFILE_COUNT=$(find "$HOME/Library/MobileDevice/Provisioning Profiles" -name "*.mobileprovision" 2>/dev/null | wc -l | tr -d ' ')
-        echo "::notice::Found $PROFILE_COUNT provisioning profile(s) installed"
+        echo "✅ Found $PROFILE_COUNT provisioning profile(s) installed"
 
         # Verify keychain is in search list
         if security list-keychains -d user | grep -q "${{ inputs.keychain-name }}"; then
-          echo "::notice::Keychain is in search list"
+          echo "✅ Keychain is in search list"
         else
           echo "::warning::Keychain not found in search list"
         fi
 
-        echo "::notice::Verification completed"
+        echo "✅ Verification completed"
 
     - name: "🧹 Cleanup keychain"
       if: ${{ inputs.delete-keychain == 'true' }}
@@ -333,7 +333,7 @@ runs:
         # Delete keychain
         security delete-keychain "${{ inputs.keychain-name }}" || true
 
-        echo "::notice::Keychain cleanup completed"
+        echo "✅ Keychain cleanup completed"
 
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'

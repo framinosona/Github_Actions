@@ -213,7 +213,7 @@ runs:
           fi
         done
 
-        echo "::notice::Input validation completed successfully"
+        echo "✅ Input validation completed successfully"
         echo "::endgroup::"
 
     - name: "📦 Install CycloneDX tool"
@@ -392,7 +392,7 @@ runs:
 
         # Verify file was created
         if [ -f "$SBOM_FILE" ]; then
-          echo "::notice::SBOM file created successfully: $SBOM_FILE"
+          echo "✅ SBOM file created successfully: $SBOM_FILE"
           echo "sbom-path=$SBOM_FILE" >> $GITHUB_OUTPUT
         else
           echo "::error file=$SBOM_FILE::SBOM file not found at expected location: $SBOM_FILE"
@@ -438,7 +438,7 @@ runs:
               ;;
           esac
 
-          echo "::notice::Dependencies found: $DEPS_COUNT"
+          echo "✅ Dependencies found: $DEPS_COUNT"
           echo "dependencies-count=$DEPS_COUNT" >> $GITHUB_OUTPUT
           echo "::endgroup::"
 

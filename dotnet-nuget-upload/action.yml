@@ -140,7 +140,7 @@ runs:
           esac
         fi
 
-        echo "::notice::Input validation completed successfully"
+        echo "✅ Input validation completed successfully"
         echo "::endgroup::"
 
     - name: "📋 Extract package information"
@@ -162,7 +162,7 @@ runs:
         if [[ "$BASENAME" =~ ^(.+)\.([0-9]+\.[0-9]+\.[0-9]+.*)$ ]]; then
           PACKAGE_NAME="${BASH_REMATCH[1]}"
           PACKAGE_VERSION="${BASH_REMATCH[2]}"
-          echo "::notice::Extracted package: $PACKAGE_NAME version $PACKAGE_VERSION"
+          echo "✅ Extracted package: $PACKAGE_NAME version $PACKAGE_VERSION"
         else
           echo "::warning::Could not parse package name and version from filename: $BASENAME"
           PACKAGE_NAME="$BASENAME"

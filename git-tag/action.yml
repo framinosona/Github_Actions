@@ -126,7 +126,7 @@ runs:
           echo "🎯 Target specified: ${{ inputs.target }}"
         fi
 
-        echo "::notice::Input validation passed"
+        echo "✅ Input validation passed"
 
     - name: "🔧 Configure Git"
       shell: bash
@@ -137,7 +137,7 @@ runs:
         git config --local user.email "${{ inputs.git-user-email }}"
 
         echo "👤 Git user: ${{ inputs.git-user-name }} <${{ inputs.git-user-email }}>"
-        echo "::notice::Git configuration completed"
+        echo "✅ Git configuration completed"
 
     - name: "🏷️ Create and push Git tag"
       id: create
@@ -216,7 +216,7 @@ runs:
           fi
         fi
 
-        echo "::notice::Tag $TAG_NAME created successfully"
+        echo "✅ Tag $TAG_NAME created successfully"
         echo "tag-created=true" >> $GITHUB_OUTPUT
 
         # Push the tag if requested
@@ -234,7 +234,7 @@ runs:
             git push origin "$TAG_NAME"
           fi
 
-          echo "::notice::Tag $TAG_NAME pushed to remote"
+          echo "✅ Tag $TAG_NAME pushed to remote"
           echo "tag-pushed=true" >> $GITHUB_OUTPUT
         else
           echo "⏭️ Skipping push (push disabled)"
@@ -255,7 +255,7 @@ runs:
 
         # Verify tag exists locally
         if git tag -l "$TAG_NAME" | grep -q "^$TAG_NAME$"; then
-          echo "::notice::Tag $TAG_NAME exists locally"
+          echo "✅ Tag $TAG_NAME exists locally"
 
           # Get tag information
           if git cat-file -t "$TAG_NAME" | grep -q "tag"; then
@@ -278,13 +278,13 @@ runs:
 
           # Try to fetch the tag from remote to verify it exists
           if git ls-remote --tags origin | grep -q "refs/tags/$TAG_NAME$"; then
-            echo "::notice::Tag $TAG_NAME verified on remote"
+            echo "✅ Tag $TAG_NAME verified on remote"
           else
             echo "::warning::Tag may not be fully propagated to remote yet"
           fi
         fi
 
-        echo "::notice::Tag verification completed"
+        echo "✅ Tag verification completed"
 
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'

@@ -137,7 +137,7 @@ runs:
           fi
         fi
 
-        echo "::notice::Input validation completed successfully"
+        echo "✅ Input validation completed successfully"
         echo "::endgroup::"
 
     - name: "🚀 Run dotnet command with auto-verbosity"
@@ -339,14 +339,14 @@ runs:
 
         # Execute the command using the array for better argument handling
         echo "::group::⚡ Executing dotnet command"
-        echo "::notice::Executing: $FULL_COMMAND"
+        echo "✅ Executing: $FULL_COMMAND"
         "${COMMAND_PARTS[@]}"
         EXIT_CODE=$?
         echo "::endgroup::"
 
         # Enhanced status reporting
         if [ $EXIT_CODE -eq 0 ]; then
-          echo "::notice::Command completed successfully with exit code 0"
+          echo "✅ Command completed successfully with exit code 0"
         else
           echo "::error::Command failed with exit code $EXIT_CODE"
         fi

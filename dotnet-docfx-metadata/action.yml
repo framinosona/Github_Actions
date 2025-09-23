@@ -174,7 +174,7 @@ runs:
           exit 1
         fi
 
-        echo "::notice::Input validation passed"
+        echo "✅ Input validation passed"
 
     - name: "📦 Install DocFX tool"
       uses: "./dotnet-tool-install"
