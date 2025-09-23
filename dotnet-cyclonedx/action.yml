@@ -365,7 +365,7 @@ runs:
       id: generate
       uses: ./dotnet
       with:
-        command: "tools"
+        command: "tool"
         arguments: ${{ steps.build-args.outputs.arguments }}
 
     - name: "📊 Analyze generated SBOM"
