@@ -90,7 +90,7 @@ runs:
         echo "✅ Input validation passed"
 
     - name: "📦 Install DocFX tool"
-      uses: "../dotnet-tool-install"
+      uses: "./dotnet-tool-install"
       with:
         tool-name: 'docfx'
         tool-version: ${{ inputs.docfx-version }}
@@ -139,7 +139,7 @@ runs:
 
     - name: "📄 Generate PDF with DocFX"
       id: generate
-      uses: ../dotnet
+      uses: ./dotnet
       with:
         command: "tools"
         arguments: ${{ steps.build-args.outputs.arguments }}
