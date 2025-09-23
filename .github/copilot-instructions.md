@@ -105,7 +105,7 @@ branding:
       echo "::error::Action failed"
       exit 1
     fi
-    
+
     echo "::endgroup::"
 ```
 
@@ -172,7 +172,7 @@ echo "🔍 Debug: Processing file"
 
 # ✅ NEW WAY - Use GitHub workflow commands
 echo "::error::Invalid parameter value"
-echo "::warning::Unusual configuration" 
+echo "::warning::Unusual configuration"
 echo "::notice::Validation completed successfully"
 echo "::debug::Processing file"
 ```
@@ -181,15 +181,15 @@ echo "::debug::Processing file"
 - **`::error::`** - Creates error annotations visible in GitHub UI
   - Use for validation failures, missing files, invalid configurations
   - Example: `echo "::error file=config.json::Configuration file not found"`
-  
-- **`::warning::`** - Creates warning annotations  
+
+- **`::warning::`** - Creates warning annotations
   - Use for non-fatal issues, deprecated features, unusual values
   - Example: `echo "::warning::Using deprecated parameter format"`
-  
+
 - **`::notice::`** - Highlights important information
   - Use for successful completion, important status updates
   - Example: `echo "::notice::Package uploaded successfully"`
-  
+
 - **`::debug::`** - Debug information (only visible when ACTIONS_STEP_DEBUG=true)
   - Use for detailed execution information, variable values
   - Example: `echo "::debug::Using configuration: $CONFIG_VALUE"`
@@ -202,7 +202,7 @@ echo "::group::🔍 Input Validation"
 echo "::notice::Input validation completed successfully"
 echo "::endgroup::"
 
-echo "::group::🔧 Building Arguments" 
+echo "::group::🔧 Building Arguments"
 # argument building steps...
 echo "::debug::Generated arguments: $ARGS"
 echo "::endgroup::"
@@ -226,7 +226,7 @@ fi
 #### Migration Guide
 When updating existing actions:
 1. Replace all `echo "❌ Error:"` with `echo "::error::"`
-2. Replace all `echo "⚠️ Warning:"` with `echo "::warning::"` 
+2. Replace all `echo "⚠️ Warning:"` with `echo "::warning::"`
 3. Replace all `echo "✅"` success messages with `echo "::notice::"`
 4. Replace debug echoes with `echo "::debug::"`
 5. Add `::group::` around major operation sections

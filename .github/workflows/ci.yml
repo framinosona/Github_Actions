@@ -124,13 +124,6 @@ jobs:
           EOF
           echo "✅ Created version.json for site"
 
-          # Add version info to index page if it exists
-          if [ -f "${{ steps.docfx.outputs.output-path }}/index.html" ]; then
-            echo "📝 Adding version info to documentation"
-            # This is a simple addition - you might want to customize this based on your theme
-            sed -i 's|</body>|<script>console.log("Documentation Version: ${{ steps.version.outputs.VERSION_FULL }}");</script></body>|' ${{ steps.docfx.outputs.output-path }}/index.html
-          fi
-
           echo "✅ Site assets preparation completed"
 
       - name: '📤 Upload GitHub Pages Artifact'
