@@ -155,7 +155,7 @@ jobs:
 
           ## 🔗 Quick Links
           - 📦 **Version**: `${{ steps.version.outputs.VERSION_FULL }}`
-          - 🏷️ **Badge**: Available at `/assets/version-badge.svg`
+          - 🏷️ **Badge**: Available at `/version-badge.svg`
           - 🌐 **Documentation**: Will be available at GitHub Pages after deployment
           ${{ steps.release.outputs.release-url && format('- 🚀 **Release**: [View Release]({0})', steps.release.outputs.release-url) || '' }}
 
@@ -189,12 +189,10 @@ jobs:
           | Component | Status | URL |
           |-----------|--------|-----|
           | 📚 Documentation Site | ✅ | [${{ steps.deployment.outputs.page_url }}](${{ steps.deployment.outputs.page_url }}) |
-          | 🏷️ Version Badge | ✅ | [${{ steps.deployment.outputs.page_url }}assets/version-badge.svg](${{ steps.deployment.outputs.page_url }}assets/version-badge.svg) |
-          | 📄 Version Info | ✅ | [${{ steps.deployment.outputs.page_url }}assets/version.json](${{ steps.deployment.outputs.page_url }}assets/version.json) |
+          | 🏷️ Version Badge | ✅ | [${{ steps.deployment.outputs.page_url }}version-badge.svg](${{ steps.deployment.outputs.page_url }}version-badge.svg) |
 
           ## 📋 Available Resources
           - **Main Documentation**: [${{ steps.deployment.outputs.page_url }}](${{ steps.deployment.outputs.page_url }})
-          - **Version Badge**: [${{ steps.deployment.outputs.page_url }}assets/version-badge.svg](${{ steps.deployment.outputs.page_url }}assets/version-badge.svg)
           - **Version**: `${{ needs.build-and-release.outputs.version-full }}`
           ${{ needs.build-and-release.outputs.release-url && format('- **Latest Release**: [View Release]({0})', needs.build-and-release.outputs.release-url) || '' }}
           EOF

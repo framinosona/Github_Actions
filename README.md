@@ -1,6 +1,6 @@
 # 🚀 GitHub Actions Collection
 
-[![CI/CD Pipeline](https://github.com/framinosona/Github_Actions/actions/workflows/ci.yml/badge.svg)](https://github.com/framinosona/Github_Actions/actions/workflows/ci.yml)
+[![CI/CD Pipeline](https://framinosona.github.io/Github_Actions/version-badge.svg)](https://github.com/framinosona/Github_Actions/actions/workflows/ci.yml)
 [![Documentation](https://img.shields.io/badge/docs-github--pages-blue)](https://framinosona.github.io/Github_Actions/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE.md)
 
