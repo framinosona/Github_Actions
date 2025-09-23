@@ -163,7 +163,7 @@ runs:
 
     - name: "📦 Push NuGet package"
       id: push-package
-      uses: ../dotnet
+      uses: ./dotnet
       with:
         command: "nuget"
         arguments: |

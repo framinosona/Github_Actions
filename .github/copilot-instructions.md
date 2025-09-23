@@ -239,7 +239,7 @@ Brief description of what the action does.
 ### Tool Installation Pattern
 ```yaml
 - name: "📦 Install [Tool Name]"
-  uses: ../dotnet-tool-install
+  uses: ./dotnet-tool-install
   with:
     tool-name: 'tool-name'
     tool-version: '1.0.0'  # Optional, uses latest if not specified

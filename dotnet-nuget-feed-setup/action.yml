@@ -120,7 +120,7 @@ runs:
 
     - name: "🔗 Add NuGet source"
       id: add-source
-      uses: ../dotnet
+      uses: ./dotnet
       with:
         command: "nuget"
         arguments: |
