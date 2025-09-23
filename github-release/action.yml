@@ -1,5 +1,5 @@
 name: '🚀 Create GitHub Release'
-description: 'Creates GitHub releases with assets using GitHub CLI'
+description: 'Creates GitHub releases using GitHub CLI'
 author: 'Francois Raminosona'
 
 inputs:
@@ -59,14 +59,6 @@ inputs:
     description: 'Fail if there are no commits since the last release'
     required: false
     default: 'false'
-  assets:
-    description: 'Assets to upload (newline-separated list of file paths or patterns)'
-    required: false
-    default: ''
-  assets-dir:
-    description: 'Directory containing assets to upload (uploads all files in directory)'
-    required: false
-    default: ''
   repo:
     description: 'Target repository in OWNER/REPO format (defaults to current repository)'
     required: false
@@ -93,9 +85,6 @@ outputs:
   release-name:
     description: 'Name/title of the created release'
     value: ${{ steps.create.outputs.release-name }}
-  assets-uploaded:
-    description: 'Number of assets uploaded'
-    value: ${{ steps.create.outputs.assets-uploaded }}
   upload-url:
     description: 'Upload URL for the release'
     value: ${{ steps.create.outputs.upload-url }}
@@ -116,12 +105,6 @@ runs:
         # Validate notes-file exists if provided
         if [ -n "${{ inputs.notes-file }}" ] && [ ! -f "${{ inputs.notes-file }}" ]; then
           echo "❌ Error: Notes file not found: ${{ inputs.notes-file }}"
-          exit 1
-        fi
-
-        # Validate assets directory exists if provided
-        if [ -n "${{ inputs.assets-dir }}" ] && [ ! -d "${{ inputs.assets-dir }}" ]; then
-          echo "❌ Error: Assets directory not found: ${{ inputs.assets-dir }}"
           exit 1
         fi
 
@@ -171,6 +154,7 @@ runs:
       shell: bash
       run: |
         echo "🔧 Setting up GitHub CLI..."
+
 
         # Authenticate with GitHub CLI
         gh auth login --with-token <<< "${{ inputs.github-token }}"
@@ -258,99 +242,12 @@ runs:
           echo "💬 Discussion category: ${{ inputs.discussion-category }}"
         fi
 
-        # Prepare assets list
-        ASSETS_LIST=()
-        ASSETS_COUNT=0
-
-        # Add individual assets if provided
-        if [ -n "${{ inputs.assets }}" ]; then
-          echo "📦 Processing individual assets..."
-          while IFS= read -r asset; do
-            if [ -n "$asset" ]; then
-              echo "🔍 Checking asset: '$asset'"
-              if [[ "$asset" == *"*"* ]]; then
-                # Handle glob patterns
-                echo "🌐 Processing glob pattern: $asset"
-                for file in $asset; do
-                  if [ -f "$file" ]; then
-                    ASSETS_LIST+=("$file")
-                    echo "  📎 Found asset: $file"
-                    ((ASSETS_COUNT++))
-                  else
-                    echo "  ⚠️ Glob file not found: $file"
-                  fi
-                done
-              else
-                # Handle direct file paths
-                if [ -f "$asset" ]; then
-                  ASSETS_LIST+=("$asset")
-                  echo "  📎 Added asset: $asset"
-                  ((ASSETS_COUNT++))
-                else
-                  echo "  ⚠️ Asset not found: $asset"
-                fi
-              fi
-            fi
-          done <<< "${{ inputs.assets }}"
-          echo "✅ Asset processing completed. Total assets: $ASSETS_COUNT"
-        fi
-
-        # Add assets from directory if provided
-        if [ -n "${{ inputs.assets-dir }}" ]; then
-          echo "📁 Processing assets directory: ${{ inputs.assets-dir }}"
-          if [ -d "${{ inputs.assets-dir }}" ]; then
-            for file in "${{ inputs.assets-dir }}"/*; do
-              if [ -f "$file" ]; then
-                ASSETS_LIST+=("$file")
-                echo "  📎 Found asset: $file"
-                ((ASSETS_COUNT++))
-              fi
-            done
-            echo "✅ Directory processing completed. Files found: $ASSETS_COUNT"
-          else
-            echo "❌ Error: Assets directory does not exist: ${{ inputs.assets-dir }}"
-            exit 1
-          fi
-        fi
-
-        # Add assets to command
-        echo "📦 Adding $ASSETS_COUNT assets to release command..."
-        for asset in "${ASSETS_LIST[@]}"; do
-          if [ -f "$asset" ]; then
-            COMMAND_ARGS+=("$asset")
-            echo "  ✅ Asset added to command: $asset"
-          else
-            echo "  ❌ Error: Asset file not found when adding to command: $asset"
-            exit 1
-          fi
-        done
-
         # Create full command for logging (without token)
         DISPLAY_COMMAND="gh ${COMMAND_ARGS[*]}"
         echo "📋 Executing: $DISPLAY_COMMAND"
-        echo "🔍 Command array length: ${#COMMAND_ARGS[@]}"
-        echo "🔍 Assets count: $ASSETS_COUNT"
-
-        # Verify GitHub CLI is available
-        if ! command -v gh >/dev/null 2>&1; then
-          echo "❌ Error: GitHub CLI (gh) is not available"
-          exit 1
-        fi
-
-        # Verify authentication status
-        if ! gh auth status >/dev/null 2>&1; then
-          echo "❌ Error: GitHub CLI authentication failed"
-          exit 1
-        fi
 
         # Execute GitHub CLI command and capture output
-        echo "🚀 Executing GitHub CLI release command..."
-        set +e  # Temporarily disable exit on error to capture output
-        RELEASE_OUTPUT=$(gh "${COMMAND_ARGS[@]}" 2>&1)
-        EXIT_CODE=$?
-        set -e  # Re-enable exit on error
-
-        if [ $EXIT_CODE -eq 0 ]; then
+        if RELEASE_OUTPUT=$(gh "${COMMAND_ARGS[@]}" 2>&1); then
           echo "✅ Release created successfully"
           echo "$RELEASE_OUTPUT"
 
@@ -384,15 +281,11 @@ runs:
             fi
           fi
 
-          echo "assets-uploaded=$ASSETS_COUNT" >> $GITHUB_OUTPUT
           echo "🏷️ Release tag: ${RELEASE_TAG:-${{ inputs.tag }}}"
-          echo "📦 Assets uploaded: $ASSETS_COUNT"
 
         else
-          echo "❌ Release creation failed with exit code: $EXIT_CODE"
-          echo "❌ GitHub CLI output:"
+          echo "❌ Release creation failed"
           echo "$RELEASE_OUTPUT"
-          echo "❌ Command that failed: $DISPLAY_COMMAND"
           exit 1
         fi
 
@@ -419,17 +312,15 @@ runs:
             echo "✅ Release verified successfully"
 
             # Get release details
-            RELEASE_DETAILS=$(gh release view "$RELEASE_TAG" $REPO_PARAM --json id,name,tagName,url,isDraft,isPrerelease,assets)
+            RELEASE_DETAILS=$(gh release view "$RELEASE_TAG" $REPO_PARAM --json id,name,tagName,url,isDraft,isPrerelease)
 
             DRAFT_STATUS=$(echo "$RELEASE_DETAILS" | jq -r '.isDraft')
             PRERELEASE_STATUS=$(echo "$RELEASE_DETAILS" | jq -r '.isPrerelease')
-            ASSETS_COUNT=$(echo "$RELEASE_DETAILS" | jq '.assets | length')
 
             echo "📋 Release Status:"
             echo "  🏷️ Tag: $RELEASE_TAG"
             echo "  📋 Draft: $DRAFT_STATUS"
             echo "  🚧 Prerelease: $PRERELEASE_STATUS"
-            echo "  📦 Assets: $ASSETS_COUNT"
 
           else
             echo "❌ Release verification failed - release not found"
@@ -464,7 +355,6 @@ runs:
         | 🔗 Release URL | `${{ steps.create.outputs.release-url }}` |
         | 🏷️ Release Tag | `${{ steps.create.outputs.release-tag }}` |
         | 📝 Release Name | `${{ steps.create.outputs.release-name }}` |
-        | 📦 Assets Uploaded | `${{ steps.create.outputs.assets-uploaded }}` |
         | 🔗 Upload URL | `${{ steps.create.outputs.upload-url }}` |
 
         ## ⚙️ Release Configuration
