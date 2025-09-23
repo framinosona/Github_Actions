@@ -102,7 +102,7 @@ branding:
 ### 3. 📊 Summary Step (Always Last)
 ```yaml
 - name: "📊 Action Summary"
-  if: ${{ inputs.show-summary == 'true' }}
+  if: always() && inputs.show-summary == 'true'
   shell: bash
   run: |
     cat >> $GITHUB_STEP_SUMMARY << 'EOF'
