@@ -33,6 +33,10 @@ inputs:
     description: 'Path to output .NET props file'
     required: false
     default: ''
+  output-json:
+    description: 'Path to output JSON file with version information'
+    required: false
+    default: ''
   fetch-depth:
     description: 'Depth of Git history to fetch for tag analysis'
     required: false
@@ -82,6 +86,9 @@ outputs:
   VERSION_OUTPUTPROPS:
     description: 'Path to generated props file (if created)'
     value: ${{ steps.generate.outputs.VERSION_OUTPUTPROPS }}
+  VERSION_OUTPUTJSON:
+    description: 'Path to generated JSON file (if created)'
+    value: ${{ steps.generate.outputs.VERSION_OUTPUTJSON }}
 
 runs:
   using: "composite"
@@ -89,35 +96,36 @@ runs:
     - name: "✅ Validate inputs"
       shell: bash
       run: |
-        echo "🔍 Validating version generation inputs..."
+        echo "::group::🔍 Version Generation Input Validation"
+        echo "::debug::Validating inputs for semantic version generation"
 
         # Validate major version
         if ! [[ "${{ inputs.major }}" =~ ^[0-9]+$ ]]; then
-          echo "❌ Error: Major version must be a non-negative integer, got: ${{ inputs.major }}"
+          echo "::error::Major version must be a non-negative integer, got: ${{ inputs.major }}"
           exit 1
         fi
 
         # Validate minor version
         if ! [[ "${{ inputs.minor }}" =~ ^[0-9]+$ ]]; then
-          echo "❌ Error: Minor version must be a non-negative integer, got: ${{ inputs.minor }}"
+          echo "::error::Minor version must be a non-negative integer, got: ${{ inputs.minor }}"
           exit 1
         fi
 
         # Validate build-id
         if ! [[ "${{ inputs.build-id }}" =~ ^[0-9]+$ ]]; then
-          echo "❌ Error: Build ID must be a non-negative integer, got: ${{ inputs.build-id }}"
+          echo "::error::Build ID must be a non-negative integer, got: ${{ inputs.build-id }}"
           exit 1
         fi
 
         # Validate fetch-depth
         if ! [[ "${{ inputs.fetch-depth }}" =~ ^[0-9]+$ ]]; then
-          echo "❌ Error: Fetch depth must be a non-negative integer, got: ${{ inputs.fetch-depth }}"
+          echo "::error::Fetch depth must be a non-negative integer, got: ${{ inputs.fetch-depth }}"
           exit 1
         fi
 
         # Validate branch-suffix-max-length
         if ! [[ "${{ inputs.branch-suffix-max-length }}" =~ ^[0-9]+$ ]]; then
-          echo "❌ Error: Branch suffix max length must be a positive integer, got: ${{ inputs.branch-suffix-max-length }}"
+          echo "::error::Branch suffix max length must be a positive integer, got: ${{ inputs.branch-suffix-max-length }}"
           exit 1
         fi
 
@@ -125,44 +133,53 @@ runs:
         if [ -n "${{ inputs.output-txt }}" ]; then
           OUTPUT_DIR=$(dirname "${{ inputs.output-txt }}")
           if [ ! -d "$OUTPUT_DIR" ] && [ "$OUTPUT_DIR" != "." ]; then
-            echo "📁 Creating directory for output txt: $OUTPUT_DIR"
+            echo "::debug::Creating directory for output txt: $OUTPUT_DIR"
           fi
         fi
 
         if [ -n "${{ inputs.output-props }}" ]; then
           OUTPUT_DIR=$(dirname "${{ inputs.output-props }}")
           if [ ! -d "$OUTPUT_DIR" ] && [ "$OUTPUT_DIR" != "." ]; then
-            echo "📁 Creating directory for output props: $OUTPUT_DIR"
+            echo "::debug::Creating directory for output props: $OUTPUT_DIR"
           fi
         fi
 
-        echo "✅ Input validation passed"
+        if [ -n "${{ inputs.output-json }}" ]; then
+          OUTPUT_DIR=$(dirname "${{ inputs.output-json }}")
+          if [ ! -d "$OUTPUT_DIR" ] && [ "$OUTPUT_DIR" != "." ]; then
+            echo "::debug::Creating directory for output JSON: $OUTPUT_DIR"
+          fi
+        fi
+
+        echo "::notice::Input validation completed successfully"
+        echo "::endgroup::"
 
     - name: "🔍 Fetch Git history"
       shell: bash
       run: |
-        echo "🔍 Fetching Git history for tag analysis..."
+        echo "::group::🔍 Git History Analysis"
+        echo "::debug::Fetching Git history for tag analysis and version calculation"
 
         # Fetch full history if fetch-depth is 0, otherwise fetch specified depth
         if [ "${{ inputs.fetch-depth }}" = "0" ]; then
-          echo "📥 Fetching full Git history..."
+          echo "::debug::Fetching full Git history"
           git fetch --unshallow --tags || git fetch --tags
         else
-          echo "📥 Fetching Git history with depth ${{ inputs.fetch-depth }}..."
+          echo "::debug::Fetching Git history with depth ${{ inputs.fetch-depth }}"
           git fetch --depth=${{ inputs.fetch-depth }} --tags
         fi
 
         # Verify we have access to tags
         TAG_COUNT=$(git tag -l | wc -l)
-        echo "🏷️ Found $TAG_COUNT existing tags"
-
-        echo "✅ Git history fetch completed"
+        echo "::notice::Found $TAG_COUNT existing tags"
+        echo "::endgroup::"
 
     - name: "🔢 Generate version numbers"
       id: generate
       shell: bash
       run: |
-        echo "🔢 Generating version numbers..."
+        echo "::group::🔢 Generating Semantic Versions"
+        echo "::debug::Calculating version numbers based on Git tags and branch information"
 
         # Helper function to set environment variables and outputs
         setEnvironmentVariable() {
@@ -349,7 +366,33 @@ runs:
           setEnvironmentVariable "VERSION_OUTPUTPROPS" "$output_props"
         fi
 
-        echo "✅ Version generation completed successfully"
+        # Generate JSON file if requested
+        output_json="${{ inputs.output-json }}"
+        if [ -n "$output_json" ]; then
+          echo "📝 Generating JSON file: $output_json"
+          mkdir -p "$(dirname "$output_json")" && touch "$output_json"
+          {
+            echo "{"
+            echo "  \"VERSION_MAJOR\": \"$major_version\","
+            echo "  \"VERSION_MINOR\": \"$minor_version\","
+            echo "  \"VERSION_PATCH\": \"$patch_version\","
+            echo "  \"VERSION_SUFFIX\": \"$suffix\","
+            echo "  \"VERSION_REVISION\": \"$revision_version\","
+            echo "  \"VERSION_BUILDID\": \"$build_id\","
+            echo "  \"VERSION_CORE\": \"$version_core\","
+            echo "  \"VERSION_EXTENSION\": \"$version_extension\","
+            echo "  \"VERSION_FULL\": \"$version_full\","
+            echo "  \"VERSION_ASSEMBLY\": \"$version_assembly\","
+            echo "  \"VERSION_BRANCHNAME\": \"$branch_name\","
+            echo "  \"VERSION_SCRIPTCALLED\": true"
+            echo "}"
+          } > "$output_json"
+          echo "✅ Generated $output_json"
+          setEnvironmentVariable "VERSION_OUTPUTJSON" "$output_json"
+        fi
+
+        echo "::notice::Version generation completed successfully"
+        echo "::endgroup::"
 
     - name: "🔍 Verify generated versions"
       id: verify
@@ -388,27 +431,56 @@ runs:
         # Verify output files if they were requested
         if [ -n "${{ inputs.output-txt }}" ]; then
           if [ -f "${{ inputs.output-txt }}" ]; then
-            echo "✅ Output txt file created: ${{ inputs.output-txt }}"
-            echo "📄 Content preview:"
+            echo "::notice::Output txt file created: ${{ inputs.output-txt }}"
+            echo "::debug::Content preview:"
             head -5 "${{ inputs.output-txt }}" | sed 's/^/  /'
           else
-            echo "❌ Error: Output txt file not created: ${{ inputs.output-txt }}"
+            echo "::error file=${{ inputs.output-txt }}::Output txt file not created: ${{ inputs.output-txt }}"
             exit 1
           fi
         fi
 
         if [ -n "${{ inputs.output-props }}" ]; then
           if [ -f "${{ inputs.output-props }}" ]; then
-            echo "✅ Output props file created: ${{ inputs.output-props }}"
-            echo "📄 Content preview:"
+            echo "::notice::Output props file created: ${{ inputs.output-props }}"
+            echo "::debug::Content preview:"
             head -10 "${{ inputs.output-props }}" | sed 's/^/  /'
           else
-            echo "❌ Error: Output props file not created: ${{ inputs.output-props }}"
+            echo "::error file=${{ inputs.output-props }}::Output props file not created: ${{ inputs.output-props }}"
             exit 1
           fi
         fi
 
-        echo "✅ Version verification completed successfully"
+        if [ -n "${{ inputs.output-json }}" ]; then
+          if [ -f "${{ inputs.output-json }}" ]; then
+            echo "::notice::Output JSON file created: ${{ inputs.output-json }}"
+            echo "::debug::Content preview:"
+            head -10 "${{ inputs.output-json }}" | sed 's/^/  /'
+            # Validate JSON format
+            if command -v jq >/dev/null 2>&1; then
+              if jq empty "${{ inputs.output-json }}" 2>/dev/null; then
+                echo "::notice::JSON file is valid"
+              else
+                echo "::error::Generated JSON file is invalid"
+                exit 1
+              fi
+            elif command -v python3 >/dev/null 2>&1; then
+              if python3 -m json.tool "${{ inputs.output-json }}" >/dev/null 2>&1; then
+                echo "::notice::JSON file is valid"
+              else
+                echo "::error::Generated JSON file is invalid"
+                exit 1
+              fi
+            fi
+          else
+            echo "::error file=${{ inputs.output-json }}::Output JSON file not created: ${{ inputs.output-json }}"
+            exit 1
+          fi
+        fi
+
+        echo "::notice::Version verification completed successfully"
+        echo "::endgroup::"
+        echo "::endgroup::"
 
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
@@ -442,6 +514,7 @@ runs:
         |-----------|------|--------|
         | 📝 Txt File | `${{ inputs.output-txt || 'not requested' }}` | `${{ inputs.output-txt != '' && '✅ Generated' || '⏭️ Skipped' }}` |
         | 📄 Props File | `${{ inputs.output-props || 'not requested' }}` | `${{ inputs.output-props != '' && '✅ Generated' || '⏭️ Skipped' }}` |
+        | 📋 JSON File | `${{ inputs.output-json || 'not requested' }}` | `${{ inputs.output-json != '' && '✅ Generated' || '⏭️ Skipped' }}` |
 
         ## 🔧 Process Details
         | Step | Status |
