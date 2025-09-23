@@ -69,6 +69,14 @@ runs:
     - name: "✅ Validate inputs"
       shell: bash
       run: |
+        if [ "$ACTIONS_STEP_DEBUG" = "true" ] || [ "$ACTIONS_RUNNER_DEBUG" = "true" ]; then
+          echo "🐛 Debug: Environment info:"
+          echo "  Working directory: $(pwd)"
+          echo "  .NET version: $(dotnet --version 2>/dev/null || echo 'Not found')"
+          echo "  Available runtimes: $(dotnet --list-runtimes 2>/dev/null || echo 'None')"
+          show_command_support
+        fi
+
         echo "🔍 Validating inputs..."
 
         # Validate command is not empty
@@ -95,6 +103,41 @@ runs:
             quiet|minimal|normal|detailed|diagnostic) ;;
             *) echo "❌ Error: Invalid verbosity level: ${{ inputs.force-verbosity }}. Must be one of: quiet, minimal, normal, detailed, diagnostic"; exit 1 ;;
           esac
+        fi
+
+        # Validate boolean inputs
+        for param in no-logo no-restore no-build; do
+          case $param in
+            no-logo) value="${{ inputs.no-logo }}" ;;
+            no-restore) value="${{ inputs.no-restore }}" ;;
+            no-build) value="${{ inputs.no-build }}" ;;
+          esac
+          if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
+            echo "❌ Error: Parameter $param must be 'true' or 'false', got: $value"
+            exit 1
+          fi
+        done
+
+        # Validate configuration if provided
+        if [ -n "${{ inputs.configuration }}" ]; then
+          case "${{ inputs.configuration }}" in
+            Debug|Release|MinSizeRel|RelWithDebInfo) ;;
+            *) echo "⚠️ Warning: Unusual configuration value: ${{ inputs.configuration }}" ;;
+          esac
+        fi
+
+        # Validate framework format if provided (basic check)
+        if [ -n "${{ inputs.framework }}" ]; then
+          if ! [[ "${{ inputs.framework }}" =~ ^(net[0-9]+\.[0-9]+|netstandard[0-9]+\.[0-9]+|netcoreapp[0-9]+\.[0-9]+|netframework[0-9]+\.[0-9]+)$ ]]; then
+            echo "⚠️ Warning: Framework format may be invalid: ${{ inputs.framework }}"
+          fi
+        fi
+
+        # Validate runtime format if provided (basic check)
+        if [ -n "${{ inputs.runtime }}" ]; then
+          if ! [[ "${{ inputs.runtime }}" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+            echo "⚠️ Warning: Runtime identifier format may be invalid: ${{ inputs.runtime }}"
+          fi
         fi
 
         echo "✅ Input validation passed"
@@ -266,8 +309,8 @@ runs:
             ARGUMENTS_STRING="$arguments"
 
             # Use read to split on spaces while preserving quoted strings
-            eval "set -- $ARGUMENTS_STRING"
-            for arg in "$@"; do
+            IFS=' ' read -ra ARGS <<< "$ARGUMENTS_STRING"
+            for arg in "${ARGS[@]}"; do
               COMMAND_PARTS+=("$arg")
               echo "🔧   Added string argument: $arg"
             done
@@ -335,7 +378,14 @@ runs:
         | Metric | Value |
         |--------|-------|
         | ✅ Exit Code | `${{ steps.run-command.outputs.exit-code }}` |
+        | 📊 Status | `${{ steps.run-command.outcome }}` |
         | 🚀 Executed Command | `${{ steps.run-command.outputs.executed-command }}` |
+
+        ## ⚙️ Process Details
+        | Step | Status |
+        |------|--------|
+        | ✅ Input Validation | `✅ Completed` |
+        | 🚀 Command Execution | `${{ steps.run-command.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
 
         ## 🎛️ Applied Options
         | Option | Status |
@@ -348,3 +398,7 @@ runs:
 
         </details>
         EOF
+
+branding:
+  icon: 'terminal'
+  color: 'blue'
