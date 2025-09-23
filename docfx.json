@@ -33,7 +33,6 @@
       "_gitUrlPattern": "github",
       "_copyrightFooter": "© 2025 Actions Documentation"
     },
-    "dest": "_site",
     "xrefService": [
       "https://xref.docs.microsoft.com/query?uid={uid}"
     ],
