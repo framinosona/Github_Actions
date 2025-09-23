@@ -95,16 +95,16 @@ runs:
     - name: "✅ Validate inputs"
       shell: bash
       run: |
-        echo "🔍 Validating GitHub release inputs..."
+        echo "::debug::Validating GitHub release inputs..."
 
         # Validate that either notes, notes-file, notes-from-tag, or generate-notes is provided
         if [ -z "${{ inputs.notes }}" ] && [ -z "${{ inputs.notes-file }}" ] && [ "${{ inputs.notes-from-tag }}" != "true" ] && [ "${{ inputs.generate-notes }}" != "true" ]; then
-          echo "⚠️ Warning: No release notes specified. Consider using notes, notes-file, notes-from-tag, or generate-notes"
+          echo "::warning::No release notes specified. Consider using notes, notes-file, notes-from-tag, or generate-notes"
         fi
 
         # Validate notes-file exists if provided
         if [ -n "${{ inputs.notes-file }}" ] && [ ! -f "${{ inputs.notes-file }}" ]; then
-          echo "❌ Error: Notes file not found: ${{ inputs.notes-file }}"
+          echo "::error::Notes file not found: ${{ inputs.notes-file }}"
           exit 1
         fi
 
@@ -119,7 +119,7 @@ runs:
             fail-on-no-commits) value="${{ inputs.fail-on-no-commits }}" ;;
           esac
           if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
-            echo "❌ Error: Parameter $param must be 'true' or 'false', got: $value"
+            echo "::error::Parameter $param must be 'true' or 'false', got: $value"
             exit 1
           fi
         done
@@ -128,14 +128,14 @@ runs:
         if [ -n "${{ inputs.latest }}" ]; then
           case "${{ inputs.latest }}" in
             true|false|auto) ;;
-            *) echo "❌ Error: latest must be 'true', 'false', or 'auto'"; exit 1 ;;
+            *) echo "::error::latest must be 'true', 'false', or 'auto'"; exit 1 ;;
           esac
         fi
 
         # Validate repository format if provided
         if [ -n "${{ inputs.repo }}" ]; then
           if ! [[ "${{ inputs.repo }}" =~ ^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$ ]]; then
-            echo "❌ Error: Repository must be in OWNER/REPO format"
+                        echo "::error::Invalid repository format. Must be OWNER/REPO"
             exit 1
           fi
         fi
@@ -143,12 +143,12 @@ runs:
         # Validate tag format if provided
         if [ -n "${{ inputs.tag }}" ]; then
           if [[ "${{ inputs.tag }}" =~ [[:space:]] ]]; then
-            echo "❌ Error: Tag cannot contain spaces"
+                        echo "::error::Tag name cannot contain spaces"
             exit 1
           fi
         fi
 
-        echo "✅ Input validation passed"
+        echo "::notice::Input validation passed"
 
     - name: "🔧 Setup GitHub CLI"
       shell: bash
@@ -161,9 +161,9 @@ runs:
 
         # Verify authentication
         if gh auth status >/dev/null 2>&1; then
-          echo "✅ GitHub CLI authentication successful"
+          echo "::notice::GitHub CLI authentication successful"
         else
-          echo "❌ Error: GitHub CLI authentication failed"
+          echo "::error::GitHub CLI authentication failed"
           exit 1
         fi
 
@@ -218,8 +218,8 @@ runs:
         # Add boolean flags
         [ "${{ inputs.draft }}" = "true" ] && COMMAND_ARGS+=("--draft") && echo "📋 Creating as draft"
         [ "${{ inputs.prerelease }}" = "true" ] && COMMAND_ARGS+=("--prerelease") && echo "🚧 Marking as prerelease"
-        [ "${{ inputs.verify-tag }}" = "true" ] && COMMAND_ARGS+=("--verify-tag") && echo "✅ Verifying tag exists"
-        [ "${{ inputs.fail-on-no-commits }}" = "true" ] && COMMAND_ARGS+=("--fail-on-no-commits") && echo "🔍 Checking for new commits"
+        [ "${{ inputs.verify-tag }}" = "true" ] && COMMAND_ARGS+=("--verify-tag") && echo "::notice::Verifying tag exists"
+        [ "${{ inputs.fail-on-no-commits }}" = "true" ] && COMMAND_ARGS+=("--fail-on-no-commits") && echo "::debug::Checking for new commits"
 
         # Add latest flag
         if [ "${{ inputs.latest }}" = "true" ]; then
@@ -248,7 +248,7 @@ runs:
 
         # Execute GitHub CLI command and capture output
         if RELEASE_OUTPUT=$(gh "${COMMAND_ARGS[@]}" 2>&1); then
-          echo "✅ Release created successfully"
+          echo "::notice::Release created successfully"
           echo "$RELEASE_OUTPUT"
 
           # Extract release information from output or API
@@ -284,7 +284,7 @@ runs:
           echo "🏷️ Release tag: ${RELEASE_TAG:-${{ inputs.tag }}}"
 
         else
-          echo "❌ Release creation failed"
+          echo "::error::Release creation failed"
           echo "$RELEASE_OUTPUT"
           exit 1
         fi
@@ -293,7 +293,7 @@ runs:
       id: verify
       shell: bash
       run: |
-        echo "🔍 Verifying release creation..."
+        echo "::debug::Verifying release creation..."
 
         RELEASE_TAG="${{ steps.create.outputs.release-tag }}"
         if [ -z "$RELEASE_TAG" ]; then
@@ -309,7 +309,7 @@ runs:
           fi
 
           if gh release view "$RELEASE_TAG" $REPO_PARAM >/dev/null 2>&1; then
-            echo "✅ Release verified successfully"
+            echo "::notice::Release verified successfully"
 
             # Get release details
             RELEASE_DETAILS=$(gh release view "$RELEASE_TAG" $REPO_PARAM --json id,name,tagName,url,isDraft,isPrerelease)
@@ -323,11 +323,11 @@ runs:
             echo "  🚧 Prerelease: $PRERELEASE_STATUS"
 
           else
-            echo "❌ Release verification failed - release not found"
+            echo "::error::Release verification failed - release not found"
             exit 1
           fi
         else
-          echo "⚠️ No release tag available for verification"
+          echo "::warning::No release tag available for verification"
         fi
 
     - name: "📊 Action Summary"

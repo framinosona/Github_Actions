@@ -103,11 +103,11 @@ runs:
     - name: "✅ Validate inputs"
       shell: bash
       run: |
-        echo "🔍 Validating DocFX Metadata inputs..."
+        echo "::debug::Validating DocFX Metadata inputs..."
 
         # Validate config file exists if specified and not default
         if [ "${{ inputs.config }}" != "docfx.json" ] && [ ! -f "${{ inputs.config }}" ]; then
-          echo "❌ Error: DocFX configuration file not found: ${{ inputs.config }}"
+          echo "::error::DocFX configuration file not found: ${{ inputs.config }}"
           exit 1
         fi
 
@@ -115,7 +115,7 @@ runs:
         if [ -n "${{ inputs.log-level }}" ]; then
           case "${{ inputs.log-level }}" in
             error|warning|info|verbose|diagnostic) ;;
-            *) echo "❌ Error: Invalid log level. Must be one of: error, warning, info, verbose, diagnostic"; exit 1 ;;
+            *) echo "::error::Invalid log level. Must be one of: error, warning, info, verbose, diagnostic"; exit 1 ;;
           esac
         fi
 
@@ -123,7 +123,7 @@ runs:
         if [ -n "${{ inputs.output-format }}" ]; then
           case "${{ inputs.output-format }}" in
             mref|markdown|apiPage) ;;
-            *) echo "❌ Error: Invalid output format. Must be one of: mref, markdown, apiPage"; exit 1 ;;
+            *) echo "::error::Invalid output format. Must be one of: mref, markdown, apiPage"; exit 1 ;;
           esac
         fi
 
@@ -131,7 +131,7 @@ runs:
         if [ -n "${{ inputs.namespace-layout }}" ]; then
           case "${{ inputs.namespace-layout }}" in
             Flattened|Nested) ;;
-            *) echo "❌ Error: Invalid namespace layout. Must be one of: Flattened, Nested"; exit 1 ;;
+            *) echo "::error::Invalid namespace layout. Must be one of: Flattened, Nested"; exit 1 ;;
           esac
         fi
 
@@ -139,7 +139,7 @@ runs:
         if [ -n "${{ inputs.member-layout }}" ]; then
           case "${{ inputs.member-layout }}" in
             SamePage|SeparatePages) ;;
-            *) echo "❌ Error: Invalid member layout. Must be one of: SamePage, SeparatePages"; exit 1 ;;
+            *) echo "::error::Invalid member layout. Must be one of: SamePage, SeparatePages"; exit 1 ;;
           esac
         fi
 
@@ -155,7 +155,7 @@ runs:
             use-clr-type-names) value="${{ inputs.use-clr-type-names }}" ;;
           esac
           if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
-            echo "❌ Error: Parameter $param must be 'true' or 'false', got: $value"
+            echo "::error::Parameter $param must be 'true' or 'false', got: $value"
             exit 1
           fi
         done
@@ -163,18 +163,18 @@ runs:
         # Validate JSON inputs if provided
         if [ -n "${{ inputs.property }}" ]; then
           if ! echo '${{ inputs.property }}' | python3 -m json.tool >/dev/null 2>&1; then
-            echo "❌ Error: property must be valid JSON"
+            echo "::error::property must be valid JSON"
             exit 1
           fi
         fi
 
         # Validate filter file exists if specified
         if [ -n "${{ inputs.filter }}" ] && [ ! -f "${{ inputs.filter }}" ]; then
-          echo "❌ Error: Filter config file not found: ${{ inputs.filter }}"
+          echo "::error::Filter config file not found: ${{ inputs.filter }}"
           exit 1
         fi
 
-        echo "✅ Input validation passed"
+        echo "::notice::Input validation passed"
 
     - name: "📦 Install DocFX tool"
       uses: "./dotnet-tool-install"
@@ -318,7 +318,7 @@ runs:
           esac
 
         else
-          echo "❌ Output directory not found: $OUTPUT_DIR"
+          echo "::error::Output directory not found: $OUTPUT_DIR"
           echo "files-count=0" >> $GITHUB_OUTPUT
           echo "output-size=0" >> $GITHUB_OUTPUT
         fi

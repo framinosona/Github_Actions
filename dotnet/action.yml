@@ -74,7 +74,7 @@ runs:
         echo "::debug::Environment info - .NET version: $(dotnet --version 2>/dev/null || echo 'Not found')"
         echo "::debug::Environment info - Available runtimes: $(dotnet --list-runtimes 2>/dev/null || echo 'None')"
 
-        echo "🔍 Validating inputs..."
+        echo "::debug::Validating inputs..."
 
         # Validate command is not empty
         if [ -z "${{ inputs.command }}" ]; then

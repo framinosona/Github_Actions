@@ -77,27 +77,27 @@ runs:
     - name: "✅ Validate inputs"
       shell: bash
       run: |
-        echo "🔍 Validating Git tag inputs..."
+        echo "::debug::Validating Git tag inputs..."
 
         # Validate tag name is provided and not empty
         if [ -z "${{ inputs.tag }}" ]; then
-          echo "❌ Error: Tag name cannot be empty"
+          echo "::error::Tag name cannot be empty"
           exit 1
         fi
 
         # Validate tag name format (basic Git tag validation)
         if [[ "${{ inputs.tag }}" =~ [[:space:]] ]]; then
-          echo "❌ Error: Tag name cannot contain spaces"
+          echo "::error::Tag name cannot contain spaces"
           exit 1
         fi
 
         if [[ "${{ inputs.tag }}" =~ \.\.|\.\. ]]; then
-          echo "❌ Error: Tag name cannot contain '..' sequences"
+          echo "::error::Tag name cannot contain '..' sequences"
           exit 1
         fi
 
         if [[ "${{ inputs.tag }}" == *"/"* ]] && [[ "${{ inputs.tag }}" == "/"* || "${{ inputs.tag }}" == *"/" ]]; then
-          echo "❌ Error: Tag name cannot start or end with '/'"
+          echo "::error::Tag name cannot start or end with '/'"
           exit 1
         fi
 
@@ -110,14 +110,14 @@ runs:
             fail-if-exists) value="${{ inputs.fail-if-exists }}" ;;
           esac
           if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
-            echo "❌ Error: Parameter $param must be 'true' or 'false', got: $value"
+            echo "::error::Parameter $param must be 'true' or 'false', got: $value"
             exit 1
           fi
         done
 
         # Validate email format
         if ! [[ "${{ inputs.git-user-email }}" =~ ^[^@]+@[^@]+$ ]]; then
-          echo "❌ Error: Invalid email format: ${{ inputs.git-user-email }}"
+          echo "::error::Invalid email format: ${{ inputs.git-user-email }}"
           exit 1
         fi
 
@@ -126,7 +126,7 @@ runs:
           echo "🎯 Target specified: ${{ inputs.target }}"
         fi
 
-        echo "✅ Input validation passed"
+        echo "::notice::Input validation passed"
 
     - name: "🔧 Configure Git"
       shell: bash
@@ -137,7 +137,7 @@ runs:
         git config --local user.email "${{ inputs.git-user-email }}"
 
         echo "👤 Git user: ${{ inputs.git-user-name }} <${{ inputs.git-user-email }}>"
-        echo "✅ Git configuration completed"
+        echo "::notice::Git configuration completed"
 
     - name: "🏷️ Create and push Git tag"
       id: create
@@ -157,13 +157,13 @@ runs:
 
         # Check if tag already exists
         if git tag -l "$TAG_NAME" | grep -q "^$TAG_NAME$"; then
-          echo "⚠️ Tag $TAG_NAME already exists"
+          echo "::warning::Tag $TAG_NAME already exists"
           echo "tag-exists=true" >> $GITHUB_OUTPUT
 
           if [ "${{ inputs.force }}" = "true" ]; then
             echo "🔄 Force mode enabled - will update existing tag"
           elif [ "${{ inputs.fail-if-exists }}" = "true" ]; then
-            echo "❌ Error: Tag $TAG_NAME already exists and fail-if-exists is true"
+            echo "::error::Tag $TAG_NAME already exists and fail-if-exists is true"
             exit 1
           else
             echo "⏭️ Tag exists but continuing without error"
@@ -216,7 +216,7 @@ runs:
           fi
         fi
 
-        echo "✅ Tag $TAG_NAME created successfully"
+        echo "::notice::Tag $TAG_NAME created successfully"
         echo "tag-created=true" >> $GITHUB_OUTPUT
 
         # Push the tag if requested
@@ -234,7 +234,7 @@ runs:
             git push origin "$TAG_NAME"
           fi
 
-          echo "✅ Tag $TAG_NAME pushed to remote"
+          echo "::notice::Tag $TAG_NAME pushed to remote"
           echo "tag-pushed=true" >> $GITHUB_OUTPUT
         else
           echo "⏭️ Skipping push (push disabled)"
@@ -249,13 +249,13 @@ runs:
       id: verify
       shell: bash
       run: |
-        echo "🔍 Verifying tag creation..."
+        echo "::debug::Verifying tag creation..."
 
         TAG_NAME="${{ steps.create.outputs.tag-name }}"
 
         # Verify tag exists locally
         if git tag -l "$TAG_NAME" | grep -q "^$TAG_NAME$"; then
-          echo "✅ Tag $TAG_NAME exists locally"
+          echo "::notice::Tag $TAG_NAME exists locally"
 
           # Get tag information
           if git cat-file -t "$TAG_NAME" | grep -q "tag"; then
@@ -268,23 +268,23 @@ runs:
             echo "📍 Points to commit: $TAG_COMMIT"
           fi
         else
-          echo "❌ Error: Tag $TAG_NAME not found locally"
+          echo "::error::Tag $TAG_NAME not found locally"
           exit 1
         fi
 
         # Verify remote push if it was requested
         if [ "${{ inputs.push }}" = "true" ] && [ "${{ steps.create.outputs.tag-pushed }}" = "true" ]; then
-          echo "🔍 Verifying remote tag..."
+          echo "::debug::Verifying remote tag..."
 
           # Try to fetch the tag from remote to verify it exists
           if git ls-remote --tags origin | grep -q "refs/tags/$TAG_NAME$"; then
-            echo "✅ Tag $TAG_NAME verified on remote"
+            echo "::notice::Tag $TAG_NAME verified on remote"
           else
-            echo "⚠️ Warning: Tag may not be fully propagated to remote yet"
+            echo "::warning::Tag may not be fully propagated to remote yet"
           fi
         fi
 
-        echo "✅ Tag verification completed"
+        echo "::notice::Tag verification completed"
 
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'

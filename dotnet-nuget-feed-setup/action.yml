@@ -87,19 +87,19 @@ runs:
 
         # Validate working directory exists
         if [ ! -d "${{ inputs.working-directory }}" ]; then
-          echo "❌ Error: Working directory does not exist: ${{ inputs.working-directory }}"
+          echo "::error::Working directory does not exist: ${{ inputs.working-directory }}"
           exit 1
         fi
 
         # Validate store-password-in-clear-text flag
         case "${{ inputs.store-password-in-clear-text }}" in
           true|false) ;;
-          *) echo "❌ Error: Store password in clear text flag must be 'true' or 'false', got: ${{ inputs.store-password-in-clear-text }}"; exit 1 ;;
+          *) echo "::error::Store password in clear text flag must be 'true' or 'false', got: ${{ inputs.store-password-in-clear-text }}"; exit 1 ;;
         esac
 
         # Validate configfile exists if specified
         if [ -n "${{ inputs.configfile }}" ] && [ ! -f "${{ inputs.configfile }}" ]; then
-          echo "❌ Error: Configuration file not found: ${{ inputs.configfile }}"
+          echo "::error::Configuration file not found: ${{ inputs.configfile }}"
           exit 1
         fi
 
@@ -107,7 +107,7 @@ runs:
         if [ -n "${{ inputs.verbosity }}" ]; then
           case "${{ inputs.verbosity }}" in
             quiet|minimal|normal|detailed|diagnostic) ;;
-            *) echo "❌ Error: Invalid verbosity level: ${{ inputs.verbosity }}. Must be one of: quiet, minimal, normal, detailed, diagnostic"; exit 1 ;;
+            *) echo "::error::Invalid verbosity level: ${{ inputs.verbosity }}. Must be one of: quiet, minimal, normal, detailed, diagnostic"; exit 1 ;;
           esac
         fi
 
@@ -174,7 +174,7 @@ runs:
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       run: |
-        echo "🔍 Verifying NuGet source was added..."
+        echo "::debug::Verifying NuGet source was added..."
 
         SOURCE_ADDED="false"
 
@@ -187,13 +187,13 @@ runs:
 
         if echo "$SOURCES_OUTPUT" | grep -q "${{ inputs.name }}"; then
           SOURCE_ADDED="true"
-          echo "✅ Source '${{ inputs.name }}' was successfully added"
+          echo "::notice::Source '${{ inputs.name }}' was successfully added"
 
           # Show the added source details (without sensitive info)
           echo "📋 Source details:"
           echo "$SOURCES_OUTPUT" | grep -A 1 "${{ inputs.name }}" || true
         else
-          echo "⚠️ Could not verify that source '${{ inputs.name }}' was added"
+          echo "::warning::Could not verify that source '${{ inputs.name }}' was added"
         fi
 
         echo "source-added=$SOURCE_ADDED" >> $GITHUB_OUTPUT

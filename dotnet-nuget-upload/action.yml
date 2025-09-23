@@ -102,32 +102,32 @@ runs:
 
         # Validate working directory exists
         if [ ! -d "${{ inputs.working-directory }}" ]; then
-          echo "❌ Error: Working directory does not exist: ${{ inputs.working-directory }}"
+          echo "::error::Working directory does not exist: ${{ inputs.working-directory }}"
           exit 1
         fi
 
         # Validate skip-duplicate flag
         case "${{ inputs.skip-duplicate }}" in
           true|false) ;;
-          *) echo "❌ Error: Skip duplicate flag must be 'true' or 'false', got: ${{ inputs.skip-duplicate }}"; exit 1 ;;
+          *) echo "::error::Skip duplicate flag must be 'true' or 'false', got: ${{ inputs.skip-duplicate }}"; exit 1 ;;
         esac
 
         # Validate no-symbols flag
         case "${{ inputs.no-symbols }}" in
           true|false) ;;
-          *) echo "❌ Error: No symbols flag must be 'true' or 'false', got: ${{ inputs.no-symbols }}"; exit 1 ;;
+          *) echo "::error::No symbols flag must be 'true' or 'false', got: ${{ inputs.no-symbols }}"; exit 1 ;;
         esac
 
         # Validate force-english-output flag
         case "${{ inputs.force-english-output }}" in
           true|false) ;;
-          *) echo "❌ Error: Force English output flag must be 'true' or 'false', got: ${{ inputs.force-english-output }}"; exit 1 ;;
+          *) echo "::error::Force English output flag must be 'true' or 'false', got: ${{ inputs.force-english-output }}"; exit 1 ;;
         esac
 
         # Validate timeout is a positive number
         if [ -n "${{ inputs.timeout }}" ]; then
           if ! [[ "${{ inputs.timeout }}" =~ ^[0-9]+$ ]]; then
-            echo "❌ Error: Timeout must be a positive number: ${{ inputs.timeout }}"
+            echo "::error::Timeout must be a positive number: ${{ inputs.timeout }}"
             exit 1
           fi
         fi
@@ -136,7 +136,7 @@ runs:
         if [ -n "${{ inputs.verbosity }}" ]; then
           case "${{ inputs.verbosity }}" in
             quiet|minimal|normal|detailed|diagnostic) ;;
-            *) echo "❌ Error: Invalid verbosity level: ${{ inputs.verbosity }}. Must be one of: quiet, minimal, normal, detailed, diagnostic"; exit 1 ;;
+            *) echo "::error::Invalid verbosity level: ${{ inputs.verbosity }}. Must be one of: quiet, minimal, normal, detailed, diagnostic"; exit 1 ;;
           esac
         fi
 
@@ -147,7 +147,7 @@ runs:
       id: extract-info
       shell: bash
       run: |
-        echo "🔍 Extracting package information..."
+        echo "::debug::Extracting package information..."
 
         PACKAGE_FILE="${{ inputs.package-path }}"
         PACKAGE_NAME="unknown"
@@ -162,9 +162,9 @@ runs:
         if [[ "$BASENAME" =~ ^(.+)\.([0-9]+\.[0-9]+\.[0-9]+.*)$ ]]; then
           PACKAGE_NAME="${BASH_REMATCH[1]}"
           PACKAGE_VERSION="${BASH_REMATCH[2]}"
-          echo "✅ Extracted package: $PACKAGE_NAME version $PACKAGE_VERSION"
+          echo "::notice::Extracted package: $PACKAGE_NAME version $PACKAGE_VERSION"
         else
-          echo "⚠️ Could not parse package name and version from filename: $BASENAME"
+          echo "::warning::Could not parse package name and version from filename: $BASENAME"
           PACKAGE_NAME="$BASENAME"
         fi
 

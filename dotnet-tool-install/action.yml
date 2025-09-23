@@ -67,54 +67,54 @@ runs:
     - name: "✅ Validate inputs"
       shell: bash
       run: |
-        echo "🔍 Validating inputs..."
+        echo "::debug::Validating inputs..."
 
         # Validate tool name is not empty
         if [ -z "${{ inputs.tool-name }}" ]; then
-          echo "❌ Error: Tool name cannot be empty"
+          echo "::error::Tool name cannot be empty"
           exit 1
         fi
 
         # Validate working directory exists
         if [ ! -d "${{ inputs.working-directory }}" ]; then
-          echo "❌ Error: Working directory does not exist: ${{ inputs.working-directory }}"
+          echo "::error::Working directory does not exist: ${{ inputs.working-directory }}"
           exit 1
         fi
 
         # Validate global flag
         case "${{ inputs.global }}" in
           true|false) ;;
-          *) echo "❌ Error: Global flag must be 'true' or 'false', got: ${{ inputs.global }}"; exit 1 ;;
+          *) echo "::error::Global flag must be 'true' or 'false', got: ${{ inputs.global }}"; exit 1 ;;
         esac
 
         # Validate prerelease flag
         case "${{ inputs.prerelease }}" in
           true|false) ;;
-          *) echo "❌ Error: Prerelease flag must be 'true' or 'false', got: ${{ inputs.prerelease }}"; exit 1 ;;
+          *) echo "::error::Prerelease flag must be 'true' or 'false', got: ${{ inputs.prerelease }}"; exit 1 ;;
         esac
 
         # Validate verbosity level if specified
         if [ -n "${{ inputs.verbosity }}" ]; then
           case "${{ inputs.verbosity }}" in
             quiet|minimal|normal|detailed|diagnostic) ;;
-            *) echo "❌ Error: Invalid verbosity level: ${{ inputs.verbosity }}. Must be one of: quiet, minimal, normal, detailed, diagnostic"; exit 1 ;;
+            *) echo "::error::Invalid verbosity level: ${{ inputs.verbosity }}. Must be one of: quiet, minimal, normal, detailed, diagnostic"; exit 1 ;;
           esac
         fi
 
         # Validate configfile exists if specified
         if [ -n "${{ inputs.configfile }}" ] && [ ! -f "${{ inputs.configfile }}" ]; then
-          echo "❌ Error: Configuration file not found: ${{ inputs.configfile }}"
+          echo "::error::Configuration file not found: ${{ inputs.configfile }}"
           exit 1
         fi
 
-        echo "✅ Input validation passed"
+        echo "::notice::Input validation passed"
 
     - name: "📝 Create tool manifest if needed"
       id: create-manifest
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       run: |
-        echo "🔍 Checking for tool manifest..."
+        echo "::debug::Checking for tool manifest..."
 
         MANIFEST_CREATED="false"
 
@@ -126,9 +126,9 @@ runs:
             dotnet new tool-manifest
             if [ $? -eq 0 ]; then
               MANIFEST_CREATED="true"
-              echo "✅ Tool manifest created successfully"
+              echo "::notice::Tool manifest created successfully"
             else
-              echo "❌ Failed to create tool manifest"
+              echo "::error::Failed to create tool manifest"
               exit 1
             fi
           else
@@ -197,7 +197,7 @@ runs:
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       run: |
-        echo "🔍 Extracting installed tool version..."
+        echo "::debug::Extracting installed tool version..."
 
         INSTALLED_VERSION="unknown"
 
@@ -212,9 +212,9 @@ runs:
 
         if [ -n "$VERSION_OUTPUT" ]; then
           INSTALLED_VERSION="$VERSION_OUTPUT"
-          echo "✅ Detected installed version: $INSTALLED_VERSION"
+          echo "::notice::Detected installed version: $INSTALLED_VERSION"
         else
-          echo "⚠️ Could not determine installed version"
+          echo "::warning::Could not determine installed version"
         fi
 
         echo "installed-version=$INSTALLED_VERSION" >> $GITHUB_OUTPUT

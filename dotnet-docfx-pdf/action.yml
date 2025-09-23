@@ -59,11 +59,11 @@ runs:
     - name: "✅ Validate inputs"
       shell: bash
       run: |
-        echo "🔍 Validating DocFX PDF inputs..."
+        echo "::debug::Validating DocFX PDF inputs..."
 
         # Validate config file exists if specified and not default
         if [ "${{ inputs.config }}" != "docfx.json" ] && [ ! -f "${{ inputs.config }}" ]; then
-          echo "❌ Error: DocFX configuration file not found: ${{ inputs.config }}"
+          echo "::error::DocFX configuration file not found: ${{ inputs.config }}"
           exit 1
         fi
 
@@ -71,7 +71,7 @@ runs:
         if [ -n "${{ inputs.log-level }}" ]; then
           case "${{ inputs.log-level }}" in
             error|warning|info|verbose|diagnostic) ;;
-            *) echo "❌ Error: Invalid log level. Must be one of: error, warning, info, verbose, diagnostic"; exit 1 ;;
+            *) echo "::error::Invalid log level. Must be one of: error, warning, info, verbose, diagnostic"; exit 1 ;;
           esac
         fi
 
@@ -82,12 +82,12 @@ runs:
             warnings-as-errors) value="${{ inputs.warnings-as-errors }}" ;;
           esac
           if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
-            echo "❌ Error: Parameter $param must be 'true' or 'false', got: $value"
+            echo "::error::Parameter $param must be 'true' or 'false', got: $value"
             exit 1
           fi
         done
 
-        echo "✅ Input validation passed"
+        echo "::notice::Input validation passed"
 
     - name: "📦 Install DocFX tool"
       uses: "./dotnet-tool-install"
@@ -196,11 +196,11 @@ runs:
               fi
             done
           else
-            echo "⚠️ No PDF files were generated"
+            echo "::warning::No PDF files were generated"
           fi
 
         else
-          echo "❌ Output directory not found: $OUTPUT_DIR"
+          echo "::error::Output directory not found: $OUTPUT_DIR"
           echo "files-count=0" >> $GITHUB_OUTPUT
           echo "output-size=0" >> $GITHUB_OUTPUT
           echo "pdf-files=" >> $GITHUB_OUTPUT

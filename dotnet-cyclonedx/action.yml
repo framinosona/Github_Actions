@@ -208,7 +208,7 @@ runs:
             nuget-password-clear-text) value="${{ inputs.nuget-password-clear-text }}" ;;
           esac
           if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
-            echo "❌ Error: Parameter $param must be 'true' or 'false', got: $value"
+            echo "::error::Parameter $param must be 'true' or 'false', got: $value"
             exit 1
           fi
         done

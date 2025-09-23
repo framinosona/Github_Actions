@@ -216,7 +216,7 @@ runs:
         echo "🌿 Current branch: $branch_name"
 
         # Find the highest patch version for the given major.minor
-        echo "🔍 Searching for existing tags matching ${major_version}.${minor_version}.*"
+        echo "::debug::Searching for existing tags matching ${major_version}.${minor_version}.*"
 
         # Get all tags that match the pattern major.minor.patch (with optional prefix)
         if [ -n "$tag_prefix" ]; then
@@ -251,7 +251,7 @@ runs:
             patch_version=$((existing_patch + 1))
             echo "📈 Incrementing patch from $existing_patch to $patch_version"
           else
-            echo "⚠️ Could not parse patch version from tag, starting at 0"
+            echo "::warning::Could not parse patch version from tag, starting at 0"
             patch_version=0
           fi
         else
@@ -335,7 +335,7 @@ runs:
             echo "VERSION_BRANCHNAME=$branch_name"
             echo "VERSION_SCRIPTCALLED=true"
           } > "$output_txt"
-          echo "✅ Generated $output_txt"
+          echo "::notice::Generated $output_txt"
           setEnvironmentVariable "VERSION_OUTPUTTXT" "$output_txt"
         fi
 
@@ -362,7 +362,7 @@ runs:
             echo "    </PropertyGroup>"
             echo "</Project>"
           } > "$output_props"
-          echo "✅ Generated $output_props"
+          echo "::notice::Generated $output_props"
           setEnvironmentVariable "VERSION_OUTPUTPROPS" "$output_props"
         fi
 
@@ -387,7 +387,7 @@ runs:
             echo "  \"VERSION_SCRIPTCALLED\": true"
             echo "}"
           } > "$output_json"
-          echo "✅ Generated $output_json"
+          echo "::notice::Generated $output_json"
           setEnvironmentVariable "VERSION_OUTPUTJSON" "$output_json"
         fi
 
@@ -398,7 +398,7 @@ runs:
       id: verify
       shell: bash
       run: |
-        echo "🔍 Verifying generated versions..."
+        echo "::debug::Verifying generated versions..."
 
         # Verify all required outputs are set
         REQUIRED_VARS=(
@@ -409,22 +409,22 @@ runs:
 
         for var in "${REQUIRED_VARS[@]}"; do
           if [ -z "${!var:-}" ]; then
-            echo "❌ Error: Required variable $var is not set"
+            echo "::error::Required variable $var is not set"
             exit 1
           else
-            echo "✅ $var=${!var}"
+            echo "::notice::$var=${!var}"
           fi
         done
 
         # Verify semantic version format
         if ! [[ "$VERSION_CORE" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-          echo "❌ Error: Invalid semantic version format: $VERSION_CORE"
+          echo "::error::Invalid semantic version format: $VERSION_CORE"
           exit 1
         fi
 
         # Verify assembly version format
         if ! [[ "$VERSION_ASSEMBLY" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-          echo "❌ Error: Invalid assembly version format: $VERSION_ASSEMBLY"
+          echo "::error::Invalid assembly version format: $VERSION_ASSEMBLY"
           exit 1
         fi
 

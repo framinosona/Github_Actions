@@ -125,14 +125,14 @@ runs:
         if [ -n "${{ inputs.log-level }}" ]; then
           case "${{ inputs.log-level }}" in
             error|warning|info|verbose|diagnostic) ;;
-            *) echo "❌ Error: Invalid log level. Must be one of: error, warning, info, verbose, diagnostic"; exit 1 ;;
+            *) echo "::error::Invalid log level. Must be one of: error, warning, info, verbose, diagnostic"; exit 1 ;;
           esac
         fi
 
         # Validate max-parallelism is numeric
         if [ -n "${{ inputs.max-parallelism }}" ]; then
           if ! [[ "${{ inputs.max-parallelism }}" =~ ^[0-9]+$ ]]; then
-            echo "❌ Error: max-parallelism must be a number"
+            echo "::error::max-parallelism must be a number"
             exit 1
           fi
         fi
@@ -148,7 +148,7 @@ runs:
             disable-git-features) value="${{ inputs.disable-git-features }}" ;;
           esac
           if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
-            echo "❌ Error: Parameter $param must be 'true' or 'false', got: $value"
+            echo "::error::Parameter $param must be 'true' or 'false', got: $value"
             exit 1
           fi
         done

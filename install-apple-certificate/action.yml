@@ -120,13 +120,13 @@ runs:
 
         # Validate provisioning profile inputs
         if [ -n "${{ inputs.provisioning-profile-data }}" ] && [ -n "${{ inputs.provisioning-profile-path }}" ]; then
-          echo "❌ Error: Only one of provisioning-profile-data or provisioning-profile-path should be provided"
+          echo "::error::Only one of provisioning-profile-data or provisioning-profile-path should be provided"
           exit 1
         fi
 
         # Validate provisioning profile file exists if path is provided
         if [ -n "${{ inputs.provisioning-profile-path }}" ] && [ ! -f "${{ inputs.provisioning-profile-path }}" ]; then
-          echo "❌ Error: Provisioning profile file not found: ${{ inputs.provisioning-profile-path }}"
+          echo "::error::Provisioning profile file not found: ${{ inputs.provisioning-profile-path }}"
           exit 1
         fi
 
@@ -134,7 +134,7 @@ runs:
         if [ -n "${{ inputs.certificate-type }}" ]; then
           case "${{ inputs.certificate-type }}" in
             development|distribution|developer-id) ;;
-            *) echo "❌ Error: Invalid certificate type. Must be one of: development, distribution, developer-id"; exit 1 ;;
+            *) echo "::error::Invalid certificate type. Must be one of: development, distribution, developer-id"; exit 1 ;;
           esac
         fi
 
@@ -145,21 +145,21 @@ runs:
             allow-codesign-keychain-access) value="${{ inputs.allow-codesign-keychain-access }}" ;;
           esac
           if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
-            echo "❌ Error: Parameter $param must be 'true' or 'false', got: $value"
+            echo "::error::Parameter $param must be 'true' or 'false', got: $value"
             exit 1
           fi
         done
 
         # Validate keychain name doesn't contain spaces or special characters
         if [[ "${{ inputs.keychain-name }}" =~ [[:space:]] ]]; then
-          echo "❌ Error: Keychain name cannot contain spaces"
+          echo "::error::Keychain name cannot contain spaces"
           exit 1
         fi
 
         # Validate Team ID format if provided
         if [ -n "${{ inputs.team-id }}" ]; then
           if ! [[ "${{ inputs.team-id }}" =~ ^[A-Z0-9]{10}$ ]]; then
-            echo "❌ Error: Team ID must be 10 alphanumeric characters"
+            echo "::error::Team ID must be 10 alphanumeric characters"
             exit 1
           fi
         fi
@@ -226,8 +226,8 @@ runs:
 
           echo "certificate-sha1=${CERT_SHA1:-unknown}" >> $GITHUB_OUTPUT
           echo "certificate-name=${CERT_NAME:-unknown}" >> $GITHUB_OUTPUT
-          echo "✅ Certificate installed: ${CERT_NAME:-unknown}"
-          echo "🔍 Certificate SHA1: ${CERT_SHA1:-unknown}"
+          echo "::notice::Certificate installed: ${CERT_NAME:-unknown}"
+          echo "::debug::Certificate SHA1: ${CERT_SHA1:-unknown}"
 
           # Extract Team ID from certificate if not provided
           EXTRACTED_TEAM_ID=""
@@ -269,7 +269,7 @@ runs:
 
           echo "provisioning-profile-uuid=$PROFILE_UUID" >> $GITHUB_OUTPUT
           echo "provisioning-profile-name=$PROFILE_NAME" >> $GITHUB_OUTPUT
-          echo "✅ Provisioning profile installed: $PROFILE_NAME"
+          echo "::notice::Provisioning profile installed: $PROFILE_NAME"
           echo "🆔 Profile UUID: $PROFILE_UUID"
         fi
 
@@ -286,18 +286,18 @@ runs:
         rm -rf "$TEMP_DIR"
         echo "🧹 Cleaned up temporary files"
 
-        echo "✅ Apple certificate and provisioning profile installation completed"
+        echo "::notice::Apple certificate and provisioning profile installation completed"
 
     - name: "📊 Verify installation"
       id: verify
       shell: bash
       run: |
-        echo "🔍 Verifying certificate and provisioning profile installation..."
+        echo "::debug::Verifying certificate and provisioning profile installation..."
 
         # Verify certificate installation
         if security find-certificate -a "${{ inputs.keychain-name }}" >/dev/null 2>&1; then
           CERT_COUNT=$(security find-certificate -a "${{ inputs.keychain-name }}" | grep -c "keychain:" || echo "0")
-          echo "✅ Found $CERT_COUNT certificate(s) in keychain"
+          echo "::notice::Found $CERT_COUNT certificate(s) in keychain"
 
           # List certificates for verification
           echo "📋 Installed certificates:"
@@ -305,21 +305,21 @@ runs:
             echo "  🔒 $line"
           done
         else
-          echo "⚠️ No certificates found in keychain"
+          echo "::warning::No certificates found in keychain"
         fi
 
         # Verify provisioning profile installation
         PROFILE_COUNT=$(find "$HOME/Library/MobileDevice/Provisioning Profiles" -name "*.mobileprovision" 2>/dev/null | wc -l | tr -d ' ')
-        echo "✅ Found $PROFILE_COUNT provisioning profile(s) installed"
+        echo "::notice::Found $PROFILE_COUNT provisioning profile(s) installed"
 
         # Verify keychain is in search list
         if security list-keychains -d user | grep -q "${{ inputs.keychain-name }}"; then
-          echo "✅ Keychain is in search list"
+          echo "::notice::Keychain is in search list"
         else
-          echo "⚠️ Keychain not found in search list"
+          echo "::warning::Keychain not found in search list"
         fi
 
-        echo "✅ Verification completed"
+        echo "::notice::Verification completed"
 
     - name: "🧹 Cleanup keychain"
       if: ${{ inputs.delete-keychain == 'true' }}
@@ -333,7 +333,7 @@ runs:
         # Delete keychain
         security delete-keychain "${{ inputs.keychain-name }}" || true
 
-        echo "✅ Keychain cleanup completed"
+        echo "::notice::Keychain cleanup completed"
 
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'

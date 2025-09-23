@@ -74,11 +74,11 @@ runs:
     - name: "✅ Validate inputs"
       shell: bash
       run: |
-        echo "🔍 Validating inputs..."
+        echo "::debug::Validating inputs..."
 
         # Validate required message parameter
         if [ -z "${{ inputs.message }}" ]; then
-          echo "❌ Error: Message parameter is required"
+          echo "::error::Message parameter is required"
           exit 1
         fi
 
@@ -86,7 +86,7 @@ runs:
         if [ -n "${{ inputs.style }}" ]; then
           case "${{ inputs.style }}" in
             flat|flat-square|plastic|for-the-badge|social) ;;
-            *) echo "❌ Error: Invalid style. Must be one of: flat, flat-square, plastic, for-the-badge, social"; exit 1 ;;
+            *) echo "::error::Invalid style. Must be one of: flat, flat-square, plastic, for-the-badge, social"; exit 1 ;;
           esac
         fi
 
@@ -94,7 +94,7 @@ runs:
         if [ -n "${{ inputs.output-format }}" ]; then
           case "${{ inputs.output-format }}" in
             url|markdown|html|svg) ;;
-            *) echo "❌ Error: Invalid output format. Must be one of: url, markdown, html, svg"; exit 1 ;;
+            *) echo "::error::Invalid output format. Must be one of: url, markdown, html, svg"; exit 1 ;;
           esac
         fi
 
@@ -110,12 +110,12 @@ runs:
         # Validate cache-seconds is numeric if specified
         if [ -n "${{ inputs.cache-seconds }}" ]; then
           if ! [[ "${{ inputs.cache-seconds }}" =~ ^[0-9]+$ ]]; then
-            echo "❌ Error: cache-seconds must be a numeric value"
+            echo "::error::cache-seconds must be a numeric value"
             exit 1
           fi
         fi
 
-        echo "✅ Input validation passed"
+        echo "::notice::Input validation passed"
 
     - name: "🏷️ Generate Badge"
       id: generate
@@ -208,15 +208,15 @@ runs:
           elif command -v wget >/dev/null 2>&1; then
             svg_content=$(wget -qO- "${badge_url}")
           else
-            echo "❌ Error: Neither curl nor wget is available for downloading SVG content"
+            echo "::error::Neither curl nor wget is available for downloading SVG content"
             exit 1
           fi
 
           if [ -n "$svg_content" ] && [[ "$svg_content" =~ \<svg ]]; then
-            echo "✅ SVG content downloaded successfully"
+            echo "::notice::SVG content downloaded successfully"
             echo "svg-content=${svg_content}" >> $GITHUB_OUTPUT
           else
-            echo "❌ Error: Failed to download valid SVG content"
+            echo "::error::Failed to download valid SVG content"
             exit 1
           fi
         fi
@@ -238,7 +238,7 @@ runs:
                 echo "${svg_content}" > "${{ inputs.output-file }}"
                 echo "📁 SVG file saved to: ${{ inputs.output-file }}"
               else
-                echo "❌ Error: No SVG content available to save"
+                echo "::error::No SVG content available to save"
                 exit 1
               fi
               ;;
@@ -251,7 +251,7 @@ runs:
           echo "output-file-path=" >> $GITHUB_OUTPUT
         fi
 
-        echo "✅ Badge generation completed successfully"
+        echo "::notice::Badge generation completed successfully"
 
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
