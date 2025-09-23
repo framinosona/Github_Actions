@@ -1,0 +1,367 @@
+name: '🍎 Install Apple Certificate'
+description: 'Installs Apple certificates and provisioning profiles for iOS/macOS development'
+author: 'Francois Raminosona'
+
+inputs:
+  certificate-data:
+    description: 'Base64 encoded certificate (.p12 file content)'
+    required: false
+    default: ''
+  certificate-path:
+    description: 'Path to certificate file (.p12)'
+    required: false
+    default: ''
+  certificate-password:
+    description: 'Password for the certificate'
+    required: true
+  provisioning-profile-data:
+    description: 'Base64 encoded provisioning profile (.mobileprovision file content)'
+    required: false
+    default: ''
+  provisioning-profile-path:
+    description: 'Path to provisioning profile file (.mobileprovision)'
+    required: false
+    default: ''
+  keychain-name:
+    description: 'Name for the temporary keychain'
+    required: false
+    default: 'build.keychain'
+  keychain-password:
+    description: 'Password for the temporary keychain'
+    required: false
+    default: 'build-keychain-password'
+  delete-keychain:
+    description: 'Delete the keychain after installation'
+    required: false
+    default: 'true'
+  certificate-type:
+    description: 'Type of certificate (development, distribution, developer-id)'
+    required: false
+    default: 'development'
+  team-id:
+    description: 'Apple Developer Team ID'
+    required: false
+    default: ''
+  allow-codesign-keychain-access:
+    description: 'Allow codesign to access the keychain'
+    required: false
+    default: 'true'
+  show-summary:
+    description: 'Whether to show the action summary'
+    required: false
+    default: 'false'
+
+outputs:
+  keychain-path:
+    description: 'Path to the created keychain'
+    value: ${{ steps.install.outputs.keychain-path }}
+  certificate-name:
+    description: 'Name of the installed certificate'
+    value: ${{ steps.install.outputs.certificate-name }}
+  certificate-sha1:
+    description: 'SHA1 fingerprint of the installed certificate'
+    value: ${{ steps.install.outputs.certificate-sha1 }}
+  provisioning-profile-name:
+    description: 'Name of the installed provisioning profile'
+    value: ${{ steps.install.outputs.provisioning-profile-name }}
+  provisioning-profile-uuid:
+    description: 'UUID of the installed provisioning profile'
+    value: ${{ steps.install.outputs.provisioning-profile-uuid }}
+  team-id:
+    description: 'Team ID from the certificate or input'
+    value: ${{ steps.install.outputs.team-id }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: "✅ Validate inputs"
+      shell: bash
+      run: |
+        echo "🔍 Validating Apple certificate inputs..."
+
+        # Check that we're running on macOS
+        if [[ "$RUNNER_OS" != "macOS" ]]; then
+          echo "❌ Error: This action only works on macOS runners"
+          exit 1
+        fi
+
+        # Validate that either certificate-data or certificate-path is provided
+        if [ -z "${{ inputs.certificate-data }}" ] && [ -z "${{ inputs.certificate-path }}" ]; then
+          echo "❌ Error: Either certificate-data or certificate-path must be provided"
+          exit 1
+        fi
+
+        # Validate that both certificate inputs are not provided
+        if [ -n "${{ inputs.certificate-data }}" ] && [ -n "${{ inputs.certificate-path }}" ]; then
+          echo "❌ Error: Only one of certificate-data or certificate-path should be provided"
+          exit 1
+        fi
+
+        # Validate certificate file exists if path is provided
+        if [ -n "${{ inputs.certificate-path }}" ] && [ ! -f "${{ inputs.certificate-path }}" ]; then
+          echo "❌ Error: Certificate file not found: ${{ inputs.certificate-path }}"
+          exit 1
+        fi
+
+        # Validate provisioning profile inputs
+        if [ -n "${{ inputs.provisioning-profile-data }}" ] && [ -n "${{ inputs.provisioning-profile-path }}" ]; then
+          echo "❌ Error: Only one of provisioning-profile-data or provisioning-profile-path should be provided"
+          exit 1
+        fi
+
+        # Validate provisioning profile file exists if path is provided
+        if [ -n "${{ inputs.provisioning-profile-path }}" ] && [ ! -f "${{ inputs.provisioning-profile-path }}" ]; then
+          echo "❌ Error: Provisioning profile file not found: ${{ inputs.provisioning-profile-path }}"
+          exit 1
+        fi
+
+        # Validate certificate type
+        if [ -n "${{ inputs.certificate-type }}" ]; then
+          case "${{ inputs.certificate-type }}" in
+            development|distribution|developer-id) ;;
+            *) echo "❌ Error: Invalid certificate type. Must be one of: development, distribution, developer-id"; exit 1 ;;
+          esac
+        fi
+
+        # Validate boolean inputs
+        for param in delete-keychain allow-codesign-keychain-access; do
+          case $param in
+            delete-keychain) value="${{ inputs.delete-keychain }}" ;;
+            allow-codesign-keychain-access) value="${{ inputs.allow-codesign-keychain-access }}" ;;
+          esac
+          if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
+            echo "❌ Error: Parameter $param must be 'true' or 'false', got: $value"
+            exit 1
+          fi
+        done
+
+        # Validate keychain name doesn't contain spaces or special characters
+        if [[ "${{ inputs.keychain-name }}" =~ [[:space:]] ]]; then
+          echo "❌ Error: Keychain name cannot contain spaces"
+          exit 1
+        fi
+
+        # Validate Team ID format if provided
+        if [ -n "${{ inputs.team-id }}" ]; then
+          if ! [[ "${{ inputs.team-id }}" =~ ^[A-Z0-9]{10}$ ]]; then
+            echo "❌ Error: Team ID must be 10 alphanumeric characters"
+            exit 1
+          fi
+        fi
+
+        echo "✅ Input validation passed"
+
+    - name: "🍎 Install Apple certificate and provisioning profile"
+      id: install
+      shell: bash
+      run: |
+        echo "🚀 Installing Apple certificate and provisioning profile..."
+
+        # Set up temporary directory for files
+        TEMP_DIR=$(mktemp -d)
+        echo "📁 Using temporary directory: $TEMP_DIR"
+
+        # Define keychain path
+        KEYCHAIN_PATH="$HOME/Library/Keychains/${{ inputs.keychain-name }}-db"
+        echo "🔑 Keychain path: $KEYCHAIN_PATH"
+        echo "keychain-path=$KEYCHAIN_PATH" >> $GITHUB_OUTPUT
+
+        # Create temporary keychain
+        echo "🔐 Creating temporary keychain..."
+        security create-keychain -p "${{ inputs.keychain-password }}" "${{ inputs.keychain-name }}"
+
+        # Set keychain settings
+        security set-keychain-settings -lut 21600 "${{ inputs.keychain-name }}"
+        security default-keychain -s "${{ inputs.keychain-name }}"
+        security unlock-keychain -p "${{ inputs.keychain-password }}" "${{ inputs.keychain-name }}"
+
+        # Handle certificate installation
+        CERTIFICATE_FILE=""
+        if [ -n "${{ inputs.certificate-data }}" ]; then
+          echo "📄 Processing base64 encoded certificate..."
+          CERTIFICATE_FILE="$TEMP_DIR/certificate.p12"
+          echo "${{ inputs.certificate-data }}" | base64 --decode > "$CERTIFICATE_FILE"
+        elif [ -n "${{ inputs.certificate-path }}" ]; then
+          echo "📄 Using certificate file: ${{ inputs.certificate-path }}"
+          CERTIFICATE_FILE="${{ inputs.certificate-path }}"
+        fi
+
+        # Import certificate
+        if [ -n "$CERTIFICATE_FILE" ]; then
+          echo "🔒 Importing certificate into keychain..."
+          security import "$CERTIFICATE_FILE" -k "${{ inputs.keychain-name }}" -P "${{ inputs.certificate-password }}" -T /usr/bin/codesign
+
+          # Get certificate information
+          CERT_SHA1=$(security find-certificate -a -c "iPhone" -Z "${{ inputs.keychain-name }}" 2>/dev/null | grep "SHA-1 hash:" | head -1 | cut -d' ' -f3 || true)
+          if [ -z "$CERT_SHA1" ]; then
+            CERT_SHA1=$(security find-certificate -a -c "Mac" -Z "${{ inputs.keychain-name }}" 2>/dev/null | grep "SHA-1 hash:" | head -1 | cut -d' ' -f3 || true)
+          fi
+          if [ -z "$CERT_SHA1" ]; then
+            CERT_SHA1=$(security find-certificate -a -Z "${{ inputs.keychain-name }}" 2>/dev/null | grep "SHA-1 hash:" | head -1 | cut -d' ' -f3 || true)
+          fi
+
+          CERT_NAME=$(security find-certificate -a -c "iPhone" -p "${{ inputs.keychain-name }}" 2>/dev/null | openssl x509 -subject -noout | sed 's/^subject.*CN=\([^,]*\).*/\1/' || true)
+          if [ -z "$CERT_NAME" ]; then
+            CERT_NAME=$(security find-certificate -a -c "Mac" -p "${{ inputs.keychain-name }}" 2>/dev/null | openssl x509 -subject -noout | sed 's/^subject.*CN=\([^,]*\).*/\1/' || true)
+          fi
+          if [ -z "$CERT_NAME" ]; then
+            CERT_NAME=$(security find-certificate -a -p "${{ inputs.keychain-name }}" 2>/dev/null | openssl x509 -subject -noout | sed 's/^subject.*CN=\([^,]*\).*/\1/' | head -1 || true)
+          fi
+
+          echo "certificate-sha1=${CERT_SHA1:-unknown}" >> $GITHUB_OUTPUT
+          echo "certificate-name=${CERT_NAME:-unknown}" >> $GITHUB_OUTPUT
+          echo "✅ Certificate installed: ${CERT_NAME:-unknown}"
+          echo "🔍 Certificate SHA1: ${CERT_SHA1:-unknown}"
+
+          # Extract Team ID from certificate if not provided
+          EXTRACTED_TEAM_ID=""
+          if [ -z "${{ inputs.team-id }}" ]; then
+            EXTRACTED_TEAM_ID=$(security find-certificate -a -p "${{ inputs.keychain-name }}" 2>/dev/null | openssl x509 -subject -noout | grep -o 'OU=[A-Z0-9]\{10\}' | cut -d'=' -f2 | head -1 || true)
+            if [ -n "$EXTRACTED_TEAM_ID" ]; then
+              echo "🏢 Extracted Team ID from certificate: $EXTRACTED_TEAM_ID"
+              echo "team-id=$EXTRACTED_TEAM_ID" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "team-id=${{ inputs.team-id }}" >> $GITHUB_OUTPUT
+          fi
+        fi
+
+        # Handle provisioning profile installation
+        PROFILE_FILE=""
+        if [ -n "${{ inputs.provisioning-profile-data }}" ]; then
+          echo "📱 Processing base64 encoded provisioning profile..."
+          PROFILE_FILE="$TEMP_DIR/profile.mobileprovision"
+          echo "${{ inputs.provisioning-profile-data }}" | base64 --decode > "$PROFILE_FILE"
+        elif [ -n "${{ inputs.provisioning-profile-path }}" ]; then
+          echo "📱 Using provisioning profile file: ${{ inputs.provisioning-profile-path }}"
+          PROFILE_FILE="${{ inputs.provisioning-profile-path }}"
+        fi
+
+        # Install provisioning profile
+        if [ -n "$PROFILE_FILE" ]; then
+          echo "📲 Installing provisioning profile..."
+
+          # Create provisioning profiles directory if it doesn't exist
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+
+          # Extract profile UUID and name
+          PROFILE_UUID=$(security cms -D -i "$PROFILE_FILE" | plutil -extract UUID raw -)
+          PROFILE_NAME=$(security cms -D -i "$PROFILE_FILE" | plutil -extract Name raw -)
+
+          # Copy profile to the correct location
+          cp "$PROFILE_FILE" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
+
+          echo "provisioning-profile-uuid=$PROFILE_UUID" >> $GITHUB_OUTPUT
+          echo "provisioning-profile-name=$PROFILE_NAME" >> $GITHUB_OUTPUT
+          echo "✅ Provisioning profile installed: $PROFILE_NAME"
+          echo "🆔 Profile UUID: $PROFILE_UUID"
+        fi
+
+        # Configure keychain for codesign access
+        if [ "${{ inputs.allow-codesign-keychain-access }}" = "true" ]; then
+          echo "🔓 Configuring keychain for codesign access..."
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "${{ inputs.keychain-password }}" "${{ inputs.keychain-name }}"
+        fi
+
+        # Add keychain to search list
+        security list-keychains -d user -s "${{ inputs.keychain-name }}" $(security list-keychains -d user | sed s/\"//g)
+
+        # Clean up temporary directory
+        rm -rf "$TEMP_DIR"
+        echo "🧹 Cleaned up temporary files"
+
+        echo "✅ Apple certificate and provisioning profile installation completed"
+
+    - name: "📊 Verify installation"
+      id: verify
+      shell: bash
+      run: |
+        echo "🔍 Verifying certificate and provisioning profile installation..."
+
+        # Verify certificate installation
+        if security find-certificate -a "${{ inputs.keychain-name }}" >/dev/null 2>&1; then
+          CERT_COUNT=$(security find-certificate -a "${{ inputs.keychain-name }}" | grep -c "keychain:" || echo "0")
+          echo "✅ Found $CERT_COUNT certificate(s) in keychain"
+
+          # List certificates for verification
+          echo "📋 Installed certificates:"
+          security find-certificate -a "${{ inputs.keychain-name }}" -p | openssl x509 -subject -noout 2>/dev/null | while read -r line; do
+            echo "  🔒 $line"
+          done
+        else
+          echo "⚠️ No certificates found in keychain"
+        fi
+
+        # Verify provisioning profile installation
+        PROFILE_COUNT=$(find "$HOME/Library/MobileDevice/Provisioning Profiles" -name "*.mobileprovision" 2>/dev/null | wc -l | tr -d ' ')
+        echo "✅ Found $PROFILE_COUNT provisioning profile(s) installed"
+
+        # Verify keychain is in search list
+        if security list-keychains -d user | grep -q "${{ inputs.keychain-name }}"; then
+          echo "✅ Keychain is in search list"
+        else
+          echo "⚠️ Keychain not found in search list"
+        fi
+
+        echo "✅ Verification completed"
+
+    - name: "🧹 Cleanup keychain"
+      if: ${{ inputs.delete-keychain == 'true' }}
+      shell: bash
+      run: |
+        echo "🧹 Cleaning up keychain..."
+
+        # Remove keychain from search list
+        security list-keychains -d user -s $(security list-keychains -d user | sed s/\"//g | grep -v "${{ inputs.keychain-name }}")
+
+        # Delete keychain
+        security delete-keychain "${{ inputs.keychain-name }}" || true
+
+        echo "✅ Keychain cleanup completed"
+
+    - name: "📊 Action Summary"
+      if: ${{ inputs.show-summary == 'true' }}
+      shell: bash
+      run: |
+        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+        <details><summary>Expand for details - 📊 Apple Certificate Installation Summary</summary>
+
+        ## 🔧 Input Parameters
+        | Parameter | Value |
+        |-----------|-------|
+        | 🔑 Keychain Name | `${{ inputs.keychain-name }}` |
+        | 📱 Certificate Type | `${{ inputs.certificate-type }}` |
+        | 🏢 Team ID | `${{ inputs.team-id || 'auto-detected' }}` |
+        | 🔓 Codesign Access | `${{ inputs.allow-codesign-keychain-access }}` |
+        | 🧹 Delete Keychain | `${{ inputs.delete-keychain }}` |
+
+        ## 📤 Installation Results
+        | Item | Value |
+        |------|-------|
+        | 🔑 Keychain Path | `${{ steps.install.outputs.keychain-path }}` |
+        | 🔒 Certificate Name | `${{ steps.install.outputs.certificate-name }}` |
+        | 🔍 Certificate SHA1 | `${{ steps.install.outputs.certificate-sha1 }}` |
+        | 📱 Profile Name | `${{ steps.install.outputs.provisioning-profile-name || 'N/A' }}` |
+        | 🆔 Profile UUID | `${{ steps.install.outputs.provisioning-profile-uuid || 'N/A' }}` |
+        | 🏢 Team ID | `${{ steps.install.outputs.team-id || 'N/A' }}` |
+
+        ## 🔧 Process Details
+        | Step | Status |
+        |------|--------|
+        | ✅ Input Validation | `✅ Completed` |
+        | 🍎 Certificate Installation | `${{ steps.install.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | 🔍 Installation Verification | `${{ steps.verify.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | 🧹 Keychain Cleanup | `${{ inputs.delete-keychain == 'true' && '✅ Completed' || '⏭️ Skipped' }}` |
+
+        ## 🛡️ Security Notes
+        - Temporary keychain created for secure certificate storage
+        - Certificate password handled securely through GitHub Secrets
+        - Keychain configured for codesign access if enabled
+        - Automatic cleanup performed if requested
+
+        </details>
+        EOF
+
+branding:
+  icon: 'shield'
+  color: 'blue'
