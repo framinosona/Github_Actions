@@ -8,15 +8,15 @@ A comprehensive collection of reusable GitHub Actions for .NET development, docu
 
 ## ✨ Features
 
-🔢 **Smart Versioning** - Semantic version calculation based on Git tags
-🏷️ **Dynamic Tagging** - Automated Git tag creation and management
-🎨 **Badge Generation** - Custom SVG badges with shields.io integration
-🚀 **Release Automation** - GitHub release creation with assets
-📚 **Documentation** - DocFX-powered static site generation
-🌐 **GitHub Pages** - Automated documentation deployment
-🛠️ **Tool Management** - .NET global tool installation and management
-📦 **Package Publishing** - NuGet package upload and feed management
-🔐 **Security** - Apple certificate installation for code signing
+- 🔢 **Smart Versioning** - Semantic version calculation based on Git tags
+- 🏷️ **Dynamic Tagging** - Automated Git tag creation and management
+- 🎨 **Badge Generation** - Custom SVG badges with shields.io integration
+- 🚀 **Release Automation** - GitHub release creation with assets
+- 📚 **Documentation** - DocFX-powered static site generation
+- 🌐 **GitHub Pages** - Automated documentation deployment
+- 🛠️ **Tool Management** - .NET global tool installation and management
+- 📦 **Package Publishing** - NuGet package upload and feed management
+- 🔐 **Security** - Apple certificate installation for code signing
 
 ## 📋 Available Actions
 
@@ -172,11 +172,13 @@ Each action includes comprehensive documentation:
 All actions follow consistent design patterns:
 
 ### 📋 Three-Step Structure
+
 1. **✅ Validation** - Comprehensive input validation
 2. **⚙️ Execution** - Main functionality with error handling
 3. **📊 Summary** - Detailed output summaries
 
 ### 🎯 Standards
+
 - **🔍 Input Validation** - All inputs validated upfront
 - **📤 Rich Outputs** - Multiple output formats for flexibility
 - **🛡️ Error Handling** - Graceful failure with actionable messages
@@ -202,13 +204,6 @@ All actions follow consistent design patterns:
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
-
-## 👤 Author
-
-**Francois Raminosona**
-
-- GitHub: [@framinosona](https://github.com/framinosona)
-- Repository: [Github_Actions](https://github.com/framinosona/Github_Actions)
 
 ## 🙏 Acknowledgments
 
