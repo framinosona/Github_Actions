@@ -150,7 +150,7 @@ branding:
 - **Exit codes**: Use proper exit codes (0 for success, 1 for failure)
 
 ### 🔧 Tool Management
-- **Reuse existing actions**: Use `../dotnet-tool-install` for .NET tools
+- **Reuse existing actions**: Use `./dotnet-tool-install` for .NET tools, `./dotnet` for .NET CLI commands
 - **Tool installation**: Check if tool exists before installing
 - **Cross-platform**: Ensure compatibility with Windows, Linux, and macOS
 

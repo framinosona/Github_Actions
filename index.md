@@ -9,51 +9,60 @@ Actions is a curated collection of powerful, reliable, and well-documented GitHu
 ## 📚 Action Categories
 
 ### 🔧 .NET Development Actions
+
 - **[.NET Tool Install](dotnet-tool-install/README.md)** - Install and manage .NET global tools
 - **[.NET Build](dotnet/README.md)** - Build .NET projects with advanced configuration
 - **[NuGet Feed Setup](dotnet-nuget-feed-setup/README.md)** - Configure NuGet package sources
 - **[NuGet Upload](dotnet-nuget-upload/README.md)** - Publish packages to NuGet repositories
 
 ### 📖 Documentation Actions
-- **[DocFX](dotnet-docfx/README.md)** - Generate complete documentation websites
+
 - **[DocFX Build](dotnet-docfx-build/README.md)** - Build static documentation sites
 - **[DocFX Metadata](dotnet-docfx-metadata/README.md)** - Extract API metadata from .NET code
 - **[DocFX PDF](dotnet-docfx-pdf/README.md)** - Generate PDF documentation
 
 ### 🔒 Security & Certificates
+
 - **[Install Apple Certificate](install-apple-certificate/README.md)** - Install Apple certificates for iOS/macOS development
 - **[CycloneDX SBOM](dotnet-cyclonedx/README.md)** - Generate Software Bill of Materials
 
 ### 🚀 Release & Versioning
+
 - **[Generate Version](generate-version/README.md)** - Intelligent semantic versioning
 - **[Git Tag](git-tag/README.md)** - Create and manage Git tags
 - **[GitHub Release](github-release/README.md)** - Create GitHub releases with assets
 
 ### 🎨 Utilities
+
 - **[Generate Badge](generate-badge/README.md)** - Create dynamic badges for repositories
 
 ## ✨ Key Features
 
 ### 🛡️ **Enterprise-Ready**
+
 - Comprehensive input validation
 - Detailed error handling and logging
 - Cross-platform compatibility (Linux, macOS, Windows)
 - Secure secret handling
 
 ### 📊 **Rich Outputs**
+
 - Detailed action summaries
 - Comprehensive output variables
 - Integration-friendly results
 - Audit trail capabilities
 
 ### 🔧 **Developer Experience**
+
 - Clear, comprehensive documentation
 - Real-world usage examples
 - Troubleshooting guides
 - Best practices included
 
 ### 🎯 **Standards Compliance**
+
 All actions follow the Actions Guidelines:
+
 - **Validation Step** - Comprehensive input validation
 - **Main Action Step** - Core functionality execution
 - **Summary Step** - Detailed reporting and results

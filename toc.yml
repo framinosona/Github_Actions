@@ -18,8 +18,6 @@
 
   - name: Documentation
     items:
-    - name: DocFX
-      href: dotnet-docfx/README.md
     - name: DocFX Build
       href: dotnet-docfx-build/README.md
     - name: DocFX Metadata
