@@ -198,9 +198,8 @@ runs:
         if [ -n "${{ inputs.output }}" ]; then
           ARGS="$ARGS --output '${{ inputs.output }}'"
         fi
-        OUTPUT_PATH=$(realpath "${{ inputs.output }}")
-        echo "output-path=$OUTPUT_PATH" >> $GITHUB_OUTPUT
-        echo "::debug::Using output path: $OUTPUT_PATH"
+        echo "output-path=${{ inputs.output }}" >> $GITHUB_OUTPUT
+        echo "::debug::Using output path: ${{ inputs.output }}"
 
         # Log level
         if [ -n "${{ inputs.log-level }}" ]; then
