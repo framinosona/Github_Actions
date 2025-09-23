@@ -41,7 +41,7 @@ inputs:
   output-format:
     description: 'Output format - url, markdown, html, svg'
     required: false
-    default: 'url'
+    default: 'svg'
   cache-seconds:
     description: 'HTTP cache lifetime in seconds'
     required: false

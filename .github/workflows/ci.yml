@@ -59,72 +59,50 @@ jobs:
         with:
           major: ${{ env.MAJOR_VERSION }}
           minor: ${{ env.MINOR_VERSION }}
-          output-txt: 'version.txt'
+          output-txt: 'output/version/version.txt'
+          output-json: 'output/version/version.json'
+          output-props: 'output/version/version.props'
           show-summary: 'true'
 
+      - name: '📦 Upload Version Artifacts'
+        uses: actions/upload-artifact@v3
+        with:
+          name: version-files
+          path: output/version
+          retention-days: 2
 
       - name: '🏷️ Generate Version Badge'
         id: badge
         uses: ./generate-badge
         with:
-          label: 'version'
+          label: 'CI'
           message: ${{ steps.version.outputs.VERSION_FULL }}
           logo: 'github'
-          output-file: 'version-badge.svg'
-          output-format: 'svg'
+          output-file: 'output/badge/version-badge.svg'
           show-summary: 'true'
+
+      - name: '📦 Upload Version Badge'
+        uses: actions/upload-artifact@v3
+        with:
+          name: version-badge
+          path: output/badge/version-badge.svg
+          retention-days: 2
 
       - name: '📚 Build Documentation'
         id: docfx
         uses: ./dotnet-docfx-build
         with:
-          metadata: '{"_appTitle":"GitHub Actions Repository","_appFooter":"© 2024 Francois Raminosona","_enableSearch":"true"}'
+          output: 'output/docs/site'
           show-summary: 'true'
 
-      - name: '📁 Prepare Site Assets'
+      - name: '📁 Move badge to site assets'
         shell: bash
         run: |
-          echo "📁 Preparing site assets for GitHub Pages..."
-
-          # Create assets directory in site output
-          mkdir -p ${{ steps.docfx.outputs.output-path }}/assets
-
           # Copy version files to site
-          if [ -f "version.txt" ]; then
-            cp version.txt ${{ steps.docfx.outputs.output-path }}/assets/
-            echo "✅ Copied version.txt to site assets"
-          fi
-
-          # Copy SVG badge to site assets
-          if [ -f "version-badge.svg" ]; then
-            cp version-badge.svg ${{ steps.docfx.outputs.output-path }}/assets/
+          if [ -f "${{ steps.badge.outputs.output-file-path }}" ]; then
+            cp ${{ steps.badge.outputs.output-file-path }} ${{ steps.docfx.outputs.output-path }}/version-badge.svg
             echo "✅ Copied version-badge.svg to site assets"
           fi
-
-          # Copy SVG badge to site assets
-          if [ -f "version-badge.svg" ]; then
-            cp version-badge.svg ${{ steps.docfx.outputs.output-path }}/assets/
-            echo "✅ Copied version-badge.svg to site assets"
-          fi
-
-          # Create version JSON for JavaScript consumption
-          cat > ${{ steps.docfx.outputs.output-path }}/assets/version.json << EOF
-          {
-            "major": "${{ steps.version.outputs.VERSION_MAJOR }}",
-            "minor": "${{ steps.version.outputs.VERSION_MINOR }}",
-            "patch": "${{ steps.version.outputs.VERSION_PATCH }}",
-            "full": "${{ steps.version.outputs.VERSION_FULL }}",
-            "core": "${{ steps.version.outputs.VERSION_CORE }}",
-            "assembly": "${{ steps.version.outputs.VERSION_ASSEMBLY }}",
-            "buildId": "${{ steps.version.outputs.VERSION_BUILDID }}",
-            "branchName": "${{ steps.version.outputs.VERSION_BRANCHNAME }}",
-            "releaseUrl": "${{ steps.release.outputs.release-url || '' }}",
-            "badgeFile": "assets/version-badge.svg"
-          }
-          EOF
-          echo "✅ Created version.json for site"
-
-          echo "✅ Site assets preparation completed"
 
       - name: '📤 Upload GitHub Pages Artifact'
         uses: actions/upload-pages-artifact@v3
