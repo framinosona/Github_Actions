@@ -1,5 +1,5 @@
-name: '🏗️ Build DocFX Documentation'
-description: 'Builds static site contents using DocFX .NET Global Tool'
+name: '📚 Generate DocFX Documentation'
+description: 'Generates documentation using DocFX .NET Global Tool'
 author: 'Francois Raminosona'
 
 inputs:
@@ -95,19 +95,16 @@ inputs:
 outputs:
   output-path:
     description: 'Full path to the generated documentation output directory'
-    value: ${{ steps.generate.outputs.output-path }}
+    value: ${{ steps.build-args.outputs.output-path }}
   config-path:
     description: 'Path to the DocFX configuration file used'
-    value: ${{ steps.generate.outputs.config-path }}
+    value: ${{ steps.build-args.outputs.config-path }}
   files-count:
     description: 'Number of files generated'
     value: ${{ steps.analyze.outputs.files-count }}
   output-size:
     description: 'Total size of the output directory in bytes'
     value: ${{ steps.analyze.outputs.output-size }}
-  execution-time:
-    description: 'Time taken to build documentation in seconds'
-    value: ${{ steps.generate.outputs.execution-time }}
 
 runs:
   using: "composite"
@@ -115,7 +112,7 @@ runs:
     - name: "✅ Validate inputs"
       shell: bash
       run: |
-        echo "🔍 Validating DocFX build inputs..."
+        echo "🔍 Validating DocFX inputs..."
 
         # Validate config file exists if specified and not default
         if [ "${{ inputs.config }}" != "docfx.json" ] && [ ! -f "${{ inputs.config }}" ]; then
@@ -178,136 +175,113 @@ runs:
         tool-name: 'docfx'
         tool-version: ${{ inputs.docfx-version }}
 
-    - name: "🏗️ Build documentation with DocFX"
-      id: generate
+    - name: "🔧 Build arguments"
+      id: build-args
       shell: bash
       run: |
-        echo "🚀 Building documentation with DocFX..."
+        echo "🔧 Building dotnet arguments..."
 
-        # Record start time
-        START_TIME=$(date +%s)
+        # Start with base arguments
+        ARGS="run docfx"
 
-        # Build command arguments array
-        COMMAND_ARGS=("build")
-
-        # Add config file if not default or if default exists
-        if [ "${{ inputs.config }}" != "docfx.json" ] || [ -f "docfx.json" ]; then
-          COMMAND_ARGS+=("${{ inputs.config }}")
-          echo "📋 Using config file: ${{ inputs.config }}"
+        # Config file
+        if [ -n "${{ inputs.config }}" ]; then
+          ARGS="$ARGS '${{ inputs.config }}'"
         fi
+        CONFIG_PATH=$(realpath "${{ inputs.config }}")
+        echo "config-path=$CONFIG_PATH" >> $GITHUB_OUTPUT
 
-        # Add output directory
+        # Output directory
         if [ -n "${{ inputs.output }}" ]; then
-          COMMAND_ARGS+=("--output" "${{ inputs.output }}")
-          echo "📁 Output directory: ${{ inputs.output }}"
+          ARGS="$ARGS --output '${{ inputs.output }}'"
         fi
-
-        # Add log level
-        if [ -n "${{ inputs.log-level }}" ]; then
-          COMMAND_ARGS+=("--logLevel" "${{ inputs.log-level }}")
-          echo "📊 Log level: ${{ inputs.log-level }}"
-        fi
-
-        # Add log file
-        if [ -n "${{ inputs.log-file }}" ]; then
-          COMMAND_ARGS+=("--log" "${{ inputs.log-file }}")
-          echo "📄 Log file: ${{ inputs.log-file }}"
-        fi
-
-        # Add boolean flags
-        [ "${{ inputs.verbose }}" = "true" ] && COMMAND_ARGS+=("--verbose") && echo "🔍 Verbose logging enabled"
-        [ "${{ inputs.warnings-as-errors }}" = "true" ] && COMMAND_ARGS+=("--warningsAsErrors") && echo "⚠️ Treating warnings as errors"
-        [ "${{ inputs.debug }}" = "true" ] && COMMAND_ARGS+=("--debug") && echo "🐛 Debug mode enabled"
-        [ "${{ inputs.export-raw-model }}" = "true" ] && COMMAND_ARGS+=("--exportRawModel") && echo "📤 Exporting raw model"
-        [ "${{ inputs.export-view-model }}" = "true" ] && COMMAND_ARGS+=("--exportViewModel") && echo "📤 Exporting view model"
-        [ "${{ inputs.disable-git-features }}" = "true" ] && COMMAND_ARGS+=("--disableGitFeatures") && echo "🚫 Git features disabled"
-
-        # Add metadata if provided
-        if [ -n "${{ inputs.metadata }}" ]; then
-          echo "🏷️ Using custom metadata"
-          COMMAND_ARGS+=("--metadata" "${{ inputs.metadata }}")
-        fi
-
-        # Add xref URLs
-        if [ -n "${{ inputs.xref }}" ]; then
-          IFS=',' read -ra XREF_URLS <<< "${{ inputs.xref }}"
-          for url in "${XREF_URLS[@]}"; do
-            COMMAND_ARGS+=("--xref" "$url")
-          done
-          echo "🔗 Using xref URLs: ${{ inputs.xref }}"
-        fi
-
-        # Add template
-        if [ -n "${{ inputs.template }}" ]; then
-          COMMAND_ARGS+=("--template" "${{ inputs.template }}")
-          echo "📋 Using template: ${{ inputs.template }}"
-        fi
-
-        # Add theme
-        if [ -n "${{ inputs.theme }}" ] && [ "${{ inputs.theme }}" != "default" ]; then
-          COMMAND_ARGS+=("--theme" "${{ inputs.theme }}")
-          echo "🎨 Using theme: ${{ inputs.theme }}"
-        fi
-
-        # Add debug output folder
-        if [ -n "${{ inputs.debug-output }}" ]; then
-          COMMAND_ARGS+=("--debugOutput" "${{ inputs.debug-output }}")
-          echo "🐛 Debug output folder: ${{ inputs.debug-output }}"
-        fi
-
-        # Add raw model output folder
-        if [ -n "${{ inputs.raw-model-output-folder }}" ]; then
-          COMMAND_ARGS+=("--rawModelOutputFolder" "${{ inputs.raw-model-output-folder }}")
-          echo "📁 Raw model output folder: ${{ inputs.raw-model-output-folder }}"
-        fi
-
-        # Add view model output folder
-        if [ -n "${{ inputs.view-model-output-folder }}" ]; then
-          COMMAND_ARGS+=("--viewModelOutputFolder" "${{ inputs.view-model-output-folder }}")
-          echo "📁 View model output folder: ${{ inputs.view-model-output-folder }}"
-        fi
-
-        # Add max parallelism
-        if [ -n "${{ inputs.max-parallelism }}" ] && [ "${{ inputs.max-parallelism }}" != "0" ]; then
-          COMMAND_ARGS+=("--maxParallelism" "${{ inputs.max-parallelism }}")
-          echo "⚡ Max parallelism: ${{ inputs.max-parallelism }}"
-        fi
-
-        # Add markdown engine properties
-        if [ -n "${{ inputs.markdown-engine-properties }}" ]; then
-          COMMAND_ARGS+=("--markdownEngineProperties" "${{ inputs.markdown-engine-properties }}")
-          echo "🔧 Using custom markdown engine properties"
-        fi
-
-        # Add post processors
-        if [ -n "${{ inputs.post-processors }}" ]; then
-          COMMAND_ARGS+=("--postProcessors" "${{ inputs.post-processors }}")
-          echo "🔄 Post processors order: ${{ inputs.post-processors }}"
-        fi
-
-        # Create full command for logging
-        FULL_COMMAND="docfx ${COMMAND_ARGS[*]}"
-        echo "📋 Executing: $FULL_COMMAND"
-
-        # Execute DocFX Build
-        if docfx "${COMMAND_ARGS[@]}"; then
-          echo "✅ Documentation build completed successfully"
-        else
-          echo "❌ Documentation build failed"
-          exit 1
-        fi
-
-        # Calculate execution time
-        END_TIME=$(date +%s)
-        EXECUTION_TIME=$((END_TIME - START_TIME))
-        echo "execution-time=$EXECUTION_TIME" >> $GITHUB_OUTPUT
-
-        # Set outputs
         OUTPUT_PATH=$(realpath "${{ inputs.output }}")
         echo "output-path=$OUTPUT_PATH" >> $GITHUB_OUTPUT
 
-        CONFIG_PATH=$(realpath "${{ inputs.config }}")
-        echo "config-path=$CONFIG_PATH" >> $GITHUB_OUTPUT
+        # Log level
+        if [ -n "${{ inputs.log-level }}" ]; then
+          ARGS="$ARGS --logLevel '${{ inputs.log-level }}'"
+        fi
+
+        # Log file
+        if [ -n "${{ inputs.log-file }}" ]; then
+          ARGS="$ARGS --log '${{ inputs.log-file }}'"
+        fi
+
+        # Boolean flags
+        [ "${{ inputs.verbose }}" = "true" ] && ARGS="$ARGS --verbose"
+        [ "${{ inputs.warnings-as-errors }}" = "true" ] && ARGS="$ARGS --warningsAsErrors"
+        [ "${{ inputs.debug }}" = "true" ] && ARGS="$ARGS --debug"
+        [ "${{ inputs.export-raw-model }}" = "true" ] && ARGS="$ARGS --exportRawModel"
+        [ -n "${{ inputs.raw-model-output-folder }}" ] && ARGS="$ARGS --rawModelOutputFolder '${{ inputs.raw-model-output-folder }}'"
+        [ "${{ inputs.export-view-model }}" = "true" ] && ARGS="$ARGS --exportViewModel"
+        [ -n "${{ inputs.view-model-output-folder }}" ] && ARGS="$ARGS --viewModelOutputFolder '${{ inputs.view-model-output-folder }}'"
+        [ "${{ inputs.disable-git-features }}" = "true" ] && ARGS="$ARGS --disableGitFeatures"
+
+        # Metadata
+        if [ -n "${{ inputs.metadata }}" ]; then
+          ARGS="$ARGS --metadata '${{ inputs.metadata }}'"
+        fi
+
+        # Xref URLs
+        if [ -n "${{ inputs.xref }}" ]; then
+          IFS=',' read -ra XREF_URLS <<< "${{ inputs.xref }}"
+          for url in "${XREF_URLS[@]}"; do
+            ARGS="$ARGS --xref '$url'"
+          done
+        fi
+
+        # Template
+        if [ -n "${{ inputs.template }}" ]; then
+          ARGS="$ARGS --template '${{ inputs.template }}'"
+        fi
+
+        # Theme
+        if [ -n "${{ inputs.theme }}" ] && [ "${{ inputs.theme }}" != "default" ]; then
+          ARGS="$ARGS --theme '${{ inputs.theme }}'"
+        fi
+
+        # Max parallelism
+        if [ -n "${{ inputs.max-parallelism }}" ] && [ "${{ inputs.max-parallelism }}" != "0" ]; then
+          ARGS="$ARGS --maxParallelism '${{ inputs.max-parallelism }}'"
+        fi
+
+        # Markdown engine properties
+        if [ -n "${{ inputs.markdown-engine-properties }}" ]; then
+          ARGS="$ARGS --markdownEngineProperties '${{ inputs.markdown-engine-properties }}'"
+        fi
+
+        # Post processors
+        if [ -n "${{ inputs.post-processors }}" ]; then
+          ARGS="$ARGS --postProcessors '${{ inputs.post-processors }}'"
+        fi
+
+        # Debug output folder
+        if [ -n "${{ inputs.debug-output }}" ]; then
+          ARGS="$ARGS --debugOutput '${{ inputs.debug-output }}'"
+        fi
+
+        # Raw model output folder
+        if [ -n "${{ inputs.raw-model-output-folder }}" ]; then
+          ARGS="$ARGS --rawModelOutputFolder '${{ inputs.raw-model-output-folder }}'"
+        fi
+
+        # View model output folder
+        if [ -n "${{ inputs.view-model-output-folder }}" ]; then
+          ARGS="$ARGS --viewModelOutputFolder '${{ inputs.view-model-output-folder }}'"
+        fi
+
+        echo "📋 Generated arguments: $ARGS"
+
+        # Output the arguments string
+        echo "arguments=$ARGS" >> $GITHUB_OUTPUT
+
+    - name: "📚 Generate documentation with DocFX"
+      id: generate
+      uses: ./dotnet
+      with:
+        command: "tools"
+        arguments: ${{ steps.build-args.outputs.arguments }}
 
     - name: "📊 Analyze generated documentation"
       id: analyze
@@ -315,7 +289,7 @@ runs:
       run: |
         echo "📊 Analyzing generated documentation..."
 
-        OUTPUT_DIR="${{ steps.generate.outputs.output-path }}"
+        OUTPUT_DIR="${{ steps.build-args.outputs.output-path }}"
 
         if [ -d "$OUTPUT_DIR" ]; then
           # Count files
@@ -357,7 +331,7 @@ runs:
       shell: bash
       run: |
         cat >> $GITHUB_STEP_SUMMARY << 'EOF'
-        <details><summary>Expand for details - 📊 DocFX Build Summary</summary>
+        <details><summary>Expand for details - 📊 DocFX Documentation Generation Summary</summary>
 
         ## 🔧 Input Parameters
         | Parameter | Value |
@@ -368,14 +342,13 @@ runs:
         | 🎨 Theme | `${{ inputs.theme }}` |
         | 📋 Template | `${{ inputs.template || 'default' }}` |
 
-        ## 📤 Build Results
+        ## 📤 Generation Results
         | Metric | Value |
         |--------|-------|
-        | 📁 Output Path | `${{ steps.generate.outputs.output-path }}` |
-        | 📋 Config Path | `${{ steps.generate.outputs.config-path }}` |
+        | 📁 Output Path | `${{ steps.build-args.outputs.output-path }}` |
+        | 📋 Config Path | `${{ steps.build-args.outputs.config-path }}` |
         | 📄 Files Generated | `${{ steps.analyze.outputs.files-count }}` |
         | 📏 Total Size | `${{ steps.analyze.outputs.output-size }} bytes` |
-        | ⏱️ Execution Time | `${{ steps.generate.outputs.execution-time }} seconds` |
 
         ## ⚙️ Configuration Options
         | Option | Status |
@@ -392,12 +365,12 @@ runs:
         |------|--------|
         | ✅ Input Validation | `✅ Completed` |
         | 📦 Tool Installation | `✅ Completed` |
-        | 🏗️ Documentation Build | `${{ steps.generate.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | 📚 Documentation Generation | `${{ steps.generate.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
         | 📊 Output Analysis | `${{ steps.analyze.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
 
         </details>
         EOF
 
 branding:
-  icon: 'folder'
+  icon: 'book-open'
   color: 'blue'

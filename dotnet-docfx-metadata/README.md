@@ -1,83 +1,101 @@
-# 📋 DocFX Metadata Extraction Action
+# 📖 DocFX Generate Metadata Action
 
-Extract YAML metadata files from .NET source code using the DocFX .NET Global Tool.
+Generates YAML metadata files from source code using DocFX .NET Global Tool. This action extracts API documentation metadata from .NET projects and generates structured YAML files that can be used for documentation generation.
 
 ## Features
 
-- 📋 **API Metadata Extraction** - Generate YAML files from .NET source code
-- 🔍 **Flexible Filtering** - Support for custom API filters and configurations
-- 📊 **Multiple Output Formats** - Support for mref, markdown, and apiPage formats
-- 📂 **Layout Customization** - Configurable namespace and member layouts
-- 🔧 **MSBuild Integration** - Support for MSBuild properties and project settings
-- 📈 **Detailed Analytics** - API counts, file metrics, and execution statistics
+- 📋 Generates metadata from .NET source code
+- ⚙️ Supports multiple output formats (mref, markdown, apiPage)
+- 🔧 Configurable namespace and member layouts
+- 📊 Comprehensive logging and error handling
+- 🌐 Git integration support
+- 🔍 Advanced filtering capabilities
+- 📄 MSBuild property integration
 
 ## Usage
 
 ### Basic Usage
 
-Extract metadata using default `docfx.json` configuration:
-
 ```yaml
-- name: Extract API Metadata
-  uses: ./dotnet-docfx-metadata
-  with:
-    config: 'docfx.json'
+steps:
+  - name: Generate API metadata
+    uses: ./dotnet-docfx-metadata
+    with:
+      config: 'docfx.json'
+      output: 'api'
 ```
 
 ### Advanced Usage
 
 ```yaml
-- name: Extract Metadata with Custom Settings
-  uses: ./dotnet-docfx-metadata
-  with:
-    config: 'docs/docfx.json'
-    output: 'api-metadata'
-    output-format: 'markdown'
-    namespace-layout: 'Nested'
-    member-layout: 'SeparatePages'
-    filter: 'api-filter.yml'
-    property: 'Configuration=Release;Platform=AnyCPU'
-    log-level: 'verbose'
+steps:
+  - name: Generate API metadata with custom settings
+    uses: ./dotnet-docfx-metadata
+    with:
+      config: 'docs/docfx.json'
+      output: 'generated/api'
+      output-format: 'markdown'
+      namespace-layout: 'Nested'
+      member-layout: 'SeparatePages'
+      log-level: 'verbose'
+      warnings-as-errors: 'true'
+      disable-default-filter: 'false'
+      property: '{"Configuration":"Release","Platform":"Any CPU"}'
+      docfx-version: '2.70.0'
+      show-summary: 'true'
+```
+
+### With Custom Filter
+
+```yaml
+steps:
+  - name: Generate filtered metadata
+    uses: ./dotnet-docfx-metadata
+    with:
+      config: 'docfx.json'
+      output: 'api'
+      filter: 'filterConfig.yml'
+      global-namespace-id: 'MyProject'
+      use-clr-type-names: 'true'
 ```
 
 ## Inputs
 
-| Input | Description | Default | Example |
-|-------|-------------|---------|---------|
-| `config` | Path to the docfx configuration file | `docfx.json` | `docs/docfx.json` |
-| `output` | Output base directory | `api` | `api-metadata` |
-| `log-level` | Log level (error, warning, info, verbose, diagnostic) | `info` | `verbose` |
-| `log-file` | Save structured JSON log to specified file | `''` | `metadata.log.json` |
-| `verbose` | Enable verbose logging | `false` | `true` |
-| `warnings-as-errors` | Treat warnings as errors | `false` | `true` |
-| `should-skip-markup` | Skip markup of triple slash comments | `false` | `true` |
-| `output-format` | Output type (mref, markdown, apiPage) | `mref` | `markdown` |
-| `filter` | Filter config file path | `''` | `api-filter.yml` |
-| `global-namespace-id` | Name for the global namespace | `''` | `GlobalNamespace` |
-| `property` | MSBuild properties (semicolon-separated) | `''` | `Configuration=Release;Platform=AnyCPU` |
-| `disable-git-features` | Disable Git information fetching | `false` | `true` |
-| `disable-default-filter` | Disable default API filter | `false` | `true` |
-| `no-restore` | Skip dotnet restore | `false` | `true` |
-| `namespace-layout` | Namespace layout (Flattened, Nested) | `Flattened` | `Nested` |
-| `member-layout` | Member layout (SamePage, SeparatePages) | `SamePage` | `SeparatePages` |
-| `use-clr-type-names` | Use CLR type names instead of language aliases | `false` | `true` |
-| `docfx-version` | Specific DocFX version to install | `''` | `2.70.0` |
-| `show-summary` | Show action summary | `true` | `false` |
+| Input | Description | Required | Default |
+|-------|-------------|----------|---------|
+| `config` | Path to the docfx configuration file | false | `docfx.json` |
+| `output` | Specify the output base directory | false | `api` |
+| `log-level` | Set log level (error, warning, info, verbose, diagnostic) | false | `info` |
+| `log-file` | Save log as structured JSON to the specified file | false | `` |
+| `verbose` | Set log level to verbose | false | `false` |
+| `warnings-as-errors` | Treats warnings as errors | false | `false` |
+| `should-skip-markup` | Skip to markup the triple slash comments | false | `false` |
+| `output-format` | Specify the output type (mref, markdown, apiPage) | false | `mref` |
+| `filter` | Specify the filter config file | false | `` |
+| `global-namespace-id` | Specify the name to use for the global namespace | false | `` |
+| `property` | MSBuild properties in JSON format | false | `` |
+| `disable-git-features` | Disable fetching Git related information for articles | false | `false` |
+| `disable-default-filter` | Disable the default API filter | false | `false` |
+| `no-restore` | Do not run dotnet restore before building the projects | false | `false` |
+| `namespace-layout` | Determines the namespace layout (Flattened, Nested) | false | `Flattened` |
+| `member-layout` | Determines the member page layout (SamePage, SeparatePages) | false | `SamePage` |
+| `use-clr-type-names` | Use CLR type names or language aliases | false | `false` |
+| `docfx-version` | Version of DocFX tool to install | false | `` |
+| `show-summary` | Whether to show the action summary | false | `false` |
 
 ## Outputs
 
-| Output | Description | Example |
-|--------|-------------|---------|
-| `output-path` | Full path to generated metadata directory | `/path/to/api-metadata` |
-| `config-path` | Path to DocFX configuration file used | `/path/to/docfx.json` |
-| `yaml-files` | Number of YAML files generated | `25` |
-| `api-count` | Number of API items extracted | `150` |
-| `output-size` | Total output directory size in bytes | `512000` |
-| `execution-time` | Extraction time in seconds | `30` |
+| Output | Description |
+|--------|-------------|
+| `output-path` | Full path to the generated metadata output directory |
+| `config-path` | Path to the DocFX configuration file used |
+| `files-count` | Number of metadata files generated |
+| `output-size` | Total size of the output directory in bytes |
+| `output-format` | Output format used for metadata generation |
 
 ## Examples
 
-### Complete API Documentation Pipeline
+### Basic .NET Library Documentation
 
 ```yaml
 name: Generate API Documentation
@@ -87,264 +105,206 @@ on:
     branches: [ main ]
 
 jobs:
-  api-docs:
+  generate-docs:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: '8.0.x'
+      - name: Generate metadata
+        uses: ./dotnet-docfx-metadata
+        with:
+          config: 'docfx.json'
+          output: 'api'
+          show-summary: 'true'
 
-    - name: Extract API Metadata
-      id: metadata
-      uses: ./dotnet-docfx-metadata
-      with:
-        config: 'docfx.json'
-        output: 'api'
-        output-format: 'mref'
-        namespace-layout: 'Nested'
-        member-layout: 'SeparatePages'
-
-    - name: Build Documentation
-      uses: ./dotnet-docfx-build
-      with:
-        config: 'docfx.json'
-        output: 'docs-site'
-
-    - name: Report Results
-      run: |
-        echo "Extracted ${{ steps.metadata.outputs.api-count }} API items"
-        echo "Generated ${{ steps.metadata.outputs.yaml-files }} YAML files"
+      - name: Upload metadata artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: api-metadata
+          path: api/
 ```
 
-### Filtered API Extraction
+### Multi-Project Solution with Custom Settings
 
 ```yaml
-- name: Extract Public APIs Only
-  uses: ./dotnet-docfx-metadata
-  with:
-    config: 'docfx.json'
-    output: 'public-api'
-    filter: 'public-api-filter.yml'
-    disable-default-filter: 'false'  # Keep default public/protected filter
-    should-skip-markup: 'false'      # Include XML doc comments
+name: Documentation Generation
+
+on:
+  workflow_dispatch:
+    inputs:
+      output-format:
+        description: 'Output format'
+        required: false
+        default: 'mref'
+        type: choice
+        options:
+          - mref
+          - markdown
+          - apiPage
+
+jobs:
+  generate-metadata:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Generate API metadata
+        id: generate
+        uses: ./dotnet-docfx-metadata
+        with:
+          config: 'docs/docfx.json'
+          output: 'generated/api'
+          output-format: ${{ github.event.inputs.output-format || 'mref' }}
+          namespace-layout: 'Nested'
+          member-layout: 'SeparatePages'
+          log-level: 'info'
+          property: '{"Configuration":"Release","TargetFramework":"net8.0"}'
+          warnings-as-errors: 'true'
+          show-summary: 'true'
+
+      - name: Display results
+        run: |
+          echo "Generated ${{ steps.generate.outputs.files-count }} files"
+          echo "Output size: ${{ steps.generate.outputs.output-size }} bytes"
+          echo "Output path: ${{ steps.generate.outputs.output-path }}"
 ```
 
-### Release Build Metadata
+### With Custom Filter Configuration
 
 ```yaml
-- name: Extract Release Metadata
-  uses: ./dotnet-docfx-metadata
-  with:
-    config: 'docfx.json'
-    output: 'release-api'
-    property: 'Configuration=Release;Platform=AnyCPU;DefineConstants=RELEASE'
-    no-restore: 'false'
-    warnings-as-errors: 'true'
-    log-level: 'warning'
-```
-
-### Markdown Output for Wiki
-
-```yaml
-- name: Generate Wiki Documentation
-  uses: ./dotnet-docfx-metadata
-  with:
-    config: 'docfx.json'
-    output: 'wiki-docs'
-    output-format: 'markdown'
-    namespace-layout: 'Flattened'
-    use-clr-type-names: 'false'  # Use language aliases (int vs Int32)
+steps:
+  - name: Generate filtered metadata
+    uses: ./dotnet-docfx-metadata
+    with:
+      config: 'docfx.json'
+      output: 'api'
+      filter: 'docs/filterConfig.yml'
+      global-namespace-id: 'MyCompany.MyProduct'
+      disable-default-filter: 'true'
+      use-clr-type-names: 'false'
+      namespace-layout: 'Flattened'
+      member-layout: 'SamePage'
 ```
 
 ## Requirements
 
-### Prerequisites
+- **.NET SDK**: The action requires .NET SDK to be available for building projects
+- **DocFX Configuration**: A valid `docfx.json` configuration file
+- **Source Code**: .NET projects with XML documentation comments
+- **Git Repository**: For Git-related features (optional)
 
-- .NET SDK (any supported version)
-- .NET projects with XML documentation enabled
-- Valid `docfx.json` configuration file
+## Output Formats
 
-### Dependencies
+### MREF Format (Default)
+- Generates `.yml` and `.yaml` files
+- Standard DocFX metadata format
+- Used by DocFX for further processing
 
-- **DocFX Global Tool** - Automatically installed by the action
+### Markdown Format
+- Generates `.md` files
+- Human-readable documentation
+- Can be used directly or processed further
 
-### Supported Platforms
+### API Page Format
+- Generates `.json` files
+- Structured API information
+- Suitable for custom documentation tools
 
-- ✅ Linux (ubuntu-latest)
-- ✅ macOS (macos-latest)
-- ✅ Windows (windows-latest)
+## Filter Configuration
 
-## Configuration
-
-### DocFX Configuration for Metadata
-
-Your `docfx.json` should include metadata configuration:
-
-```json
-{
-  "metadata": [
-    {
-      "src": [
-        {
-          "files": ["**/*.csproj"],
-          "exclude": ["**/bin/**", "**/obj/**", "Tests/**"]
-        }
-      ],
-      "dest": "api",
-      "properties": {
-        "TargetFramework": "net8.0"
-      },
-      "disableGitFeatures": false,
-      "disableDefaultFilter": false
-    }
-  ]
-}
-```
-
-### API Filter Configuration
-
-Create an `api-filter.yml` file to control which APIs are included:
+You can use a filter configuration file to control which APIs are included:
 
 ```yaml
+# filterConfig.yml
 apiRules:
-- include:
-    uidRegex: ^MyNamespace\.Public
-- exclude:
-    uidRegex: ^MyNamespace\.Internal
-- include:
-    type: Class
-    hasAttribute:
-      uid: System.ComponentModel.PublicAPIAttribute
+  - exclude:
+      uidRegex: ^System\.
+  - include:
+      uidRegex: ^MyCompany\.
 ```
 
-### Project Configuration
+## MSBuild Properties
 
-Enable XML documentation in your `.csproj` files:
+Pass MSBuild properties as JSON to control the build process:
 
-```xml
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
-  </PropertyGroup>
-</Project>
+```yaml
+property: |
+  {
+    "Configuration": "Release",
+    "Platform": "Any CPU",
+    "TargetFramework": "net8.0",
+    "DefineConstants": "RELEASE;DOCS"
+  }
 ```
 
 ## Troubleshooting
 
 ### Common Issues
 
-#### ❌ No Metadata Generated
-
+**Configuration file not found**
 ```
-0 YAML files generated, 0 API items extracted
+❌ Error: DocFX configuration file not found: docfx.json
 ```
+- Ensure the `config` path is correct relative to the repository root
+- Verify the file exists and has the correct name
 
-**Solutions:**
-1. Ensure your projects have XML documentation enabled
-2. Check that project files are correctly referenced in `docfx.json`
-3. Verify your filter configuration isn't too restrictive
-
-#### ❌ Build Errors During Metadata Extraction
-
+**Build failures**
 ```
-Error: Metadata extraction failed
+❌ Error: Failed to build project
 ```
+- Check that all dependencies are restored (`no-restore: 'false'`)
+- Verify MSBuild properties are correctly formatted
+- Ensure the .NET SDK version is compatible
 
-**Solutions:**
-1. Check MSBuild properties:
+**No metadata generated**
+```
+⚠️ No metadata files were generated
+```
+- Check that projects have XML documentation enabled
+- Verify the filter configuration isn't too restrictive
+- Ensure source files contain documented APIs
+
+**Memory issues with large projects**
+- Use `log-level: 'error'` to reduce output
+- Consider filtering to include only necessary APIs
+- Split large solutions into multiple runs
+
+### Debugging Tips
+
+1. **Enable verbose logging**:
    ```yaml
-   property: 'Configuration=Release;Platform=AnyCPU'
-   ```
-
-2. Ensure projects can build:
-   ```yaml
-   no-restore: 'false'  # Allow dotnet restore
-   ```
-
-3. Enable verbose logging:
-   ```yaml
-   log-level: 'verbose'
    verbose: 'true'
+   log-level: 'diagnostic'
    ```
 
-#### ❌ Filter Configuration Issues
-
-**Solutions:**
-1. Validate your filter YAML syntax
-2. Test with default filters first:
+2. **Save logs to file**:
    ```yaml
-   disable-default-filter: 'false'
+   log-file: 'docfx-metadata.log'
    ```
 
-3. Use simpler UID patterns initially
-
-#### ❌ Performance Issues
-
-**Solutions:**
-1. Disable Git features for large repos:
+3. **Check generated files**:
    ```yaml
-   disable-git-features: 'true'
+   show-summary: 'true'
    ```
 
-2. Use targeted project selection in `docfx.json`
+4. **Validate configuration**:
+   ```bash
+   dotnet tool install -g docfx
+   docfx metadata docfx.json --dry-run
+   ```
 
-### Debug Mode
+## Related Actions
 
-Enable comprehensive debugging:
-
-```yaml
-- name: Debug Metadata Extraction
-  uses: ./dotnet-docfx-metadata
-  with:
-    config: 'docfx.json'
-    log-level: 'diagnostic'
-    log-file: 'metadata-debug.log.json'
-    verbose: 'true'
-    disable-default-filter: 'true'  # See all APIs
-```
-
-### Validation
-
-Validate extraction before building:
-
-```yaml
-- name: Validate Metadata Extraction
-  id: validate
-  uses: ./dotnet-docfx-metadata
-  with:
-    config: 'docfx.json'
-    output: 'temp-api'
-    log-level: 'verbose'
-
-- name: Check Results
-  run: |
-    if [ "${{ steps.validate.outputs.api-count }}" -eq "0" ]; then
-      echo "Warning: No APIs extracted!"
-      exit 1
-    fi
-```
-
-## Contributing
-
-When contributing to this action:
-
-1. Follow the [Actions Guidelines](../.github/copilot-instructions.md)
-2. Test with various .NET project structures
-3. Ensure cross-platform compatibility
-4. Update documentation for new features
+- **dotnet-docfx-build**: Build complete documentation sites
+- **dotnet-docfx-pdf**: Generate PDF documentation
+- **dotnet-tool-install**: Install .NET tools
+- **dotnet**: Execute .NET CLI commands
 
 ## License
 
-This action is distributed under the same license as the repository.
-
-## Support
-
-For issues related to:
-- **DocFX metadata functionality:** Check [DocFX Metadata Documentation](https://dotnet.github.io/docfx/reference/docfx-cli-reference/docfx-metadata.html)
-- **Action bugs:** Create an issue in this repository
-- **GitHub Actions:** Check [GitHub Actions Documentation](https://docs.github.com/en/actions)
+This action is part of the GitHub Actions collection by Francois Raminosona.
