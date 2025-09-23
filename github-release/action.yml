@@ -172,15 +172,8 @@ runs:
       run: |
         echo "🔧 Setting up GitHub CLI..."
 
-        # Check if gh is available
-        if ! command -v gh >/dev/null 2>&1; then
-          echo "❌ Error: GitHub CLI (gh) is not installed"
-          echo "💡 Make sure to use a runner that has GitHub CLI pre-installed"
-          exit 1
-        fi
-
         # Authenticate with GitHub CLI
-        echo "${{ inputs.github-token }}" | gh auth login --with-token
+        gh auth login --with-token <<< "${{ inputs.github-token }}"
 
         # Verify authentication
         if gh auth status >/dev/null 2>&1; then
