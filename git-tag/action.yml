@@ -1,0 +1,338 @@
+name: '🏷️ Create Git Tag'
+description: 'Creates and pushes Git tags with validation and configuration'
+author: 'Francois Raminosona'
+
+inputs:
+  tag:
+    description: 'Tag name to create'
+    required: true
+  message:
+    description: 'Tag message (for annotated tags)'
+    required: false
+    default: ''
+  prefix:
+    description: 'Prefix to add to the tag name'
+    required: false
+    default: ''
+  annotated:
+    description: 'Create an annotated tag instead of lightweight tag'
+    required: false
+    default: 'true'
+  push:
+    description: 'Push the tag to remote repository'
+    required: false
+    default: 'true'
+  force:
+    description: 'Force create/update tag if it already exists'
+    required: false
+    default: 'false'
+  fail-if-exists:
+    description: 'Fail if tag already exists (ignored if force is true)'
+    required: false
+    default: 'true'
+  git-user-name:
+    description: 'Git user name for commits'
+    required: false
+    default: ${{ github.actor }}
+  git-user-email:
+    description: 'Git user email for commits'
+    required: false
+    default: ${{ github.actor }}@users.noreply.github.com
+  target:
+    description: 'Target commit/branch/SHA for the tag (defaults to current HEAD)'
+    required: false
+    default: ''
+  github-token:
+    description: 'GitHub token for authentication'
+    required: false
+    default: ${{ github.token }}
+  show-summary:
+    description: 'Whether to show the action summary'
+    required: false
+    default: 'false'
+
+outputs:
+  tag-name:
+    description: 'Full name of the created tag (including prefix)'
+    value: ${{ steps.create.outputs.tag-name }}
+  tag-exists:
+    description: 'Whether the tag already existed before creation'
+    value: ${{ steps.create.outputs.tag-exists }}
+  tag-sha:
+    description: 'SHA of the commit the tag points to'
+    value: ${{ steps.create.outputs.tag-sha }}
+  tag-created:
+    description: 'Whether a new tag was created'
+    value: ${{ steps.create.outputs.tag-created }}
+  tag-pushed:
+    description: 'Whether the tag was pushed to remote'
+    value: ${{ steps.create.outputs.tag-pushed }}
+  tag-url:
+    description: 'URL to the tag on GitHub'
+    value: ${{ steps.create.outputs.tag-url }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: "✅ Validate inputs"
+      shell: bash
+      run: |
+        echo "🔍 Validating Git tag inputs..."
+
+        # Validate tag name is provided and not empty
+        if [ -z "${{ inputs.tag }}" ]; then
+          echo "❌ Error: Tag name cannot be empty"
+          exit 1
+        fi
+
+        # Validate tag name format (basic Git tag validation)
+        if [[ "${{ inputs.tag }}" =~ [[:space:]] ]]; then
+          echo "❌ Error: Tag name cannot contain spaces"
+          exit 1
+        fi
+
+        if [[ "${{ inputs.tag }}" =~ \.\.|\.\. ]]; then
+          echo "❌ Error: Tag name cannot contain '..' sequences"
+          exit 1
+        fi
+
+        if [[ "${{ inputs.tag }}" == *"/"* ]] && [[ "${{ inputs.tag }}" == "/"* || "${{ inputs.tag }}" == *"/" ]]; then
+          echo "❌ Error: Tag name cannot start or end with '/'"
+          exit 1
+        fi
+
+        # Validate boolean inputs
+        for param in annotated push force fail-if-exists; do
+          case $param in
+            annotated) value="${{ inputs.annotated }}" ;;
+            push) value="${{ inputs.push }}" ;;
+            force) value="${{ inputs.force }}" ;;
+            fail-if-exists) value="${{ inputs.fail-if-exists }}" ;;
+          esac
+          if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
+            echo "❌ Error: Parameter $param must be 'true' or 'false', got: $value"
+            exit 1
+          fi
+        done
+
+        # Validate email format
+        if ! [[ "${{ inputs.git-user-email }}" =~ ^[^@]+@[^@]+$ ]]; then
+          echo "❌ Error: Invalid email format: ${{ inputs.git-user-email }}"
+          exit 1
+        fi
+
+        # Validate target if provided
+        if [ -n "${{ inputs.target }}" ]; then
+          echo "🎯 Target specified: ${{ inputs.target }}"
+        fi
+
+        echo "✅ Input validation passed"
+
+    - name: "🔧 Configure Git"
+      shell: bash
+      run: |
+        echo "🔧 Configuring Git user settings..."
+
+        git config --local user.name "${{ inputs.git-user-name }}"
+        git config --local user.email "${{ inputs.git-user-email }}"
+
+        echo "👤 Git user: ${{ inputs.git-user-name }} <${{ inputs.git-user-email }}>"
+        echo "✅ Git configuration completed"
+
+    - name: "🏷️ Create and push Git tag"
+      id: create
+      shell: bash
+      run: |
+        echo "🏷️ Creating Git tag..."
+
+        # Build full tag name with prefix
+        TAG_NAME="${{ inputs.prefix }}${{ inputs.tag }}"
+        echo "🏷️ Full tag name: $TAG_NAME"
+        echo "tag-name=$TAG_NAME" >> $GITHUB_OUTPUT
+
+        # Set default values for outputs
+        echo "tag-exists=false" >> $GITHUB_OUTPUT
+        echo "tag-created=false" >> $GITHUB_OUTPUT
+        echo "tag-pushed=false" >> $GITHUB_OUTPUT
+
+        # Check if tag already exists
+        if git tag -l "$TAG_NAME" | grep -q "^$TAG_NAME$"; then
+          echo "⚠️ Tag $TAG_NAME already exists"
+          echo "tag-exists=true" >> $GITHUB_OUTPUT
+
+          if [ "${{ inputs.force }}" = "true" ]; then
+            echo "🔄 Force mode enabled - will update existing tag"
+          elif [ "${{ inputs.fail-if-exists }}" = "true" ]; then
+            echo "❌ Error: Tag $TAG_NAME already exists and fail-if-exists is true"
+            exit 1
+          else
+            echo "⏭️ Tag exists but continuing without error"
+            # Get existing tag information
+            TAG_SHA=$(git rev-list -n 1 "$TAG_NAME")
+            echo "tag-sha=$TAG_SHA" >> $GITHUB_OUTPUT
+            echo "tag-url=https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+        fi
+
+        # Determine target for the tag
+        if [ -n "${{ inputs.target }}" ]; then
+          TARGET="${{ inputs.target }}"
+          echo "🎯 Using specified target: $TARGET"
+        else
+          TARGET="HEAD"
+          echo "🎯 Using HEAD as target"
+        fi
+
+        # Get the SHA of the target
+        TAG_SHA=$(git rev-parse "$TARGET")
+        echo "📍 Target SHA: $TAG_SHA"
+        echo "tag-sha=$TAG_SHA" >> $GITHUB_OUTPUT
+
+        # Create the tag
+        if [ "${{ inputs.annotated }}" = "true" ]; then
+          # Create annotated tag
+          if [ -n "${{ inputs.message }}" ]; then
+            TAG_MESSAGE="${{ inputs.message }}"
+          else
+            TAG_MESSAGE="Tag $TAG_NAME"
+          fi
+
+          echo "📝 Creating annotated tag with message: $TAG_MESSAGE"
+
+          if [ "${{ inputs.force }}" = "true" ]; then
+            git tag -f -a "$TAG_NAME" -m "$TAG_MESSAGE" "$TARGET"
+          else
+            git tag -a "$TAG_NAME" -m "$TAG_MESSAGE" "$TARGET"
+          fi
+        else
+          # Create lightweight tag
+          echo "🏷️ Creating lightweight tag"
+
+          if [ "${{ inputs.force }}" = "true" ]; then
+            git tag -f "$TAG_NAME" "$TARGET"
+          else
+            git tag "$TAG_NAME" "$TARGET"
+          fi
+        fi
+
+        echo "✅ Tag $TAG_NAME created successfully"
+        echo "tag-created=true" >> $GITHUB_OUTPUT
+
+        # Push the tag if requested
+        if [ "${{ inputs.push }}" = "true" ]; then
+          echo "🚀 Pushing tag to remote repository..."
+
+          # Configure authentication if token is provided
+          if [ -n "${{ inputs.github-token }}" ]; then
+            git remote set-url origin "https://x-access-token:${{ inputs.github-token }}@github.com/${{ github.repository }}.git"
+          fi
+
+          if [ "${{ inputs.force }}" = "true" ]; then
+            git push --force origin "$TAG_NAME"
+          else
+            git push origin "$TAG_NAME"
+          fi
+
+          echo "✅ Tag $TAG_NAME pushed to remote"
+          echo "tag-pushed=true" >> $GITHUB_OUTPUT
+        else
+          echo "⏭️ Skipping push (push disabled)"
+        fi
+
+        # Set GitHub URL for the tag
+        echo "tag-url=https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME" >> $GITHUB_OUTPUT
+
+        echo "🎉 Git tag operation completed successfully"
+
+    - name: "🔍 Verify tag creation"
+      id: verify
+      shell: bash
+      run: |
+        echo "🔍 Verifying tag creation..."
+
+        TAG_NAME="${{ steps.create.outputs.tag-name }}"
+
+        # Verify tag exists locally
+        if git tag -l "$TAG_NAME" | grep -q "^$TAG_NAME$"; then
+          echo "✅ Tag $TAG_NAME exists locally"
+
+          # Get tag information
+          if git cat-file -t "$TAG_NAME" | grep -q "tag"; then
+            echo "📝 Annotated tag detected"
+            echo "📄 Tag details:"
+            git cat-file -p "$TAG_NAME" | head -10 | sed 's/^/  /'
+          else
+            echo "🏷️ Lightweight tag detected"
+            TAG_COMMIT=$(git rev-list -n 1 "$TAG_NAME")
+            echo "📍 Points to commit: $TAG_COMMIT"
+          fi
+        else
+          echo "❌ Error: Tag $TAG_NAME not found locally"
+          exit 1
+        fi
+
+        # Verify remote push if it was requested
+        if [ "${{ inputs.push }}" = "true" ] && [ "${{ steps.create.outputs.tag-pushed }}" = "true" ]; then
+          echo "🔍 Verifying remote tag..."
+
+          # Try to fetch the tag from remote to verify it exists
+          if git ls-remote --tags origin | grep -q "refs/tags/$TAG_NAME$"; then
+            echo "✅ Tag $TAG_NAME verified on remote"
+          else
+            echo "⚠️ Warning: Tag may not be fully propagated to remote yet"
+          fi
+        fi
+
+        echo "✅ Tag verification completed"
+
+    - name: "📊 Action Summary"
+      if: ${{ inputs.show-summary == 'true' }}
+      shell: bash
+      run: |
+        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+        <details><summary>Expand for details - 📊 Git Tag Creation Summary</summary>
+
+        ## 🔧 Input Parameters
+        | Parameter | Value |
+        |-----------|-------|
+        | 🏷️ Tag Name | `${{ inputs.tag }}` |
+        | 🏷️ Full Tag | `${{ steps.create.outputs.tag-name }}` |
+        | 📝 Message | `${{ inputs.message || 'auto-generated' }}` |
+        | 📎 Prefix | `${{ inputs.prefix || 'none' }}` |
+        | 📝 Annotated | `${{ inputs.annotated }}` |
+        | 🚀 Push | `${{ inputs.push }}` |
+        | 🔄 Force | `${{ inputs.force }}` |
+        | 🎯 Target | `${{ inputs.target || 'HEAD' }}` |
+
+        ## 📤 Tag Results
+        | Metric | Value |
+        |--------|-------|
+        | 🏷️ Tag Name | `${{ steps.create.outputs.tag-name }}` |
+        | 📍 Tag SHA | `${{ steps.create.outputs.tag-sha }}` |
+        | 🔗 Tag URL | `${{ steps.create.outputs.tag-url }}` |
+        | ⚠️ Already Existed | `${{ steps.create.outputs.tag-exists }}` |
+        | ✅ Created | `${{ steps.create.outputs.tag-created }}` |
+        | 🚀 Pushed | `${{ steps.create.outputs.tag-pushed }}` |
+
+        ## ⚙️ Configuration
+        | Setting | Value |
+        |---------|-------|
+        | 👤 Git User | `${{ inputs.git-user-name }}` |
+        | 📧 Git Email | `${{ inputs.git-user-email }}` |
+        | 🛡️ Fail if Exists | `${{ inputs.fail-if-exists }}` |
+
+        ## 🔧 Process Details
+        | Step | Status |
+        |------|--------|
+        | ✅ Input Validation | `✅ Completed` |
+        | 🔧 Git Configuration | `✅ Completed` |
+        | 🏷️ Tag Creation | `${{ steps.create.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | 🔍 Tag Verification | `${{ steps.verify.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+
+        </details>
+        EOF
+
+branding:
+  icon: 'tag'
+  color: 'blue'
