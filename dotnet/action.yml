@@ -69,31 +69,28 @@ runs:
     - name: "✅ Validate inputs"
       shell: bash
       run: |
-        if [ "$ACTIONS_STEP_DEBUG" = "true" ] || [ "$ACTIONS_RUNNER_DEBUG" = "true" ]; then
-          echo "🐛 Debug: Environment info:"
-          echo "  Working directory: $(pwd)"
-          echo "  .NET version: $(dotnet --version 2>/dev/null || echo 'Not found')"
-          echo "  Available runtimes: $(dotnet --list-runtimes 2>/dev/null || echo 'None')"
-          show_command_support
-        fi
+        echo "::group::🔍 Input Validation"
+        echo "::debug::Environment info - Working directory: $(pwd)"
+        echo "::debug::Environment info - .NET version: $(dotnet --version 2>/dev/null || echo 'Not found')"
+        echo "::debug::Environment info - Available runtimes: $(dotnet --list-runtimes 2>/dev/null || echo 'None')"
 
         echo "🔍 Validating inputs..."
 
         # Validate command is not empty
         if [ -z "${{ inputs.command }}" ]; then
-          echo "❌ Error: Command cannot be empty"
+          echo "::error::Command cannot be empty"
           exit 1
         fi
 
         # Validate path exists if provided
         if [ -n "${{ inputs.path }}" ] && [ ! -e "${{ inputs.path }}" ]; then
-          echo "❌ Error: Specified path does not exist: ${{ inputs.path }}"
+          echo "::error file=${{ inputs.path }}::Specified path does not exist: ${{ inputs.path }}"
           exit 1
         fi
 
         # Validate working directory exists
         if [ ! -d "${{ inputs.working-directory }}" ]; then
-          echo "❌ Error: Working directory does not exist: ${{ inputs.working-directory }}"
+          echo "::error::Working directory does not exist: ${{ inputs.working-directory }}"
           exit 1
         fi
 
@@ -101,7 +98,7 @@ runs:
         if [ -n "${{ inputs.force-verbosity }}" ]; then
           case "${{ inputs.force-verbosity }}" in
             quiet|minimal|normal|detailed|diagnostic) ;;
-            *) echo "❌ Error: Invalid verbosity level: ${{ inputs.force-verbosity }}. Must be one of: quiet, minimal, normal, detailed, diagnostic"; exit 1 ;;
+            *) echo "::error::Invalid verbosity level: ${{ inputs.force-verbosity }}. Must be one of: quiet, minimal, normal, detailed, diagnostic"; exit 1 ;;
           esac
         fi
 
@@ -113,7 +110,7 @@ runs:
             no-build) value="${{ inputs.no-build }}" ;;
           esac
           if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
-            echo "❌ Error: Parameter $param must be 'true' or 'false', got: $value"
+            echo "::error::Parameter $param must be 'true' or 'false', got: $value"
             exit 1
           fi
         done
@@ -122,32 +119,34 @@ runs:
         if [ -n "${{ inputs.configuration }}" ]; then
           case "${{ inputs.configuration }}" in
             Debug|Release|MinSizeRel|RelWithDebInfo) ;;
-            *) echo "⚠️ Warning: Unusual configuration value: ${{ inputs.configuration }}" ;;
+            *) echo "::warning::Unusual configuration value: ${{ inputs.configuration }}" ;;
           esac
         fi
 
         # Validate framework format if provided (basic check)
         if [ -n "${{ inputs.framework }}" ]; then
           if ! [[ "${{ inputs.framework }}" =~ ^(net[0-9]+\.[0-9]+|netstandard[0-9]+\.[0-9]+|netcoreapp[0-9]+\.[0-9]+|netframework[0-9]+\.[0-9]+)$ ]]; then
-            echo "⚠️ Warning: Framework format may be invalid: ${{ inputs.framework }}"
+            echo "::warning::Framework format may be invalid: ${{ inputs.framework }}"
           fi
         fi
 
         # Validate runtime format if provided (basic check)
         if [ -n "${{ inputs.runtime }}" ]; then
           if ! [[ "${{ inputs.runtime }}" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
-            echo "⚠️ Warning: Runtime identifier format may be invalid: ${{ inputs.runtime }}"
+            echo "::warning::Runtime identifier format may be invalid: ${{ inputs.runtime }}"
           fi
         fi
 
-        echo "✅ Input validation passed"
+        echo "::notice::Input validation completed successfully"
+        echo "::endgroup::"
 
     - name: "🚀 Run dotnet command with auto-verbosity"
       id: run-command
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       run: |
-        echo "🚀 Preparing to execute dotnet command..."
+        echo "::group::🚀 Preparing dotnet command execution"
+        echo "::debug::Preparing to execute dotnet command: ${{ inputs.command }}"
 
         # Define command support maps (cached for performance)
         declare -A COMMAND_SUPPORT=(
@@ -180,84 +179,84 @@ runs:
         # Check if command supports verbosity
         if supports_option "verbosity"; then
           VERBOSITY_ARG="--verbosity $VERBOSITY"
-          echo "🔧 Command '${{ inputs.command }}' supports verbosity - using: $VERBOSITY"
+          echo "::debug::Command '${{ inputs.command }}' supports verbosity - using: $VERBOSITY"
         else
           VERBOSITY_ARG=""
-          echo "ℹ️ Command '${{ inputs.command }}' does not support verbosity"
+          echo "::debug::Command '${{ inputs.command }}' does not support verbosity"
         fi
 
         # Check if command supports configuration
         if supports_option "configuration"; then
           CONFIGURATION_ARG="--configuration ${{ inputs.configuration }}"
-          echo "🔧 Command '${{ inputs.command }}' supports configuration - using: ${{ inputs.configuration }}"
+          echo "::debug::Command '${{ inputs.command }}' supports configuration - using: ${{ inputs.configuration }}"
         else
           CONFIGURATION_ARG=""
-          echo "ℹ️ Command '${{ inputs.command }}' does not support configuration"
+          echo "::debug::Command '${{ inputs.command }}' does not support configuration"
         fi
 
         # Check if command supports --no-logo
         if supports_option "no-logo" && [ "${{ inputs.no-logo }}" = "true" ]; then
           NO_LOGO_ARG="--nologo"
-          echo "🔧 Command '${{ inputs.command }}' supports no-logo - suppressing startup information"
+          echo "::debug::Command '${{ inputs.command }}' supports no-logo - suppressing startup information"
         else
           NO_LOGO_ARG=""
           if [ "${{ inputs.no-logo }}" = "true" ]; then
-            echo "ℹ️ Command '${{ inputs.command }}' does not support --nologo"
+            echo "::debug::Command '${{ inputs.command }}' does not support --nologo"
           fi
         fi
 
         # Check if command supports --framework
         if supports_option "framework" && [ -n "${{ inputs.framework }}" ]; then
           FRAMEWORK_ARG="--framework ${{ inputs.framework }}"
-          echo "🔧 Command '${{ inputs.command }}' supports framework - using: ${{ inputs.framework }}"
+          echo "::debug::Command '${{ inputs.command }}' supports framework - using: ${{ inputs.framework }}"
         else
           FRAMEWORK_ARG=""
           if [ -n "${{ inputs.framework }}" ]; then
-            echo "ℹ️ Command '${{ inputs.command }}' does not support --framework"
+            echo "::debug::Command '${{ inputs.command }}' does not support --framework"
           fi
         fi
 
         # Check if command supports --runtime
         if supports_option "runtime" && [ -n "${{ inputs.runtime }}" ]; then
           RUNTIME_ARG="--runtime ${{ inputs.runtime }}"
-          echo "🔧 Command '${{ inputs.command }}' supports runtime - using: ${{ inputs.runtime }}"
+          echo "::debug::Command '${{ inputs.command }}' supports runtime - using: ${{ inputs.runtime }}"
         else
           RUNTIME_ARG=""
           if [ -n "${{ inputs.runtime }}" ]; then
-            echo "ℹ️ Command '${{ inputs.command }}' does not support --runtime"
+            echo "::debug::Command '${{ inputs.command }}' does not support --runtime"
           fi
         fi
 
         # Check if command supports --no-restore
         if supports_option "no-restore" && [ "${{ inputs.no-restore }}" = "true" ]; then
           NO_RESTORE_ARG="--no-restore"
-          echo "🔧 Command '${{ inputs.command }}' supports no-restore - skipping automatic restore"
+          echo "::debug::Command '${{ inputs.command }}' supports no-restore - skipping automatic restore"
         else
           NO_RESTORE_ARG=""
           if [ "${{ inputs.no-restore }}" = "true" ]; then
-            echo "ℹ️ Command '${{ inputs.command }}' does not support --no-restore"
+            echo "::debug::Command '${{ inputs.command }}' does not support --no-restore"
           fi
         fi
 
         # Check if command supports --output
         if supports_option "output" && [ -n "${{ inputs.output }}" ]; then
           OUTPUT_ARG="--output ${{ inputs.output }}"
-          echo "🔧 Command '${{ inputs.command }}' supports output - using: ${{ inputs.output }}"
+          echo "::debug::Command '${{ inputs.command }}' supports output - using: ${{ inputs.output }}"
         else
           OUTPUT_ARG=""
           if [ -n "${{ inputs.output }}" ]; then
-            echo "ℹ️ Command '${{ inputs.command }}' does not support --output"
+            echo "::debug::Command '${{ inputs.command }}' does not support --output"
           fi
         fi
 
         # Check if command supports --no-build
         if supports_option "no-build" && [ "${{ inputs.no-build }}" = "true" ]; then
           NO_BUILD_ARG="--no-build"
-          echo "🔧 Command '${{ inputs.command }}' supports no-build - skipping build step"
+          echo "::debug::Command '${{ inputs.command }}' supports no-build - skipping build step"
         else
           NO_BUILD_ARG=""
           if [ "${{ inputs.no-build }}" = "true" ]; then
-            echo "ℹ️ Command '${{ inputs.command }}' does not support --no-build"
+            echo "::debug::Command '${{ inputs.command }}' does not support --no-build"
           fi
         fi
 
@@ -267,42 +266,42 @@ runs:
         # Add path if provided
         if [ -n "${{ inputs.path }}" ]; then
           COMMAND_PARTS+=("${{ inputs.path }}")
-          echo "🔧 Using path: ${{ inputs.path }}"
+          echo "::debug::Using path: ${{ inputs.path }}"
         fi
 
         # Add user arguments if provided (handle both string and array inputs)
         if [ -n "${{ inputs.arguments }}" ]; then
-          echo "🔧 Adding user arguments..."
-          echo "🔍 Raw input received (length: ${#arguments}): ${{ inputs.arguments }}"
+          echo "::debug::Adding user arguments"
+          echo "::debug::Raw input received (length: ${#arguments}): ${{ inputs.arguments }}"
 
           # Let's debug what we actually receive
           arguments='${{ inputs.arguments }}'
-          echo "🔍 Variable assignment result: $arguments"
-          echo "🔍 Variable length: ${#arguments}"
+          echo "::debug::Variable assignment result: $arguments"
+          echo "::debug::Variable length: ${#arguments}"
 
           # Show raw bytes to see what's happening to backslashes
-          echo "🔍 Raw bytes (via xxd):"
+          echo "::debug::Raw bytes (via xxd):"
           echo "$arguments" | xxd | head -5
 
           # Check if arguments look like a YAML array (starts with "- " or is on multiple lines)
           if [[ "$arguments" =~ ^[[:space:]]*- ]] || [[ "$arguments" =~ $'\n' ]]; then
-            echo "🔧 Detected YAML array format - processing as separate arguments"
+            echo "::debug::Detected YAML array format - processing as separate arguments"
 
             # Process each line, being very careful about backslashes
             while IFS= read -r line; do
-              echo "🔍 Processing line: '$line'"
+              echo "::debug::Processing line: '$line'"
               # Remove leading "- " and whitespace, preserve everything else exactly
               if [[ "$line" =~ ^[[:space:]]*-[[:space:]]*(.*) ]]; then
                 clean_arg="${BASH_REMATCH[1]}"
-                echo "🔍 Extracted argument: '$clean_arg'"
+                echo "::debug::Extracted argument: '$clean_arg'"
                 if [ -n "$clean_arg" ]; then
                   COMMAND_PARTS+=("$clean_arg")
-                  echo "🔧   Added array argument: $clean_arg"
+                  echo "::debug::Added array argument: $clean_arg"
                 fi
               fi
             done <<< "$arguments"
           else
-            echo "🔧 Processing as single string with simple space splitting"
+            echo "::debug::Processing as single string with simple space splitting"
 
             # Simple approach: just add the entire arguments string as-is
             # and let the shell handle it naturally
@@ -312,7 +311,7 @@ runs:
             IFS=' ' read -ra ARGS <<< "$ARGUMENTS_STRING"
             for arg in "${ARGS[@]}"; do
               COMMAND_PARTS+=("$arg")
-              echo "🔧   Added string argument: $arg"
+              echo "::debug::Added string argument: $arg"
             done
           fi
         fi
@@ -329,24 +328,27 @@ runs:
 
         # Create readable command string for output
         FULL_COMMAND="${COMMAND_PARTS[*]}"
-        echo "📋 Final command: $FULL_COMMAND"
+        echo "::debug::Final command: $FULL_COMMAND"
 
         # Log command in debug mode
-        if [ "$ACTIONS_STEP_DEBUG" = "true" ] || [ "$ACTIONS_RUNNER_DEBUG" = "true" ]; then
-          echo "🐛 Debug: Command parts array:"
-          printf '  [%d]: %s\n' "${!COMMAND_PARTS[@]}" "${COMMAND_PARTS[@]}"
-        fi
+        echo "::debug::Command parts array: ${COMMAND_PARTS[*]}"
+        for i in "${!COMMAND_PARTS[@]}"; do
+          echo "::debug::  [$i]: ${COMMAND_PARTS[$i]}"
+        done
+        echo "::endgroup::"
 
         # Execute the command using the array for better argument handling
-        echo "⚡ Executing command..."
+        echo "::group::⚡ Executing dotnet command"
+        echo "::notice::Executing: $FULL_COMMAND"
         "${COMMAND_PARTS[@]}"
         EXIT_CODE=$?
+        echo "::endgroup::"
 
         # Enhanced status reporting
         if [ $EXIT_CODE -eq 0 ]; then
-          echo "✅ Command completed successfully"
+          echo "::notice::Command completed successfully with exit code 0"
         else
-          echo "❌ Command failed with exit code $EXIT_CODE"
+          echo "::error::Command failed with exit code $EXIT_CODE"
         fi
 
         # Set outputs

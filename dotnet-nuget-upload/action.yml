@@ -71,24 +71,33 @@ runs:
     - name: "✅ Validate inputs"
       shell: bash
       run: |
-        echo "🔍 Validating inputs..."
+        echo "::group::🔍 NuGet Package Upload Validation"
+        echo "::debug::Validating inputs for NuGet package upload"
+
+        # Mask sensitive data
+        if [ -n "${{ inputs.api-key }}" ]; then
+          echo "::add-mask::${{ inputs.api-key }}"
+        fi
+        if [ -n "${{ inputs.symbol-api-key }}" ]; then
+          echo "::add-mask::${{ inputs.symbol-api-key }}"
+        fi
 
         # Validate package path is not empty
         if [ -z "${{ inputs.package-path }}" ]; then
-          echo "❌ Error: Package path cannot be empty"
+          echo "::error::Package path cannot be empty"
           exit 1
         fi
 
         # Validate package file exists
         if [ ! -f "${{ inputs.package-path }}" ]; then
-          echo "❌ Error: Package file not found: ${{ inputs.package-path }}"
+          echo "::error file=${{ inputs.package-path }}::Package file not found: ${{ inputs.package-path }}"
           exit 1
         fi
 
         # Validate package file extension
         case "${{ inputs.package-path }}" in
           *.nupkg|*.snupkg) ;;
-          *) echo "❌ Error: Package file must have .nupkg or .snupkg extension: ${{ inputs.package-path }}"; exit 1 ;;
+          *) echo "::error file=${{ inputs.package-path }}::Package file must have .nupkg or .snupkg extension: ${{ inputs.package-path }}"; exit 1 ;;
         esac
 
         # Validate working directory exists
@@ -131,7 +140,8 @@ runs:
           esac
         fi
 
-        echo "✅ Input validation passed"
+        echo "::notice::Input validation completed successfully"
+        echo "::endgroup::"
 
     - name: "📋 Extract package information"
       id: extract-info

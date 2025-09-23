@@ -77,29 +77,44 @@ runs:
     - name: "✅ Validate inputs"
       shell: bash
       run: |
-        echo "🔍 Validating Apple certificate inputs..."
+        echo "::group::🔍 Apple Certificate Validation"
+        echo "::debug::Validating inputs for Apple certificate installation"
+
+        # Mask all sensitive data immediately
+        if [ -n "${{ inputs.certificate-password }}" ]; then
+          echo "::add-mask::${{ inputs.certificate-password }}"
+        fi
+        if [ -n "${{ inputs.keychain-password }}" ]; then
+          echo "::add-mask::${{ inputs.keychain-password }}"
+        fi
+        if [ -n "${{ inputs.certificate-data }}" ]; then
+          echo "::add-mask::${{ inputs.certificate-data }}"
+        fi
+        if [ -n "${{ inputs.provisioning-profile-data }}" ]; then
+          echo "::add-mask::${{ inputs.provisioning-profile-data }}"
+        fi
 
         # Check that we're running on macOS
         if [[ "$RUNNER_OS" != "macOS" ]]; then
-          echo "❌ Error: This action only works on macOS runners"
+          echo "::error::This action only works on macOS runners"
           exit 1
         fi
 
         # Validate that either certificate-data or certificate-path is provided
         if [ -z "${{ inputs.certificate-data }}" ] && [ -z "${{ inputs.certificate-path }}" ]; then
-          echo "❌ Error: Either certificate-data or certificate-path must be provided"
+          echo "::error::Either certificate-data or certificate-path must be provided"
           exit 1
         fi
 
         # Validate that both certificate inputs are not provided
         if [ -n "${{ inputs.certificate-data }}" ] && [ -n "${{ inputs.certificate-path }}" ]; then
-          echo "❌ Error: Only one of certificate-data or certificate-path should be provided"
+          echo "::error::Only one of certificate-data or certificate-path should be provided"
           exit 1
         fi
 
         # Validate certificate file exists if path is provided
         if [ -n "${{ inputs.certificate-path }}" ] && [ ! -f "${{ inputs.certificate-path }}" ]; then
-          echo "❌ Error: Certificate file not found: ${{ inputs.certificate-path }}"
+          echo "::error file=${{ inputs.certificate-path }}::Certificate file not found: ${{ inputs.certificate-path }}"
           exit 1
         fi
 
@@ -149,7 +164,8 @@ runs:
           fi
         fi
 
-        echo "✅ Input validation passed"
+        echo "::notice::Input validation completed successfully"
+        echo "::endgroup::"
 
     - name: "🍎 Install Apple certificate and provisioning profile"
       id: install

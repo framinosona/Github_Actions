@@ -112,11 +112,12 @@ runs:
     - name: "✅ Validate inputs"
       shell: bash
       run: |
-        echo "🔍 Validating DocFX inputs..."
+        echo "::group::🔍 DocFX Build Input Validation"
+        echo "::debug::Validating DocFX build inputs for documentation generation"
 
         # Validate config file exists if specified and not default
         if [ "${{ inputs.config }}" != "docfx.json" ] && [ ! -f "${{ inputs.config }}" ]; then
-          echo "❌ Error: DocFX configuration file not found: ${{ inputs.config }}"
+          echo "::error file=${{ inputs.config }}::DocFX configuration file not found: ${{ inputs.config }}"
           exit 1
         fi
 
@@ -155,19 +156,20 @@ runs:
         # Validate JSON inputs if provided
         if [ -n "${{ inputs.metadata }}" ]; then
           if ! echo '${{ inputs.metadata }}' | python3 -m json.tool >/dev/null 2>&1; then
-            echo "❌ Error: metadata must be valid JSON"
+            echo "::error::metadata must be valid JSON"
             exit 1
           fi
         fi
 
         if [ -n "${{ inputs.markdown-engine-properties }}" ]; then
           if ! echo '${{ inputs.markdown-engine-properties }}' | python3 -m json.tool >/dev/null 2>&1; then
-            echo "❌ Error: markdown-engine-properties must be valid JSON"
+            echo "::error::markdown-engine-properties must be valid JSON"
             exit 1
           fi
         fi
 
-        echo "✅ Input validation passed"
+        echo "::notice::Input validation completed successfully"
+        echo "::endgroup::"
 
     - name: "📦 Install DocFX tool"
       uses: "./dotnet-tool-install"
@@ -179,7 +181,8 @@ runs:
       id: build-args
       shell: bash
       run: |
-        echo "🔧 Building dotnet arguments..."
+        echo "::group::🔧 Building DocFX Arguments"
+        echo "::debug::Building dotnet arguments for DocFX documentation generation"
 
         # Start with base arguments
         ARGS="run docfx"
@@ -197,6 +200,7 @@ runs:
         fi
         OUTPUT_PATH=$(realpath "${{ inputs.output }}")
         echo "output-path=$OUTPUT_PATH" >> $GITHUB_OUTPUT
+        echo "::debug::Using output path: $OUTPUT_PATH"
 
         # Log level
         if [ -n "${{ inputs.log-level }}" ]; then
@@ -271,7 +275,8 @@ runs:
           ARGS="$ARGS --viewModelOutputFolder '${{ inputs.view-model-output-folder }}'"
         fi
 
-        echo "📋 Generated arguments: $ARGS"
+        echo "::debug::Generated arguments: $ARGS"
+        echo "::endgroup::"
 
         # Output the arguments string
         echo "arguments=$ARGS" >> $GITHUB_OUTPUT
@@ -287,14 +292,15 @@ runs:
       id: analyze
       shell: bash
       run: |
-        echo "📊 Analyzing generated documentation..."
+        echo "::group::📊 Analyzing Generated Documentation"
+        echo "::debug::Analyzing generated documentation files and calculating metrics"
 
         OUTPUT_DIR="${{ steps.build-args.outputs.output-path }}"
 
         if [ -d "$OUTPUT_DIR" ]; then
           # Count files
           FILES_COUNT=$(find "$OUTPUT_DIR" -type f | wc -l | tr -d ' ')
-          echo "📄 Files generated: $FILES_COUNT"
+          echo "::notice::Files generated: $FILES_COUNT"
           echo "files-count=$FILES_COUNT" >> $GITHUB_OUTPUT
 
           # Calculate total size
@@ -311,19 +317,21 @@ runs:
             OUTPUT_SIZE="unknown"
           fi
 
-          echo "📏 Total output size: $OUTPUT_SIZE bytes"
+          echo "::debug::Total output size: $OUTPUT_SIZE bytes"
           echo "output-size=$OUTPUT_SIZE" >> $GITHUB_OUTPUT
 
           # List main files
-          echo "📋 Main generated files:"
+          echo "::debug::Main generated files:"
           find "$OUTPUT_DIR" -maxdepth 2 -name "*.html" -o -name "*.json" -o -name "*.xml" | head -10 | while read -r file; do
-            echo "  📄 $file"
+            echo "::debug::  📄 $file"
           done
+          echo "::endgroup::"
 
         else
-          echo "❌ Output directory not found: $OUTPUT_DIR"
+          echo "::error::Output directory not found: $OUTPUT_DIR"
           echo "files-count=0" >> $GITHUB_OUTPUT
           echo "output-size=0" >> $GITHUB_OUTPUT
+          echo "::endgroup::"
         fi
 
     - name: "📊 Action Summary"

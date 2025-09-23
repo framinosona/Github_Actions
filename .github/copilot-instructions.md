@@ -53,17 +53,23 @@ branding:
 - name: "✅ Validate inputs"
   shell: bash
   run: |
-    echo "🔍 Validating inputs..."
+    echo "::group::🔍 Input Validation"
+    echo "::debug::Validating inputs for [action purpose]"
+
+    # Mask sensitive data FIRST
+    if [ -n "${{ inputs.password }}" ]; then
+      echo "::add-mask::${{ inputs.password }}"
+    fi
 
     # Validate required parameters
     if [ -z "${{ inputs.required-param }}" ]; then
-      echo "❌ Error: Required parameter cannot be empty"
+      echo "::error::Required parameter cannot be empty"
       exit 1
     fi
 
     # Validate file/directory paths if applicable
     if [ -n "${{ inputs.file-path }}" ] && [ ! -f "${{ inputs.file-path }}" ]; then
-      echo "❌ Error: File not found: ${{ inputs.file-path }}"
+      echo "::error file=${{ inputs.file-path }}::File not found: ${{ inputs.file-path }}"
       exit 1
     fi
 
@@ -71,11 +77,12 @@ branding:
     if [ -n "${{ inputs.enum-param }}" ]; then
       case "${{ inputs.enum-param }}" in
         value1|value2|value3) ;;
-        *) echo "❌ Error: Invalid value. Must be one of: value1, value2, value3"; exit 1 ;;
+        *) echo "::error::Invalid value. Must be one of: value1, value2, value3"; exit 1 ;;
       esac
     fi
 
-    echo "✅ Input validation passed"
+    echo "::notice::Input validation completed successfully"
+    echo "::endgroup::"
 ```
 
 ### 2. ⚙️ Main Action Steps
@@ -84,19 +91,22 @@ branding:
   id: step-id
   shell: bash
   run: |
-    echo "🚀 Starting main action..."
+    echo "::group::🚀 Starting main action"
+    echo "::debug::Executing main functionality for [action purpose]"
 
     # Tool installation if needed (use existing tool actions)
     # Main functionality implementation
     # Set outputs for downstream use
 
     if [success_condition]; then
-      echo "✅ Action completed successfully"
+      echo "::notice::Action completed successfully"
       echo "output-name=value" >> $GITHUB_OUTPUT
     else
-      echo "❌ Action failed"
+      echo "::error::Action failed"
       exit 1
     fi
+    
+    echo "::endgroup::"
 ```
 
 ### 3. 📊 Summary Step (Always Last)
@@ -148,6 +158,80 @@ branding:
 - **Error messages**: Clear, actionable error messages with ❌ emoji
 - **Success messages**: Positive confirmation with ✅ emoji
 - **Exit codes**: Use proper exit codes (0 for success, 1 for failure)
+
+### 📝 GitHub Workflow Commands
+**IMPORTANT**: Always use GitHub's native workflow commands for logging instead of plain echo statements. This provides better integration with GitHub's UI and enhanced functionality.
+
+#### Required Workflow Commands Usage
+```bash
+# ❌ OLD WAY - Don't use plain echo for errors/warnings
+echo "❌ Error: Invalid parameter value"
+echo "⚠️ Warning: Unusual configuration"
+echo "✅ Validation completed"
+echo "🔍 Debug: Processing file"
+
+# ✅ NEW WAY - Use GitHub workflow commands
+echo "::error::Invalid parameter value"
+echo "::warning::Unusual configuration" 
+echo "::notice::Validation completed successfully"
+echo "::debug::Processing file"
+```
+
+#### Workflow Commands Reference
+- **`::error::`** - Creates error annotations visible in GitHub UI
+  - Use for validation failures, missing files, invalid configurations
+  - Example: `echo "::error file=config.json::Configuration file not found"`
+  
+- **`::warning::`** - Creates warning annotations  
+  - Use for non-fatal issues, deprecated features, unusual values
+  - Example: `echo "::warning::Using deprecated parameter format"`
+  
+- **`::notice::`** - Highlights important information
+  - Use for successful completion, important status updates
+  - Example: `echo "::notice::Package uploaded successfully"`
+  
+- **`::debug::`** - Debug information (only visible when ACTIONS_STEP_DEBUG=true)
+  - Use for detailed execution information, variable values
+  - Example: `echo "::debug::Using configuration: $CONFIG_VALUE"`
+
+#### Log Organization with Groups
+Always organize complex operations into collapsible groups:
+```bash
+echo "::group::🔍 Input Validation"
+# validation steps...
+echo "::notice::Input validation completed successfully"
+echo "::endgroup::"
+
+echo "::group::🔧 Building Arguments" 
+# argument building steps...
+echo "::debug::Generated arguments: $ARGS"
+echo "::endgroup::"
+```
+
+#### Sensitive Data Masking
+**CRITICAL**: Always mask sensitive data before any logging:
+```bash
+# Mask ALL sensitive inputs immediately
+if [ -n "${{ inputs.api-key }}" ]; then
+  echo "::add-mask::${{ inputs.api-key }}"
+fi
+if [ -n "${{ inputs.password }}" ]; then
+  echo "::add-mask::${{ inputs.password }}"
+fi
+if [ -n "${{ inputs.certificate-data }}" ]; then
+  echo "::add-mask::${{ inputs.certificate-data }}"
+fi
+```
+
+#### Migration Guide
+When updating existing actions:
+1. Replace all `echo "❌ Error:"` with `echo "::error::"`
+2. Replace all `echo "⚠️ Warning:"` with `echo "::warning::"` 
+3. Replace all `echo "✅"` success messages with `echo "::notice::"`
+4. Replace debug echoes with `echo "::debug::"`
+5. Add `::group::` around major operation sections
+6. Add `::add-mask::` for all sensitive data
+7. Verify no sensitive data appears in logs after masking
 
 ### 🔧 Tool Management
 - **Reuse existing actions**: Use `./dotnet-tool-install` for .NET tools, `./dotnet` for .NET CLI commands

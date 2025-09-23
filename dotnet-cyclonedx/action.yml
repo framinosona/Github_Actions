@@ -118,6 +118,10 @@ inputs:
     description: "Version of CycloneDX tool to install"
     required: false
     default: ""
+  show-summary:
+    description: 'Whether to show the action summary'
+    required: false
+    default: 'false'
 
 outputs:
   sbom-path:
@@ -139,53 +143,54 @@ runs:
     - name: "✅ Validate inputs"
       shell: bash
       run: |
-        echo "🔍 Validating CycloneDX inputs..."
+        echo "::group::🔍 CycloneDX Input Validation"
+        echo "::debug::Validating CycloneDX inputs for SBOM generation"
 
         # Validate required path parameter
         if [ -z "${{ inputs.path }}" ]; then
-          echo "❌ Error: Path parameter is required"
+          echo "::error::Path parameter is required"
           exit 1
         fi
 
         # Validate path exists
         if [ ! -e "${{ inputs.path }}" ]; then
-          echo "❌ Error: Specified path does not exist: ${{ inputs.path }}"
+          echo "::error file=${{ inputs.path }}::Specified path does not exist: ${{ inputs.path }}"
           exit 1
         fi
 
-        # Validate output format if specified
+                # Validate output format if specified
         if [ -n "${{ inputs.output-format }}" ]; then
           case "${{ inputs.output-format }}" in
-            Auto|Xml|Json|UnsafeJson) ;;
-            *) echo "❌ Error: Invalid output format. Must be one of: Auto, Xml, Json, UnsafeJson"; exit 1 ;;
+            Auto|xml|json|csv|spdx-tag|spdx-json) ;;
+            *) echo "::error::Invalid output format: ${{ inputs.output-format }}. Must be one of: Auto, xml, json, csv, spdx-tag, spdx-json"; exit 1 ;;
           esac
         fi
 
         # Validate set-type if specified
         if [ -n "${{ inputs.set-type }}" ]; then
           case "${{ inputs.set-type }}" in
-            Application|Container|Cryptographic_Asset|Data|Device|Device_Driver|File|Firmware|Framework|Library|Machine_Learning_Model|Null|Operating_System|Platform) ;;
-            *) echo "❌ Error: Invalid component type. Must be one of: Application, Container, Cryptographic_Asset, Data, Device, Device_Driver, File, Firmware, Framework, Library, Machine_Learning_Model, Null, Operating_System, Platform"; exit 1 ;;
+            Application|Library|Framework|File|Container|OS|Device|Firmware|Platform) ;;
+            *) echo "::warning::Unusual component type: ${{ inputs.set-type }}" ;;
           esac
         fi
 
-        # Validate timeout is numeric
+                # Validate timeout is numeric
         if [ -n "${{ inputs.dotnet-command-timeout }}" ]; then
           if ! [[ "${{ inputs.dotnet-command-timeout }}" =~ ^[0-9]+$ ]]; then
-            echo "❌ Error: dotnet-command-timeout must be a number"
+            echo "::error::Timeout must be a numeric value in milliseconds, got: ${{ inputs.dotnet-command-timeout }}"
             exit 1
           fi
         fi
 
         # Validate GitHub credentials are paired
         if [ -n "${{ inputs.github-username }}" ] && [ -z "${{ inputs.github-token }}" ] && [ -z "${{ inputs.github-bearer-token }}" ]; then
-          echo "❌ Error: GitHub username provided but no token specified"
+          echo "::error::GitHub username provided but no token specified"
           exit 1
         fi
 
         # Validate NuGet credentials
         if [ -n "${{ inputs.nuget-username }}" ] && [ -z "${{ inputs.nuget-password }}" ]; then
-          echo "❌ Error: NuGet username provided but no password specified"
+          echo "::error::NuGet username provided but no password specified"
           exit 1
         fi
 
@@ -208,7 +213,8 @@ runs:
           fi
         done
 
-        echo "✅ Input validation passed"
+        echo "::notice::Input validation completed successfully"
+        echo "::endgroup::"
 
     - name: "📦 Install CycloneDX tool"
       uses: "./dotnet-tool-install"
@@ -219,133 +225,138 @@ runs:
       id: build-args
       shell: bash
       run: |
-        echo "🔧 Building dotnet arguments..."
+        echo "::group::🔧 Building CycloneDX Arguments"
+        echo "::debug::Building dotnet arguments for CycloneDX SBOM generation"
 
         # Start with base arguments
         ARGS="run cyclonedx"
 
         # Add path
         ARGS="$ARGS '${{ inputs.path }}'"
-        echo "📍 Using path: ${{ inputs.path }}"
+        echo "::debug::Using path: ${{ inputs.path }}"
 
         # Add framework if specified
         if [ -n "${{ inputs.framework }}" ]; then
           ARGS="$ARGS --framework '${{ inputs.framework }}'"
-          echo "🎯 Using framework: ${{ inputs.framework }}"
+          echo "::debug::Using framework: ${{ inputs.framework }}"
         fi
 
         # Add runtime if specified
         if [ -n "${{ inputs.runtime }}" ]; then
           ARGS="$ARGS --runtime '${{ inputs.runtime }}'"
-          echo "🖥️ Using runtime: ${{ inputs.runtime }}"
+          echo "::debug::Using runtime: ${{ inputs.runtime }}"
         fi
 
         # Add output directory
         ARGS="$ARGS --output '${{ inputs.output }}'"
-        echo "📁 Using output directory: ${{ inputs.output }}"
+        echo "::debug::Using output directory: ${{ inputs.output }}"
 
         # Add filename if specified
         if [ -n "${{ inputs.filename }}" ]; then
           ARGS="$ARGS --filename '${{ inputs.filename }}'"
-          echo "📄 Using filename: ${{ inputs.filename }}"
+          echo "::debug::Using filename: ${{ inputs.filename }}"
         fi
 
         # Add output format
         if [ -n "${{ inputs.output-format }}" ]; then
           ARGS="$ARGS --output-format '${{ inputs.output-format }}'"
-          echo "📋 Using output format: ${{ inputs.output-format }}"
+          echo "::debug::Using output format: ${{ inputs.output-format }}"
         fi
 
         # Add boolean flags
-        [ "${{ inputs.exclude-dev }}" = "true" ] && ARGS="$ARGS --exclude-dev" && echo "🚫 Excluding development dependencies"
-        [ "${{ inputs.exclude-test-projects }}" = "true" ] && ARGS="$ARGS --exclude-test-projects" && echo "🚫 Excluding test projects"
-        [ "${{ inputs.recursive }}" = "true" ] && ARGS="$ARGS --recursive" && echo "🔄 Using recursive scan"
-        [ "${{ inputs.include-project-references }}" = "true" ] && ARGS="$ARGS --include-project-references" && echo "🔗 Including project references"
-        [ "${{ inputs.no-serial-number }}" = "true" ] && ARGS="$ARGS --no-serial-number" && echo "🔢 Omitting serial number"
-        [ "${{ inputs.disable-package-restore }}" = "true" ] && ARGS="$ARGS --disable-package-restore" && echo "📦 Package restore disabled"
-        [ "${{ inputs.disable-hash-computation }}" = "true" ] && ARGS="$ARGS --disable-hash-computation" && echo "🔐 Hash computation disabled"
-        [ "${{ inputs.enable-github-licenses }}" = "true" ] && ARGS="$ARGS --enable-github-licenses" && echo "🔍 GitHub license resolution enabled"
-        [ "${{ inputs.nuget-password-clear-text }}" = "true" ] && ARGS="$ARGS --isBaseUrlPasswordClearText" && echo "🔓 NuGet password in clear text"
+        [ "${{ inputs.exclude-dev }}" = "true" ] && ARGS="$ARGS --exclude-dev" && echo "::debug::Excluding development dependencies"
+        [ "${{ inputs.exclude-test-projects }}" = "true" ] && ARGS="$ARGS --exclude-test-projects" && echo "::debug::Excluding test projects"
+        [ "${{ inputs.recursive }}" = "true" ] && ARGS="$ARGS --recursive" && echo "::debug::Using recursive scan"
+        [ "${{ inputs.include-project-references }}" = "true" ] && ARGS="$ARGS --include-project-references" && echo "::debug::Including project references"
+        [ "${{ inputs.no-serial-number }}" = "true" ] && ARGS="$ARGS --no-serial-number" && echo "::debug::Omitting serial number"
+        [ "${{ inputs.disable-package-restore }}" = "true" ] && ARGS="$ARGS --disable-package-restore" && echo "::debug::Package restore disabled"
+        [ "${{ inputs.disable-hash-computation }}" = "true" ] && ARGS="$ARGS --disable-hash-computation" && echo "::debug::Hash computation disabled"
+        [ "${{ inputs.enable-github-licenses }}" = "true" ] && ARGS="$ARGS --enable-github-licenses" && echo "::debug::GitHub license resolution enabled"
+        [ "${{ inputs.nuget-password-clear-text }}" = "true" ] && ARGS="$ARGS --isBaseUrlPasswordClearText" && echo "::debug::NuGet password in clear text"
 
         # Add metadata overrides
         if [ -n "${{ inputs.set-name }}" ]; then
           ARGS="$ARGS --set-name '${{ inputs.set-name }}'"
-          echo "🏷️ Setting component name: ${{ inputs.set-name }}"
+          echo "::debug::Setting component name: ${{ inputs.set-name }}"
         fi
 
         # Add version override
         if [ -n "${{ inputs.set-version }}" ]; then
           ARGS="$ARGS --set-version '${{ inputs.set-version }}'"
-          echo "🏷️ Setting component version: ${{ inputs.set-version }}"
+          echo "::debug::Setting component version: ${{ inputs.set-version }}"
         fi
 
         # Add type override
         if [ -n "${{ inputs.set-type }}" ]; then
           ARGS="$ARGS --set-type '${{ inputs.set-type }}'"
-          echo "🏷️ Setting component type: ${{ inputs.set-type }}"
+          echo "::debug::Setting component type: ${{ inputs.set-type }}"
         fi
 
         # Add timeout
         if [ -n "${{ inputs.dotnet-command-timeout }}" ]; then
           ARGS="$ARGS --dotnet-command-timeout '${{ inputs.dotnet-command-timeout }}'"
-          echo "⏰ Using timeout: ${{ inputs.dotnet-command-timeout }}ms"
+          echo "::debug::Using timeout: ${{ inputs.dotnet-command-timeout }}ms"
         fi
 
         # Add GitHub credentials
         if [ -n "${{ inputs.github-username }}" ]; then
           ARGS="$ARGS --github-username '${{ inputs.github-username }}'"
-          echo "👤 Using GitHub username for license resolution"
+          echo "::debug::Using GitHub username for license resolution"
         fi
 
-        # Add GitHub token if provided
+        # Add GitHub token if provided (mask sensitive data)
         if [ -n "${{ inputs.github-token }}" ]; then
+          echo "::add-mask::${{ inputs.github-token }}"
           ARGS="$ARGS --github-token '${{ inputs.github-token }}'"
-          echo "🔑 Using GitHub token for license resolution"
+          echo "::debug::Using GitHub token for license resolution"
         fi
 
-        # Add GitHub bearer token if provided
+        # Add GitHub bearer token if provided (mask sensitive data)
         if [ -n "${{ inputs.github-bearer-token }}" ]; then
+          echo "::add-mask::${{ inputs.github-bearer-token }}"
           ARGS="$ARGS --github-bearer-token '${{ inputs.github-bearer-token }}'"
-          echo "🔑 Using GitHub bearer token for license resolution"
+          echo "::debug::Using GitHub bearer token for license resolution"
         fi
 
         # Add NuGet repository settings
         if [ -n "${{ inputs.nuget-url }}" ]; then
           ARGS="$ARGS --url '${{ inputs.nuget-url }}'"
-          echo "🌐 Using custom NuGet URL: ${{ inputs.nuget-url }}"
+          echo "::debug::Using custom NuGet URL: ${{ inputs.nuget-url }}"
         fi
 
         # Add NuGet credentials
         if [ -n "${{ inputs.nuget-username }}" ]; then
           ARGS="$ARGS --baseUrlUsername '${{ inputs.nuget-username }}'"
-          echo "👤 Using NuGet username"
+          echo "::debug::Using NuGet username"
         fi
 
-        # Add NuGet password if provided
+        # Add NuGet password if provided (mask sensitive data)
         if [ -n "${{ inputs.nuget-password }}" ]; then
+          echo "::add-mask::${{ inputs.nuget-password }}"
           ARGS="$ARGS --baseUrlUserPassword '${{ inputs.nuget-password }}'"
-          echo "🔑 Using NuGet password"
+          echo "::debug::Using NuGet password"
         fi
 
         # Add build paths
         if [ -n "${{ inputs.base-intermediate-output-path }}" ]; then
           ARGS="$ARGS --base-intermediate-output-path '${{ inputs.base-intermediate-output-path }}'"
-          echo "📁 Using custom intermediate output path: ${{ inputs.base-intermediate-output-path }}"
+          echo "::debug::Using custom intermediate output path: ${{ inputs.base-intermediate-output-path }}"
         fi
 
         # Add import metadata path if provided
         if [ -n "${{ inputs.import-metadata-path }}" ]; then
           ARGS="$ARGS --import-metadata-path '${{ inputs.import-metadata-path }}'"
-          echo "📋 Importing metadata from: ${{ inputs.import-metadata-path }}"
+          echo "::debug::Importing metadata from: ${{ inputs.import-metadata-path }}"
         fi
 
         # Add exclude filter if provided
         if [ -n "${{ inputs.exclude-filter }}" ]; then
           ARGS="$ARGS --exclude-filter '${{ inputs.exclude-filter }}'"
-          echo "🚫 Excluding dependencies: ${{ inputs.exclude-filter }}"
+          echo "::debug::Excluding dependencies: ${{ inputs.exclude-filter }}"
         fi
 
-        echo "📋 Generated arguments: $ARGS"
+        echo "::debug::Generated arguments: $ARGS"
+        echo "::endgroup::"
 
         # Output the arguments string
         echo "arguments=$ARGS" >> $GITHUB_OUTPUT
@@ -361,7 +372,8 @@ runs:
       id: analyze
       shell: bash
       run: |
-        echo "📊 Analyzing generated SBOM..."
+        echo "::group::📊 Analyzing Generated SBOM"
+        echo "::debug::Analyzing generated SBOM file and extracting metadata"
 
         # Determine the actual output file path
         SBOM_FILE="${{ inputs.output }}/${{ inputs.filename }}"
@@ -380,10 +392,10 @@ runs:
 
         # Verify file was created
         if [ -f "$SBOM_FILE" ]; then
-          echo "📄 SBOM file created: $SBOM_FILE"
+          echo "::notice::SBOM file created successfully: $SBOM_FILE"
           echo "sbom-path=$SBOM_FILE" >> $GITHUB_OUTPUT
         else
-          echo "❌ SBOM file not found at expected location: $SBOM_FILE"
+          echo "::error file=$SBOM_FILE::SBOM file not found at expected location: $SBOM_FILE"
           exit 1
         fi
 
@@ -404,7 +416,7 @@ runs:
             SBOM_SIZE="unknown"
           fi
 
-          echo "📏 SBOM file size: $SBOM_SIZE bytes"
+          echo "::debug::SBOM file size: $SBOM_SIZE bytes"
           echo "sbom-size=$SBOM_SIZE" >> $GITHUB_OUTPUT
 
           # Count dependencies (rough estimation)
@@ -426,11 +438,15 @@ runs:
               ;;
           esac
 
-          echo "📦 Dependencies found: $DEPS_COUNT"
+          echo "::notice::Dependencies found: $DEPS_COUNT"
           echo "dependencies-count=$DEPS_COUNT" >> $GITHUB_OUTPUT
+          echo "::endgroup::"
 
         else
-          echo "❌ SBOM file not found for analysis"
+          echo "::error::SBOM file not found for analysis"
+          echo "::endgroup::"
+          exit 1
+        fi
           echo "sbom-size=0" >> $GITHUB_OUTPUT
           echo "dependencies-count=0" >> $GITHUB_OUTPUT
         fi

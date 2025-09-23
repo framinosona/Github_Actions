@@ -59,23 +59,29 @@ runs:
     - name: "✅ Validate inputs"
       shell: bash
       run: |
-        echo "🔍 Validating inputs..."
+        echo "::group::🔍 NuGet Source Validation"
+        echo "::debug::Validating inputs for NuGet source configuration"
+
+        # Mask sensitive data
+        if [ -n "${{ inputs.password }}" ]; then
+          echo "::add-mask::${{ inputs.password }}"
+        fi
 
         # Validate name is not empty
         if [ -z "${{ inputs.name }}" ]; then
-          echo "❌ Error: Source name cannot be empty"
+          echo "::error::Source name cannot be empty"
           exit 1
         fi
 
         # Validate source URL is not empty
         if [ -z "${{ inputs.source }}" ]; then
-          echo "❌ Error: Source URL cannot be empty"
+          echo "::error::Source URL cannot be empty"
           exit 1
         fi
 
         # Validate source URL format
         if [[ ! "${{ inputs.source }}" =~ ^https?:// ]]; then
-          echo "❌ Error: Source URL must start with http:// or https://: ${{ inputs.source }}"
+          echo "::error::Source URL must start with http:// or https://: ${{ inputs.source }}"
           exit 1
         fi
 
@@ -107,16 +113,17 @@ runs:
 
         # Validate authentication combination
         if [ -n "${{ inputs.username }}" ] && [ -z "${{ inputs.password }}" ]; then
-          echo "❌ Error: Password must be provided when username is specified"
+          echo "::error::Password must be provided when username is specified"
           exit 1
         fi
 
         if [ -z "${{ inputs.username }}" ] && [ -n "${{ inputs.password }}" ]; then
-          echo "❌ Error: Username must be provided when password is specified"
+          echo "::error::Username must be provided when password is specified"
           exit 1
         fi
 
-        echo "✅ Input validation passed"
+        echo "::notice::Input validation completed successfully"
+        echo "::endgroup::"
 
     - name: "🔧 Build arguments"
       id: build-args
