@@ -1,0 +1,229 @@
+name: "🔧 Install .NET Tool"
+description: "Installs a .NET global or local tool with automatic tool manifest creation"
+author: 'Francois Raminosona'
+
+inputs:
+  tool-name:
+    description: "Name of the .NET tool to install (e.g., 'dotnet-ef', 'dotnet-outdated')"
+    required: true
+  tool-version:
+    description: "Specific version of the tool to install (optional, uses latest if not specified)"
+    required: false
+    default: ""
+  global:
+    description: "Install as global tool (true) or local tool (false)"
+    required: false
+    default: "false"
+  prerelease:
+    description: "Include prerelease versions when searching for the tool"
+    required: false
+    default: "false"
+  working-directory:
+    description: "Working directory for the installation (only relevant for local tools)"
+    required: false
+    default: "."
+  tool-path:
+    description: "Custom tool path for global tool installation"
+    required: false
+    default: ""
+  add-source:
+    description: "Additional NuGet source to use when installing the tool"
+    required: false
+    default: ""
+  configfile:
+    description: "NuGet configuration file to use"
+    required: false
+    default: ""
+  framework:
+    description: "Target framework for the tool"
+    required: false
+    default: ""
+  verbosity:
+    description: "Verbosity level (quiet, minimal, normal, detailed, diagnostic)"
+    required: false
+    default: ""
+  show-summary:
+    description: 'Whether to show the action summary'
+    required: false
+    default: 'false'
+
+outputs:
+  exit-code:
+    description: "Exit code of the tool installation command"
+    value: ${{ steps.install-tool.outputs.exit-code }}
+  executed-command:
+    description: "The actual command that was executed"
+    value: ${{ steps.install-tool.outputs.executed-command }}
+  tool-manifest-created:
+    description: "Whether a new tool manifest was created"
+    value: ${{ steps.create-manifest.outputs.manifest-created }}
+  installed-version:
+    description: "The version of the tool that was installed"
+    value: ${{ steps.install-tool.outputs.installed-version }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: "✅ Validate inputs"
+      shell: bash
+      run: |
+        echo "🔍 Validating inputs..."
+
+        # Validate tool name is not empty
+        if [ -z "${{ inputs.tool-name }}" ]; then
+          echo "❌ Error: Tool name cannot be empty"
+          exit 1
+        fi
+
+        # Validate working directory exists
+        if [ ! -d "${{ inputs.working-directory }}" ]; then
+          echo "❌ Error: Working directory does not exist: ${{ inputs.working-directory }}"
+          exit 1
+        fi
+
+        # Validate global flag
+        case "${{ inputs.global }}" in
+          true|false) ;;
+          *) echo "❌ Error: Global flag must be 'true' or 'false', got: ${{ inputs.global }}"; exit 1 ;;
+        esac
+
+        # Validate prerelease flag
+        case "${{ inputs.prerelease }}" in
+          true|false) ;;
+          *) echo "❌ Error: Prerelease flag must be 'true' or 'false', got: ${{ inputs.prerelease }}"; exit 1 ;;
+        esac
+
+        # Validate verbosity level if specified
+        if [ -n "${{ inputs.verbosity }}" ]; then
+          case "${{ inputs.verbosity }}" in
+            quiet|minimal|normal|detailed|diagnostic) ;;
+            *) echo "❌ Error: Invalid verbosity level: ${{ inputs.verbosity }}. Must be one of: quiet, minimal, normal, detailed, diagnostic"; exit 1 ;;
+          esac
+        fi
+
+        # Validate configfile exists if specified
+        if [ -n "${{ inputs.configfile }}" ] && [ ! -f "${{ inputs.configfile }}" ]; then
+          echo "❌ Error: Configuration file not found: ${{ inputs.configfile }}"
+          exit 1
+        fi
+
+        echo "✅ Input validation passed"
+
+    - name: "📝 Create tool manifest if needed"
+      id: create-manifest
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        echo "🔍 Checking for tool manifest..."
+
+        MANIFEST_CREATED="false"
+
+        # Only check for manifest if installing as local tool
+        if [ "${{ inputs.global }}" = "false" ]; then
+          # Check if tool manifest exists, create if not
+          if [ ! -f .config/dotnet-tools.json ]; then
+            echo "📝 Creating tool manifest..."
+            dotnet new tool-manifest
+            if [ $? -eq 0 ]; then
+              MANIFEST_CREATED="true"
+              echo "✅ Tool manifest created successfully"
+            else
+              echo "❌ Failed to create tool manifest"
+              exit 1
+            fi
+          else
+            echo "ℹ️ Tool manifest already exists"
+          fi
+        else
+          echo "ℹ️ Installing as global tool - no manifest needed"
+        fi
+
+        echo "manifest-created=$MANIFEST_CREATED" >> $GITHUB_OUTPUT
+
+    - name: "🔧 Install .NET tool"
+      id: install-tool
+      uses: ../dotnet
+      with:
+        command: "tool"
+        arguments: |
+          - install
+          - ${{ inputs.tool-name }}
+          ${{ inputs.tool-version != '' && format('--version {0}', inputs.tool-version) || '' }}
+          ${{ inputs.global == 'true' && '--global' || '--local' }}
+          ${{ inputs.prerelease == 'true' && '--prerelease' || '' }}
+          ${{ inputs.tool-path != '' && format('--tool-path {0}', inputs.tool-path) || '' }}
+          ${{ inputs.add-source != '' && format('--add-source {0}', inputs.add-source) || '' }}
+          ${{ inputs.configfile != '' && format('--configfile {0}', inputs.configfile) || '' }}
+          ${{ inputs.framework != '' && format('--framework {0}', inputs.framework) || '' }}
+        working-directory: ${{ inputs.working-directory }}
+        force-verbosity: ${{ inputs.verbosity }}
+
+    - name: "🔍 Extract installed version"
+      id: extract-version
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        echo "🔍 Extracting installed tool version..."
+
+        INSTALLED_VERSION="unknown"
+
+        # Try to get the installed version
+        if [ "${{ inputs.global }}" = "true" ]; then
+          # For global tools, list global tools
+          VERSION_OUTPUT=$(dotnet tool list --global | grep "${{ inputs.tool-name }}" | awk '{print $2}' || echo "")
+        else
+          # For local tools, list local tools
+          VERSION_OUTPUT=$(dotnet tool list | grep "${{ inputs.tool-name }}" | awk '{print $2}' || echo "")
+        fi
+
+        if [ -n "$VERSION_OUTPUT" ]; then
+          INSTALLED_VERSION="$VERSION_OUTPUT"
+          echo "✅ Detected installed version: $INSTALLED_VERSION"
+        else
+          echo "⚠️ Could not determine installed version"
+        fi
+
+        echo "installed-version=$INSTALLED_VERSION" >> $GITHUB_OUTPUT
+
+    - name: "📊 Action Summary"
+      if: always() && inputs.show-summary == 'true'
+      shell: bash
+      run: |
+        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+        <details><summary>Expand for details - 📊 .NET Tool Installation Summary</summary>
+
+        ## 🔧 Input Parameters
+        | Parameter | Value |
+        |-----------|-------|
+        | 🔧 Tool Name | `${{ inputs.tool-name }}` |
+        | 📦 Tool Version | `${{ inputs.tool-version || 'latest' }}` |
+        | 🌍 Global Install | `${{ inputs.global }}` |
+        | 🧪 Include Prerelease | `${{ inputs.prerelease }}` |
+        | 📁 Working Directory | `${{ inputs.working-directory }}` |
+        | 🛤️ Tool Path | `${{ inputs.tool-path || 'default' }}` |
+        | 🔗 Additional Source | `${{ inputs.add-source || 'none' }}` |
+        | ⚙️ Config File | `${{ inputs.configfile || 'default' }}` |
+        | 🎯 Framework | `${{ inputs.framework || 'default' }}` |
+
+        ## 📤 Installation Results
+        | Metric | Value |
+        |--------|-------|
+        | ✅ Exit Code | `${{ steps.install-tool.outputs.exit-code }}` |
+        | 📦 Installed Version | `${{ steps.extract-version.outputs.installed-version }}` |
+        | 📝 Manifest Created | `${{ steps.create-manifest.outputs.manifest-created }}` |
+        | 🚀 Executed Command | `${{ steps.install-tool.outputs.executed-command }}` |
+
+        ## ⚙️ Process Details
+        | Step | Status |
+        |------|--------|
+        | ✅ Input Validation | `✅ Completed` |
+        | 📝 Manifest Creation | `${{ steps.create-manifest.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | 🔧 Tool Installation | `${{ steps.install-tool.outputs.exit-code == '0' && '✅ Completed' || '❌ Failed' }}` |
+        | 🔍 Version Detection | `${{ steps.extract-version.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+
+        </details>
+        EOF
+
+branding:
+  icon: 'settings'
+  color: 'blue'
