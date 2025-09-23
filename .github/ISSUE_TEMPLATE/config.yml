@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Ask a Question or Get Help
+    url: https://github.com/framinosona/github-actions/discussions
+    about: Ask questions, share ideas, or get help using GitHub Discussions
+  - name: 🔒 Security Issue
+    url: https://github.com/framinosona/github-actions/security/advisories/new
+    about: Report a security vulnerability privately
+  - name: 📚 Documentation
+    url: https://github.com/framinosona/github-actions/blob/main/README.md
+    about: Read the main documentation and action-specific READMEs

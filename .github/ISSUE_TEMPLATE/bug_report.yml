@@ -1,0 +1,143 @@
+name: 🐛 Bug Report
+description: Report a bug or issue with one of the GitHub Actions
+title: "[BUG] "
+labels: ["bug", "triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time to report a bug! Please fill out the form below to help us understand and reproduce the issue.
+
+  - type: dropdown
+    id: action
+    attributes:
+      label: Which action is affected?
+      description: Select the GitHub Action where you encountered the bug
+      options:
+        - ".Net Run"
+        - ".Net Tool Install"
+        - ".Net NuGet Upload"
+        - ".Net NuGet Feed Setup"
+        - "CycloneDX"
+        - "DocFX Metadata"
+        - "DocFX Build"
+        - "DocFX PDF"
+        - "Generate Badge"
+        - "GitHub Release"
+        - "Install Apple Certificates"
+        - "Multiple actions"
+        - "Other/Unknown"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is
+      placeholder: Describe what happened and what you expected to happen
+    validations:
+      required: true
+
+  - type: textarea
+    id: workflow
+    attributes:
+      label: Workflow Configuration
+      description: Please share the relevant part of your workflow file
+      placeholder: |
+        ```yaml
+        - name: Your step name
+          uses: action@v1
+          with:
+            input1: value1
+            input2: value2
+        ```
+      render: yaml
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error Logs
+      description: Please include relevant error messages or logs
+      placeholder: Paste the error output from the GitHub Actions run
+      render: text
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: Action Version
+      description: What version of the action are you using?
+      placeholder: "v1.2.3 or commit SHA"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: runner
+    attributes:
+      label: Runner Operating System
+      description: What operating system is your runner using?
+      options:
+        - "ubuntu-latest"
+        - "windows-latest"
+        - "macos-latest"
+        - "ubuntu-20.04"
+        - "ubuntu-22.04"
+        - "windows-2019"
+        - "windows-2022"
+        - "macos-11"
+        - "macos-12"
+        - "macos-13"
+        - "Self-hosted"
+        - "Other"
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Detailed steps to reproduce the behavior
+      placeholder: |
+        1. Set up workflow with...
+        2. Configure action with...
+        3. Run workflow...
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+      placeholder: A clear description of what you expected to happen
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any other context about the problem here
+      placeholder: Screenshots, related issues, workarounds, etc.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      description: Please confirm the following
+      options:
+        - label: I have searched existing issues to ensure this bug hasn't been reported before
+          required: true
+        - label: I have provided all the requested information above
+          required: true
+        - label: I am using a supported version of the action
+          required: true
