@@ -149,7 +149,7 @@ runs:
           - install
           - ${{ inputs.tool-name }}
           ${{ inputs.tool-version != '' && format('--version {0}', inputs.tool-version) || '' }}
-          ${{ inputs.global == 'true' && '--global' || '--local' }}
+          ${{ inputs.global == 'true' && '--global' || '' }}
           ${{ inputs.prerelease == 'true' && '--prerelease' || '' }}
           ${{ inputs.tool-path != '' && format('--tool-path {0}', inputs.tool-path) || '' }}
           ${{ inputs.add-source != '' && format('--add-source {0}', inputs.add-source) || '' }}
