@@ -1,0 +1,211 @@
+name: "🔗 Setup NuGet Feed"
+description: "Adds a NuGet package source using dotnet nuget add source with authentication support"
+author: 'Francois Raminosona'
+
+inputs:
+  name:
+    description: "Name for the NuGet source (must be unique)"
+    required: true
+  source:
+    description: "URL of the NuGet package source"
+    required: true
+  username:
+    description: "Username for authenticated feeds"
+    required: false
+    default: ""
+  password:
+    description: "Password or token for authenticated feeds (use secrets for security)"
+    required: false
+    default: ""
+  store-password-in-clear-text:
+    description: "Store password in clear text instead of encrypted (true/false)"
+    required: false
+    default: "false"
+  valid-authentication-types:
+    description: "Valid authentication types for this source (basic, negotiate, etc.)"
+    required: false
+    default: ""
+  configfile:
+    description: "NuGet configuration file to modify"
+    required: false
+    default: ""
+  working-directory:
+    description: "Working directory for the operation"
+    required: false
+    default: "."
+  verbosity:
+    description: "Verbosity level (quiet, minimal, normal, detailed, diagnostic)"
+    required: false
+    default: ""
+  show-summary:
+    description: 'Whether to show the action summary'
+    required: false
+    default: 'false'
+
+outputs:
+  exit-code:
+    description: "Exit code of the nuget add source command"
+    value: ${{ steps.add-source.outputs.exit-code }}
+  executed-command:
+    description: "The actual command that was executed (credentials masked)"
+    value: ${{ steps.add-source.outputs.executed-command }}
+  source-added:
+    description: "Whether the source was successfully added"
+    value: ${{ steps.verify-source.outputs.source-added }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: "✅ Validate inputs"
+      shell: bash
+      run: |
+        echo "🔍 Validating inputs..."
+
+        # Validate name is not empty
+        if [ -z "${{ inputs.name }}" ]; then
+          echo "❌ Error: Source name cannot be empty"
+          exit 1
+        fi
+
+        # Validate source URL is not empty
+        if [ -z "${{ inputs.source }}" ]; then
+          echo "❌ Error: Source URL cannot be empty"
+          exit 1
+        fi
+
+        # Validate source URL format
+        if [[ ! "${{ inputs.source }}" =~ ^https?:// ]]; then
+          echo "❌ Error: Source URL must start with http:// or https://: ${{ inputs.source }}"
+          exit 1
+        fi
+
+        # Validate working directory exists
+        if [ ! -d "${{ inputs.working-directory }}" ]; then
+          echo "❌ Error: Working directory does not exist: ${{ inputs.working-directory }}"
+          exit 1
+        fi
+
+        # Validate store-password-in-clear-text flag
+        case "${{ inputs.store-password-in-clear-text }}" in
+          true|false) ;;
+          *) echo "❌ Error: Store password in clear text flag must be 'true' or 'false', got: ${{ inputs.store-password-in-clear-text }}"; exit 1 ;;
+        esac
+
+        # Validate configfile exists if specified
+        if [ -n "${{ inputs.configfile }}" ] && [ ! -f "${{ inputs.configfile }}" ]; then
+          echo "❌ Error: Configuration file not found: ${{ inputs.configfile }}"
+          exit 1
+        fi
+
+        # Validate verbosity level if specified
+        if [ -n "${{ inputs.verbosity }}" ]; then
+          case "${{ inputs.verbosity }}" in
+            quiet|minimal|normal|detailed|diagnostic) ;;
+            *) echo "❌ Error: Invalid verbosity level: ${{ inputs.verbosity }}. Must be one of: quiet, minimal, normal, detailed, diagnostic"; exit 1 ;;
+          esac
+        fi
+
+        # Validate authentication combination
+        if [ -n "${{ inputs.username }}" ] && [ -z "${{ inputs.password }}" ]; then
+          echo "❌ Error: Password must be provided when username is specified"
+          exit 1
+        fi
+
+        if [ -z "${{ inputs.username }}" ] && [ -n "${{ inputs.password }}" ]; then
+          echo "❌ Error: Username must be provided when password is specified"
+          exit 1
+        fi
+
+        echo "✅ Input validation passed"
+
+    - name: "🔗 Add NuGet source"
+      id: add-source
+      uses: ../dotnet
+      with:
+        command: "nuget"
+        arguments: |
+          - add
+          - source
+          - ${{ inputs.source }}
+          - --name
+          - ${{ inputs.name }}
+          ${{ inputs.username != '' && format('--username {0}', inputs.username) || '' }}
+          ${{ inputs.password != '' && format('--password {0}', inputs.password) || '' }}
+          ${{ inputs.store-password-in-clear-text == 'true' && '--store-password-in-clear-text' || '' }}
+          ${{ inputs.valid-authentication-types != '' && format('--valid-authentication-types {0}', inputs.valid-authentication-types) || '' }}
+          ${{ inputs.configfile != '' && format('--configfile {0}', inputs.configfile) || '' }}
+        working-directory: ${{ inputs.working-directory }}
+        force-verbosity: ${{ inputs.verbosity }}
+
+    - name: "🔍 Verify source was added"
+      id: verify-source
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        echo "🔍 Verifying NuGet source was added..."
+
+        SOURCE_ADDED="false"
+
+        # List all sources and check if our source was added
+        if [ -n "${{ inputs.configfile }}" ]; then
+          SOURCES_OUTPUT=$(dotnet nuget list source --configfile "${{ inputs.configfile }}" 2>/dev/null || echo "")
+        else
+          SOURCES_OUTPUT=$(dotnet nuget list source 2>/dev/null || echo "")
+        fi
+
+        if echo "$SOURCES_OUTPUT" | grep -q "${{ inputs.name }}"; then
+          SOURCE_ADDED="true"
+          echo "✅ Source '${{ inputs.name }}' was successfully added"
+
+          # Show the added source details (without sensitive info)
+          echo "📋 Source details:"
+          echo "$SOURCES_OUTPUT" | grep -A 1 "${{ inputs.name }}" || true
+        else
+          echo "⚠️ Could not verify that source '${{ inputs.name }}' was added"
+        fi
+
+        echo "source-added=$SOURCE_ADDED" >> $GITHUB_OUTPUT
+
+    - name: "📊 Action Summary"
+      if: always() && inputs.show-summary == 'true'
+      shell: bash
+      run: |
+        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+        <details><summary>Expand for details - 📊 NuGet Source Setup Summary</summary>
+
+        ## 🔧 Input Parameters
+        | Parameter | Value |
+        |-----------|-------|
+        | 🔗 Source Name | `${{ inputs.name }}` |
+        | 🌐 Source URL | `${{ inputs.source }}` |
+        | 👤 Username | `${{ inputs.username != '' && inputs.username || 'not provided' }}` |
+        | 🔑 Password | `${{ inputs.password != '' && '***configured***' || 'not provided' }}` |
+        | 📁 Working Directory | `${{ inputs.working-directory }}` |
+        | ⚙️ Config File | `${{ inputs.configfile || 'default' }}` |
+
+        ## 📤 Setup Results
+        | Metric | Value |
+        |--------|-------|
+        | ✅ Exit Code | `${{ steps.add-source.outputs.exit-code }}` |
+        | 🔗 Source Added | `${{ steps.verify-source.outputs.source-added }}` |
+        | 🚀 Executed Command | `${{ steps.add-source.outputs.executed-command }}` |
+
+        ## 🔐 Security Options
+        | Option | Status |
+        |--------|--------|
+        | 🔓 Store Password in Clear Text | `${{ inputs.store-password-in-clear-text }}` |
+        | 🔐 Valid Auth Types | `${{ inputs.valid-authentication-types || 'default' }}` |
+
+        ## ⚙️ Process Details
+        | Step | Status |
+        |------|--------|
+        | ✅ Input Validation | `✅ Completed` |
+        | 🔗 Source Addition | `${{ steps.add-source.outputs.exit-code == '0' && '✅ Completed' || '❌ Failed' }}` |
+        | 🔍 Source Verification | `${{ steps.verify-source.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+
+        </details>
+        EOF
+
+branding:
+  icon: 'link'
+  color: 'blue'
