@@ -1,0 +1,397 @@
+name: '📋 Extract DocFX Metadata'
+description: 'Generates YAML metadata files from source code using DocFX .NET Global Tool'
+author: 'Francois Raminosona'
+
+inputs:
+  config:
+    description: 'Path to the docfx configuration file (default: docfx.json)'
+    required: false
+    default: 'docfx.json'
+  output:
+    description: 'Specify the output base directory'
+    required: false
+    default: 'api'
+  log-level:
+    description: 'Set log level to error, warning, info, verbose or diagnostic'
+    required: false
+    default: 'info'
+  log-file:
+    description: 'Save log as structured JSON to the specified file'
+    required: false
+    default: ''
+  verbose:
+    description: 'Set log level to verbose'
+    required: false
+    default: 'false'
+  warnings-as-errors:
+    description: 'Treats warnings as errors'
+    required: false
+    default: 'false'
+  should-skip-markup:
+    description: 'Skip to markup the triple slash comments'
+    required: false
+    default: 'false'
+  output-format:
+    description: 'Specify the output type (mref, markdown, apiPage)'
+    required: false
+    default: 'mref'
+  filter:
+    description: 'Specify the filter config file'
+    required: false
+    default: ''
+  global-namespace-id:
+    description: 'Specify the name to use for the global namespace'
+    required: false
+    default: ''
+  property:
+    description: 'MSBuild properties in key=value format (semicolon-separated for multiple)'
+    required: false
+    default: ''
+  disable-git-features:
+    description: 'Disable fetching Git related information for articles'
+    required: false
+    default: 'false'
+  disable-default-filter:
+    description: 'Disable the default API filter (default filter only generate public or protected APIs)'
+    required: false
+    default: 'false'
+  no-restore:
+    description: 'Do not run dotnet restore before building the projects'
+    required: false
+    default: 'false'
+  namespace-layout:
+    description: 'Determines the namespace layout in table of contents (Flattened, Nested)'
+    required: false
+    default: 'Flattened'
+  member-layout:
+    description: 'Determines the member page layout (SamePage, SeparatePages)'
+    required: false
+    default: 'SamePage'
+  use-clr-type-names:
+    description: 'Indicates whether the CLR type names or the language aliases must be used'
+    required: false
+    default: 'false'
+  docfx-version:
+    description: 'Version of DocFX tool to install'
+    required: false
+    default: ''
+  show-summary:
+    description: 'Whether to show the action summary'
+    required: false
+    default: 'false'
+
+outputs:
+  output-path:
+    description: 'Full path to the generated metadata output directory'
+    value: ${{ steps.generate.outputs.output-path }}
+  config-path:
+    description: 'Path to the DocFX configuration file used'
+    value: ${{ steps.generate.outputs.config-path }}
+  yaml-files:
+    description: 'Number of YAML files generated'
+    value: ${{ steps.analyze.outputs.yaml-files }}
+  api-count:
+    description: 'Number of API items extracted'
+    value: ${{ steps.analyze.outputs.api-count }}
+  output-size:
+    description: 'Total size of the output directory in bytes'
+    value: ${{ steps.analyze.outputs.output-size }}
+  execution-time:
+    description: 'Time taken to extract metadata in seconds'
+    value: ${{ steps.generate.outputs.execution-time }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: "✅ Validate inputs"
+      shell: bash
+      run: |
+        echo "🔍 Validating DocFX metadata inputs..."
+
+        # Validate config file exists if specified and not default
+        if [ "${{ inputs.config }}" != "docfx.json" ] && [ ! -f "${{ inputs.config }}" ]; then
+          echo "❌ Error: DocFX configuration file not found: ${{ inputs.config }}"
+          exit 1
+        fi
+
+        # Validate log level
+        if [ -n "${{ inputs.log-level }}" ]; then
+          case "${{ inputs.log-level }}" in
+            error|warning|info|verbose|diagnostic) ;;
+            *) echo "❌ Error: Invalid log level. Must be one of: error, warning, info, verbose, diagnostic"; exit 1 ;;
+          esac
+        fi
+
+        # Validate output format
+        if [ -n "${{ inputs.output-format }}" ]; then
+          case "${{ inputs.output-format }}" in
+            mref|markdown|apiPage) ;;
+            *) echo "❌ Error: Invalid output format. Must be one of: mref, markdown, apiPage"; exit 1 ;;
+          esac
+        fi
+
+        # Validate namespace layout
+        if [ -n "${{ inputs.namespace-layout }}" ]; then
+          case "${{ inputs.namespace-layout }}" in
+            Flattened|Nested) ;;
+            *) echo "❌ Error: Invalid namespace layout. Must be one of: Flattened, Nested"; exit 1 ;;
+          esac
+        fi
+
+        # Validate member layout
+        if [ -n "${{ inputs.member-layout }}" ]; then
+          case "${{ inputs.member-layout }}" in
+            SamePage|SeparatePages) ;;
+            *) echo "❌ Error: Invalid member layout. Must be one of: SamePage, SeparatePages"; exit 1 ;;
+          esac
+        fi
+
+        # Validate boolean inputs
+        for param in verbose warnings-as-errors should-skip-markup disable-git-features disable-default-filter no-restore use-clr-type-names; do
+          case $param in
+            verbose) value="${{ inputs.verbose }}" ;;
+            warnings-as-errors) value="${{ inputs.warnings-as-errors }}" ;;
+            should-skip-markup) value="${{ inputs.should-skip-markup }}" ;;
+            disable-git-features) value="${{ inputs.disable-git-features }}" ;;
+            disable-default-filter) value="${{ inputs.disable-default-filter }}" ;;
+            no-restore) value="${{ inputs.no-restore }}" ;;
+            use-clr-type-names) value="${{ inputs.use-clr-type-names }}" ;;
+          esac
+          if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
+            echo "❌ Error: Parameter $param must be 'true' or 'false', got: $value"
+            exit 1
+          fi
+        done
+
+        # Validate filter file exists if specified
+        if [ -n "${{ inputs.filter }}" ] && [ ! -f "${{ inputs.filter }}" ]; then
+          echo "❌ Error: Filter config file not found: ${{ inputs.filter }}"
+          exit 1
+        fi
+
+        echo "✅ Input validation passed"
+
+    - name: "📦 Install DocFX tool"
+      uses: "./dotnet-tool-install"
+      with:
+        tool-name: 'docfx'
+        tool-version: ${{ inputs.docfx-version }}
+
+    - name: "📋 Extract metadata with DocFX"
+      id: generate
+      shell: bash
+      run: |
+        echo "🚀 Extracting metadata with DocFX..."
+
+        # Record start time
+        START_TIME=$(date +%s)
+
+        # Build command arguments array
+        COMMAND_ARGS=("metadata")
+
+        # Add config file if not default or if default exists
+        if [ "${{ inputs.config }}" != "docfx.json" ] || [ -f "docfx.json" ]; then
+          COMMAND_ARGS+=("${{ inputs.config }}")
+          echo "📋 Using config file: ${{ inputs.config }}"
+        fi
+
+        # Add output directory
+        if [ -n "${{ inputs.output }}" ]; then
+          COMMAND_ARGS+=("--output" "${{ inputs.output }}")
+          echo "📁 Output directory: ${{ inputs.output }}"
+        fi
+
+        # Add log level
+        if [ -n "${{ inputs.log-level }}" ]; then
+          COMMAND_ARGS+=("--logLevel" "${{ inputs.log-level }}")
+          echo "📊 Log level: ${{ inputs.log-level }}"
+        fi
+
+        # Add log file
+        if [ -n "${{ inputs.log-file }}" ]; then
+          COMMAND_ARGS+=("--log" "${{ inputs.log-file }}")
+          echo "📄 Log file: ${{ inputs.log-file }}"
+        fi
+
+        # Add boolean flags
+        [ "${{ inputs.verbose }}" = "true" ] && COMMAND_ARGS+=("--verbose") && echo "🔍 Verbose logging enabled"
+        [ "${{ inputs.warnings-as-errors }}" = "true" ] && COMMAND_ARGS+=("--warningsAsErrors") && echo "⚠️ Treating warnings as errors"
+        [ "${{ inputs.should-skip-markup }}" = "true" ] && COMMAND_ARGS+=("--shouldSkipMarkup") && echo "🚫 Skipping markup of triple slash comments"
+        [ "${{ inputs.disable-git-features }}" = "true" ] && COMMAND_ARGS+=("--disableGitFeatures") && echo "🚫 Git features disabled"
+        [ "${{ inputs.disable-default-filter }}" = "true" ] && COMMAND_ARGS+=("--disableDefaultFilter") && echo "🚫 Default API filter disabled"
+        [ "${{ inputs.no-restore }}" = "true" ] && COMMAND_ARGS+=("--noRestore") && echo "📦 Skipping dotnet restore"
+        [ "${{ inputs.use-clr-type-names }}" = "true" ] && COMMAND_ARGS+=("--useClrTypeNames") && echo "🔤 Using CLR type names"
+
+        # Add output format
+        if [ -n "${{ inputs.output-format }}" ]; then
+          COMMAND_ARGS+=("--outputFormat" "${{ inputs.output-format }}")
+          echo "📋 Output format: ${{ inputs.output-format }}"
+        fi
+
+        # Add filter config file
+        if [ -n "${{ inputs.filter }}" ]; then
+          COMMAND_ARGS+=("--filter" "${{ inputs.filter }}")
+          echo "🔍 Using filter config: ${{ inputs.filter }}"
+        fi
+
+        # Add global namespace ID
+        if [ -n "${{ inputs.global-namespace-id }}" ]; then
+          COMMAND_ARGS+=("--globalNamespaceId" "${{ inputs.global-namespace-id }}")
+          echo "🌐 Global namespace ID: ${{ inputs.global-namespace-id }}"
+        fi
+
+        # Add MSBuild properties
+        if [ -n "${{ inputs.property }}" ]; then
+          IFS=';' read -ra PROPERTIES <<< "${{ inputs.property }}"
+          for prop in "${PROPERTIES[@]}"; do
+            COMMAND_ARGS+=("--property" "$prop")
+            echo "🔧 MSBuild property: $prop"
+          done
+        fi
+
+        # Add namespace layout
+        if [ -n "${{ inputs.namespace-layout }}" ]; then
+          COMMAND_ARGS+=("--namespaceLayout" "${{ inputs.namespace-layout }}")
+          echo "📂 Namespace layout: ${{ inputs.namespace-layout }}"
+        fi
+
+        # Add member layout
+        if [ -n "${{ inputs.member-layout }}" ]; then
+          COMMAND_ARGS+=("--memberLayout" "${{ inputs.member-layout }}")
+          echo "📄 Member layout: ${{ inputs.member-layout }}"
+        fi
+
+        # Create full command for logging
+        FULL_COMMAND="docfx ${COMMAND_ARGS[*]}"
+        echo "📋 Executing: $FULL_COMMAND"
+
+        # Execute DocFX Metadata
+        if docfx "${COMMAND_ARGS[@]}"; then
+          echo "✅ Metadata extraction completed successfully"
+        else
+          echo "❌ Metadata extraction failed"
+          exit 1
+        fi
+
+        # Calculate execution time
+        END_TIME=$(date +%s)
+        EXECUTION_TIME=$((END_TIME - START_TIME))
+        echo "execution-time=$EXECUTION_TIME" >> $GITHUB_OUTPUT
+
+        # Set outputs
+        OUTPUT_PATH=$(realpath "${{ inputs.output }}")
+        echo "output-path=$OUTPUT_PATH" >> $GITHUB_OUTPUT
+
+        CONFIG_PATH=$(realpath "${{ inputs.config }}")
+        echo "config-path=$CONFIG_PATH" >> $GITHUB_OUTPUT
+
+    - name: "📊 Analyze generated metadata"
+      id: analyze
+      shell: bash
+      run: |
+        echo "📊 Analyzing generated metadata..."
+
+        OUTPUT_DIR="${{ steps.generate.outputs.output-path }}"
+
+        if [ -d "$OUTPUT_DIR" ]; then
+          # Count YAML files
+          YAML_FILES=$(find "$OUTPUT_DIR" \( -name "*.yml" -o -name "*.yaml" \) -type f | wc -l | tr -d ' ')
+          echo "📄 YAML files generated: $YAML_FILES"
+          echo "yaml-files=$YAML_FILES" >> $GITHUB_OUTPUT
+
+          # Count API items (rough estimation by counting id: entries in YAML files)
+          API_COUNT=0
+          if [ "$YAML_FILES" -gt 0 ]; then
+            API_COUNT=$(find "$OUTPUT_DIR" \( -name "*.yml" -o -name "*.yaml" \) -type f -exec grep -c "^- uid:" {} + 2>/dev/null | awk '{sum += $1} END {print sum+0}')
+          fi
+          echo "🔍 API items extracted: $API_COUNT"
+          echo "api-count=$API_COUNT" >> $GITHUB_OUTPUT
+
+          # Calculate total size
+          if command -v du >/dev/null 2>&1; then
+            if du -sb "$OUTPUT_DIR" >/dev/null 2>&1; then
+              # GNU du
+              OUTPUT_SIZE=$(du -sb "$OUTPUT_DIR" | cut -f1)
+            else
+              # BSD du (macOS)
+              OUTPUT_SIZE=$(du -sk "$OUTPUT_DIR" | cut -f1)
+              OUTPUT_SIZE=$((OUTPUT_SIZE * 1024))
+            fi
+          else
+            OUTPUT_SIZE="unknown"
+          fi
+
+          echo "📏 Total output size: $OUTPUT_SIZE bytes"
+          echo "output-size=$OUTPUT_SIZE" >> $GITHUB_OUTPUT
+
+          # List generated files
+          if [ "$YAML_FILES" -gt 0 ]; then
+            echo "📋 Generated metadata files:"
+            find "$OUTPUT_DIR" \( -name "*.yml" -o -name "*.yaml" \) -type f | head -10 | while read -r file; do
+              echo "  📄 $(basename "$file")"
+            done
+            if [ "$YAML_FILES" -gt 10 ]; then
+              echo "  ... and $((YAML_FILES - 10)) more files"
+            fi
+          fi
+
+        else
+          echo "❌ Output directory not found: $OUTPUT_DIR"
+          echo "yaml-files=0" >> $GITHUB_OUTPUT
+          echo "api-count=0" >> $GITHUB_OUTPUT
+          echo "output-size=0" >> $GITHUB_OUTPUT
+        fi
+
+    - name: "📊 Action Summary"
+      if: ${{ inputs.show-summary == 'true' }}
+      shell: bash
+      run: |
+        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+        <details><summary>Expand for details - 📊 DocFX Metadata Extraction Summary</summary>
+
+        ## 🔧 Input Parameters
+        | Parameter | Value |
+        |-----------|-------|
+        | 📋 Config File | `${{ inputs.config }}` |
+        | 📁 Output Directory | `${{ inputs.output }}` |
+        | 📊 Log Level | `${{ inputs.log-level }}` |
+        | 📋 Output Format | `${{ inputs.output-format }}` |
+        | 🔍 Filter Config | `${{ inputs.filter || 'none' }}` |
+        | 📂 Namespace Layout | `${{ inputs.namespace-layout }}` |
+        | 📄 Member Layout | `${{ inputs.member-layout }}` |
+
+        ## 📤 Extraction Results
+        | Metric | Value |
+        |--------|-------|
+        | 📁 Output Path | `${{ steps.generate.outputs.output-path }}` |
+        | 📋 Config Path | `${{ steps.generate.outputs.config-path }}` |
+        | 📄 YAML Files Generated | `${{ steps.analyze.outputs.yaml-files }}` |
+        | 🔍 API Items Extracted | `${{ steps.analyze.outputs.api-count }}` |
+        | 📏 Total Size | `${{ steps.analyze.outputs.output-size }} bytes` |
+        | ⏱️ Execution Time | `${{ steps.generate.outputs.execution-time }} seconds` |
+
+        ## ⚙️ Configuration Options
+        | Option | Status |
+        |--------|--------|
+        | 🔍 Verbose Logging | `${{ inputs.verbose }}` |
+        | ⚠️ Warnings as Errors | `${{ inputs.warnings-as-errors }}` |
+        | 🚫 Skip Markup | `${{ inputs.should-skip-markup }}` |
+        | 🚫 Disable Git Features | `${{ inputs.disable-git-features }}` |
+        | 🚫 Disable Default Filter | `${{ inputs.disable-default-filter }}` |
+        | 📦 No Restore | `${{ inputs.no-restore }}` |
+        | 🔤 Use CLR Type Names | `${{ inputs.use-clr-type-names }}` |
+
+        ## 🔧 Process Details
+        | Step | Status |
+        |------|--------|
+        | ✅ Input Validation | `✅ Completed` |
+        | 📦 Tool Installation | `✅ Completed` |
+        | 📋 Metadata Extraction | `${{ steps.generate.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | 📊 Output Analysis | `${{ steps.analyze.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+
+        </details>
+        EOF
+
+branding:
+  icon: 'database'
+  color: 'blue'
