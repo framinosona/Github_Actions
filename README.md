@@ -55,22 +55,53 @@ This repository includes a comprehensive CI/CD pipeline (`.github/workflows/ci.y
 ```mermaid
 graph TD
     A[📥 Checkout] --> B[🔢 Generate Version]
-    B --> C[🏷️ Create Git Tag]
+    B --> C[📦 Upload Version Artifacts]
     C --> D[🎨 Generate Badge]
-    D --> E[🚀 Create Release]
+    D --> E[� Upload Badge Artifacts]
     E --> F[📚 Build Documentation]
-    F --> G[📁 Prepare Assets]
-    G --> H[🌐 Deploy to Pages]
+    F --> G[📁 Move Badge to Site Assets]
+    G --> H[📤 Upload Pages Artifact]
+    H --> I[🏷️ Create Git Tag]
+    I --> J[🚀 Create Release]
+    J --> K[📋 Workflow Summary]
+    K --> L[🌐 Deploy to Pages]
 ```
 
 ### Pipeline Features
 
 - **🔄 Automatic Versioning**: Semantic version calculation with Git tag analysis
-- **🏷️ Smart Tagging**: Conditional tag creation based on branch rules
-- **🎨 Badge Generation**: SVG badges included in documentation
-- **🚀 Release Management**: Automated GitHub releases with assets
-- **📚 Documentation**: DocFX-powered site generation
-- **🌐 Deployment**: GitHub Pages integration with custom assets
+- **📦 Artifact Management**: Version files and badges uploaded as workflow artifacts
+- **🎨 Badge Generation**: SVG badges with automated integration into documentation
+- **🏷️ Smart Tagging**: Conditional tag creation based on branch rules and force-release option
+- **🚀 Release Management**: Automated GitHub releases with generated notes
+- **📚 Documentation**: DocFX-powered site generation with integrated assets
+- **🌐 Two-Stage Deployment**: Separate build and deploy jobs for GitHub Pages
+- **📋 Rich Summaries**: Detailed workflow summaries with status and quick links
+
+### Workflow Structure
+
+The CI/CD pipeline consists of two main jobs:
+
+#### 🏗️ Build and Release Job
+
+- **Version Generation**: Creates semantic versions with multiple output formats
+- **Artifact Upload**: Stores version files and badges for download
+- **Documentation Build**: Generates DocFX-powered documentation site
+- **Asset Integration**: Automatically includes badges in documentation
+- **Conditional Release**: Creates tags and releases only on main branch or force-release
+- **Summary Generation**: Provides detailed workflow execution summary
+
+#### 🌐 Deploy to Pages Job
+
+- **GitHub Pages Deployment**: Deploys documentation site to GitHub Pages
+- **Asset Verification**: Ensures badges and documentation are properly deployed
+- **Deployment Summary**: Provides links and verification of deployed resources
+
+### Workflow Triggers
+
+- **Push Events**: Automatically runs on `main` and `develop` branches
+- **Pull Requests**: Validates changes targeting the `main` branch
+- **Manual Dispatch**: Supports manual execution with version and release options
 
 ## 🚀 Quick Start
 
