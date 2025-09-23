@@ -165,7 +165,7 @@ runs:
       id: build-args
       shell: bash
       run: |
-        echo "🔧 Building dotnet nuget push arguments..."
+        echo "🔧 Building dotnet arguments..."
 
         # Start with base arguments
         ARGS="push '${{ inputs.package-path }}'"
