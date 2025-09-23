@@ -1,0 +1,350 @@
+name: "🚀 Run .NET Command"
+description: "Runs a .NET command with automatic verbosity handling based on debug settings"
+author: 'Francois Raminosona'
+
+inputs:
+  command:
+    description: "The dotnet command to run (e.g., 'build', 'restore', 'test')"
+    required: true
+  path:
+    description: "Path to the project file, solution file, or directory to operate on"
+    required: false
+    default: ""
+  arguments:
+    description: "Additional arguments to pass to the dotnet command (can be a string or YAML array for complex arguments)"
+    required: false
+    default: ""
+  working-directory:
+    description: "Working directory for the command"
+    required: false
+    default: "."
+  force-verbosity:
+    description: "Force a specific verbosity level (overrides auto-detection)"
+    required: false
+    default: ""
+  configuration:
+    description: "Build configuration to use (e.g., 'Debug', 'Release')"
+    required: false
+    default: "Release"
+  no-logo:
+    description: "Suppress the Microsoft logo and startup information"
+    required: false
+    default: "true"
+  framework:
+    description: "Target framework (e.g., 'net8.0', 'net6.0')"
+    required: false
+    default: ""
+  runtime:
+    description: "Target runtime (e.g., 'win-x64', 'linux-x64', 'osx-arm64')"
+    required: false
+    default: ""
+  no-restore:
+    description: "Skip automatic restore"
+    required: false
+    default: "false"
+  no-build:
+    description: "Skip building the project before running"
+    required: false
+    default: "false"
+  output:
+    description: "Output directory path"
+    required: false
+    default: ""
+  show-summary:
+    description: 'Whether to show the action summary'
+    required: false
+    default: 'false'
+
+outputs:
+  exit-code:
+    description: "Exit code of the dotnet command"
+    value: ${{ steps.run-command.outputs.exit-code }}
+  executed-command:
+    description: "The actual command that was executed"
+    value: ${{ steps.run-command.outputs.executed-command }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: "✅ Validate inputs"
+      shell: bash
+      run: |
+        echo "🔍 Validating inputs..."
+
+        # Validate command is not empty
+        if [ -z "${{ inputs.command }}" ]; then
+          echo "❌ Error: Command cannot be empty"
+          exit 1
+        fi
+
+        # Validate path exists if provided
+        if [ -n "${{ inputs.path }}" ] && [ ! -e "${{ inputs.path }}" ]; then
+          echo "❌ Error: Specified path does not exist: ${{ inputs.path }}"
+          exit 1
+        fi
+
+        # Validate working directory exists
+        if [ ! -d "${{ inputs.working-directory }}" ]; then
+          echo "❌ Error: Working directory does not exist: ${{ inputs.working-directory }}"
+          exit 1
+        fi
+
+        # Validate verbosity level if forced
+        if [ -n "${{ inputs.force-verbosity }}" ]; then
+          case "${{ inputs.force-verbosity }}" in
+            quiet|minimal|normal|detailed|diagnostic) ;;
+            *) echo "❌ Error: Invalid verbosity level: ${{ inputs.force-verbosity }}. Must be one of: quiet, minimal, normal, detailed, diagnostic"; exit 1 ;;
+          esac
+        fi
+
+        echo "✅ Input validation passed"
+
+    - name: "🚀 Run dotnet command with auto-verbosity"
+      id: run-command
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        echo "🚀 Preparing to execute dotnet command..."
+
+        # Define command support maps (cached for performance)
+        declare -A COMMAND_SUPPORT=(
+          ["verbosity"]="build|restore|pack|publish|test|clean|msbuild|workload"
+          ["configuration"]="build|publish|test|pack|run"
+          ["no-logo"]="build|restore|pack|publish|test|clean|msbuild|run|nuget|add|remove|list"
+          ["framework"]="build|publish|test|pack|run"
+          ["runtime"]="build|publish|test|pack|run"
+          ["no-restore"]="build|test|publish|pack"
+          ["output"]="build|publish|pack"
+          ["no-build"]="test|publish"
+        )
+
+        # Function to check command support
+        supports_option() {
+          local option="$1"
+          local command="${{ inputs.command }}"
+          echo "$command" | grep -qE "^(${COMMAND_SUPPORT[$option]})$"
+        }
+
+        # Determine verbosity level
+        if [ -n "${{ inputs.force-verbosity }}" ]; then
+          VERBOSITY="${{ inputs.force-verbosity }}"
+        elif [ "$ACTIONS_STEP_DEBUG" = "true" ] || [ "$ACTIONS_RUNNER_DEBUG" = "true" ]; then
+          VERBOSITY="detailed"
+        else
+          VERBOSITY="minimal"
+        fi
+
+        # Check if command supports verbosity
+        if supports_option "verbosity"; then
+          VERBOSITY_ARG="--verbosity $VERBOSITY"
+          echo "🔧 Command '${{ inputs.command }}' supports verbosity - using: $VERBOSITY"
+        else
+          VERBOSITY_ARG=""
+          echo "ℹ️ Command '${{ inputs.command }}' does not support verbosity"
+        fi
+
+        # Check if command supports configuration
+        if supports_option "configuration"; then
+          CONFIGURATION_ARG="--configuration ${{ inputs.configuration }}"
+          echo "🔧 Command '${{ inputs.command }}' supports configuration - using: ${{ inputs.configuration }}"
+        else
+          CONFIGURATION_ARG=""
+          echo "ℹ️ Command '${{ inputs.command }}' does not support configuration"
+        fi
+
+        # Check if command supports --no-logo
+        if supports_option "no-logo" && [ "${{ inputs.no-logo }}" = "true" ]; then
+          NO_LOGO_ARG="--nologo"
+          echo "🔧 Command '${{ inputs.command }}' supports no-logo - suppressing startup information"
+        else
+          NO_LOGO_ARG=""
+          if [ "${{ inputs.no-logo }}" = "true" ]; then
+            echo "ℹ️ Command '${{ inputs.command }}' does not support --nologo"
+          fi
+        fi
+
+        # Check if command supports --framework
+        if supports_option "framework" && [ -n "${{ inputs.framework }}" ]; then
+          FRAMEWORK_ARG="--framework ${{ inputs.framework }}"
+          echo "🔧 Command '${{ inputs.command }}' supports framework - using: ${{ inputs.framework }}"
+        else
+          FRAMEWORK_ARG=""
+          if [ -n "${{ inputs.framework }}" ]; then
+            echo "ℹ️ Command '${{ inputs.command }}' does not support --framework"
+          fi
+        fi
+
+        # Check if command supports --runtime
+        if supports_option "runtime" && [ -n "${{ inputs.runtime }}" ]; then
+          RUNTIME_ARG="--runtime ${{ inputs.runtime }}"
+          echo "🔧 Command '${{ inputs.command }}' supports runtime - using: ${{ inputs.runtime }}"
+        else
+          RUNTIME_ARG=""
+          if [ -n "${{ inputs.runtime }}" ]; then
+            echo "ℹ️ Command '${{ inputs.command }}' does not support --runtime"
+          fi
+        fi
+
+        # Check if command supports --no-restore
+        if supports_option "no-restore" && [ "${{ inputs.no-restore }}" = "true" ]; then
+          NO_RESTORE_ARG="--no-restore"
+          echo "🔧 Command '${{ inputs.command }}' supports no-restore - skipping automatic restore"
+        else
+          NO_RESTORE_ARG=""
+          if [ "${{ inputs.no-restore }}" = "true" ]; then
+            echo "ℹ️ Command '${{ inputs.command }}' does not support --no-restore"
+          fi
+        fi
+
+        # Check if command supports --output
+        if supports_option "output" && [ -n "${{ inputs.output }}" ]; then
+          OUTPUT_ARG="--output ${{ inputs.output }}"
+          echo "🔧 Command '${{ inputs.command }}' supports output - using: ${{ inputs.output }}"
+        else
+          OUTPUT_ARG=""
+          if [ -n "${{ inputs.output }}" ]; then
+            echo "ℹ️ Command '${{ inputs.command }}' does not support --output"
+          fi
+        fi
+
+        # Check if command supports --no-build
+        if supports_option "no-build" && [ "${{ inputs.no-build }}" = "true" ]; then
+          NO_BUILD_ARG="--no-build"
+          echo "🔧 Command '${{ inputs.command }}' supports no-build - skipping build step"
+        else
+          NO_BUILD_ARG=""
+          if [ "${{ inputs.no-build }}" = "true" ]; then
+            echo "ℹ️ Command '${{ inputs.command }}' does not support --no-build"
+          fi
+        fi
+
+        # Build the command with proper argument handling
+        COMMAND_PARTS=("dotnet" "${{ inputs.command }}")
+
+        # Add path if provided
+        if [ -n "${{ inputs.path }}" ]; then
+          COMMAND_PARTS+=("${{ inputs.path }}")
+          echo "🔧 Using path: ${{ inputs.path }}"
+        fi
+
+        # Add user arguments if provided (handle both string and array inputs)
+        if [ -n "${{ inputs.arguments }}" ]; then
+          echo "🔧 Adding user arguments..."
+          echo "🔍 Raw input received (length: ${#arguments}): ${{ inputs.arguments }}"
+
+          # Let's debug what we actually receive
+          arguments='${{ inputs.arguments }}'
+          echo "🔍 Variable assignment result: $arguments"
+          echo "🔍 Variable length: ${#arguments}"
+
+          # Show raw bytes to see what's happening to backslashes
+          echo "🔍 Raw bytes (via xxd):"
+          echo "$arguments" | xxd | head -5
+
+          # Check if arguments look like a YAML array (starts with "- " or is on multiple lines)
+          if [[ "$arguments" =~ ^[[:space:]]*- ]] || [[ "$arguments" =~ $'\n' ]]; then
+            echo "🔧 Detected YAML array format - processing as separate arguments"
+
+            # Process each line, being very careful about backslashes
+            while IFS= read -r line; do
+              echo "🔍 Processing line: '$line'"
+              # Remove leading "- " and whitespace, preserve everything else exactly
+              if [[ "$line" =~ ^[[:space:]]*-[[:space:]]*(.*) ]]; then
+                clean_arg="${BASH_REMATCH[1]}"
+                echo "🔍 Extracted argument: '$clean_arg'"
+                if [ -n "$clean_arg" ]; then
+                  COMMAND_PARTS+=("$clean_arg")
+                  echo "🔧   Added array argument: $clean_arg"
+                fi
+              fi
+            done <<< "$arguments"
+          else
+            echo "🔧 Processing as single string with simple space splitting"
+
+            # Simple approach: just add the entire arguments string as-is
+            # and let the shell handle it naturally
+            ARGUMENTS_STRING="$arguments"
+
+            # Use read to split on spaces while preserving quoted strings
+            eval "set -- $ARGUMENTS_STRING"
+            for arg in "$@"; do
+              COMMAND_PARTS+=("$arg")
+              echo "🔧   Added string argument: $arg"
+            done
+          fi
+        fi
+
+        # Add generated arguments only if they're not empty
+        [ -n "$VERBOSITY_ARG" ] && COMMAND_PARTS+=($VERBOSITY_ARG)
+        [ -n "$CONFIGURATION_ARG" ] && COMMAND_PARTS+=($CONFIGURATION_ARG)
+        [ -n "$NO_LOGO_ARG" ] && COMMAND_PARTS+=($NO_LOGO_ARG)
+        [ -n "$FRAMEWORK_ARG" ] && COMMAND_PARTS+=($FRAMEWORK_ARG)
+        [ -n "$RUNTIME_ARG" ] && COMMAND_PARTS+=($RUNTIME_ARG)
+        [ -n "$NO_RESTORE_ARG" ] && COMMAND_PARTS+=($NO_RESTORE_ARG)
+        [ -n "$OUTPUT_ARG" ] && COMMAND_PARTS+=($OUTPUT_ARG)
+        [ -n "$NO_BUILD_ARG" ] && COMMAND_PARTS+=($NO_BUILD_ARG)
+
+        # Create readable command string for output
+        FULL_COMMAND="${COMMAND_PARTS[*]}"
+        echo "📋 Final command: $FULL_COMMAND"
+
+        # Log command in debug mode
+        if [ "$ACTIONS_STEP_DEBUG" = "true" ] || [ "$ACTIONS_RUNNER_DEBUG" = "true" ]; then
+          echo "🐛 Debug: Command parts array:"
+          printf '  [%d]: %s\n' "${!COMMAND_PARTS[@]}" "${COMMAND_PARTS[@]}"
+        fi
+
+        # Execute the command using the array for better argument handling
+        echo "⚡ Executing command..."
+        "${COMMAND_PARTS[@]}"
+        EXIT_CODE=$?
+
+        # Enhanced status reporting
+        if [ $EXIT_CODE -eq 0 ]; then
+          echo "✅ Command completed successfully"
+        else
+          echo "❌ Command failed with exit code $EXIT_CODE"
+        fi
+
+        # Set outputs
+        echo "exit-code=$EXIT_CODE" >> $GITHUB_OUTPUT
+        echo "executed-command=$FULL_COMMAND" >> $GITHUB_OUTPUT
+
+        # Exit with the same code as the dotnet command
+        exit $EXIT_CODE
+
+    - name: "📊 Action Summary"
+      if: always() && inputs.show-summary == 'true'
+      shell: bash
+      run: |
+        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+        <details><summary>Expand for details - 📊 dotnet ${{ inputs.command }} Summary</summary>
+
+        ## 🔧 Input Parameters
+        | Parameter | Value |
+        |-----------|-------|
+        | 🚀 Command | `${{ inputs.command }}` |
+        | 📍 Path | `${{ inputs.path || 'none' }}` |
+        | 📁 Working Directory | `${{ inputs.working-directory }}` |
+        | ⚙️ Configuration | `${{ inputs.configuration }}` |
+        | 🎯 Framework | `${{ inputs.framework || 'none' }}` |
+        | 🖥️ Runtime | `${{ inputs.runtime || 'none' }}` |
+        | 🔧 Arguments | `${{ inputs.arguments || 'none' }}` |
+
+        ## 📤 Execution Results
+        | Metric | Value |
+        |--------|-------|
+        | ✅ Exit Code | `${{ steps.run-command.outputs.exit-code }}` |
+        | 🚀 Executed Command | `${{ steps.run-command.outputs.executed-command }}` |
+
+        ## 🎛️ Applied Options
+        | Option | Status |
+        |--------|--------|
+        | 🔇 No Logo | `${{ inputs.no-logo }}` |
+        | 🚫 No Restore | `${{ inputs.no-restore }}` |
+        | 🚫 No Build | `${{ inputs.no-build }}` |
+        | 📤 Output Path | `${{ inputs.output || 'none' }}` |
+        | 🔊 Force Verbosity | `${{ inputs.force-verbosity || 'auto' }}` |
+
+        </details>
+        EOF
