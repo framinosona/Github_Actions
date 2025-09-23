@@ -62,16 +62,6 @@ jobs:
           output-txt: 'version.txt'
           show-summary: 'true'
 
-      - name: '🏷️ Create Git Tag'
-        id: git-tag
-        if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || github.event.inputs.force-release == 'true'
-        uses: ./git-tag
-        with:
-          tag: ${{ steps.version.outputs.VERSION_FULL }}
-          message: 'Release ${{ steps.version.outputs.VERSION_FULL }}'
-          prefix: 'v'
-          fail-if-exists: 'false'
-          show-summary: 'true'
 
       - name: '🏷️ Generate Version Badge'
         id: badge
@@ -82,20 +72,6 @@ jobs:
           logo: 'github'
           output-file: 'version-badge.svg'
           output-format: 'svg'
-          show-summary: 'true'
-
-      - name: '🚀 Create GitHub Release'
-        id: release
-        if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || github.event.inputs.force-release == 'true'
-        uses: ./github-release
-        with:
-          tag: ${{ steps.git-tag.outputs.tag-name }}
-          title: 'Release ${{ steps.version.outputs.VERSION_FULL }}'
-          generate-notes: 'true'
-          prerelease: ${{ contains(steps.version.outputs.VERSION_FULL, '-') }}
-          assets: |
-            version.txt
-            version-badge.svg
           show-summary: 'true'
 
       - name: '📚 Build Documentation'
@@ -161,6 +137,28 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: ${{ steps.docfx.outputs.output-path }}
+
+      - name: '🏷️ Create Git Tag'
+        id: git-tag
+        if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || github.event.inputs.force-release == 'true'
+        uses: ./git-tag
+        with:
+          tag: ${{ steps.version.outputs.VERSION_FULL }}
+          message: 'Release ${{ steps.version.outputs.VERSION_FULL }}'
+          prefix: 'v'
+          fail-if-exists: 'false'
+          show-summary: 'true'
+
+      - name: '🚀 Create GitHub Release'
+        id: release
+        if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || github.event.inputs.force-release == 'true'
+        uses: ./github-release
+        with:
+          tag: ${{ steps.git-tag.outputs.tag-name }}
+          title: 'Release ${{ steps.version.outputs.VERSION_FULL }}'
+          generate-notes: 'true'
+          prerelease: ${{ contains(steps.version.outputs.VERSION_FULL, '-') }}
+          show-summary: 'true'
 
       - name: '📋 Workflow Summary'
         shell: bash
