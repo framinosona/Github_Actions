@@ -1,0 +1,46 @@
+{
+  "build": {
+    "content": [
+      {
+        "files": ["**/*.md", ".github/copilot-instructions.md", "toc.yml", "index.md"]
+      }
+    ],
+    "resource": [
+      {
+        "files": [
+          "docs/favicon/**",
+          "docs/custom/**"
+        ]
+      }
+    ],
+    "output": "_site",
+    "template": [
+      "default",
+      "modern",
+      "custom"
+    ],
+    "globalMetadata": {
+      "_appTitle": "Actions",
+      "_appName": "Actions Documentation",
+      "_appFooter": "© 2025 Actions. Made with ❤️ for GitHub Actions automation.",
+      "_enableSearch": true,
+      "_enableNewTab": true,
+      "_disableContribution": false,
+      "_gitContribute": {
+        "repo": "https://github.com/framinosona/Github_Actions",
+        "branch": "main"
+      },
+      "_gitUrlPattern": "github",
+      "_copyrightFooter": "© 2025 Actions Documentation"
+    },
+    "dest": "_site",
+    "xrefService": [
+      "https://xref.docs.microsoft.com/query?uid={uid}"
+    ],
+    "sitemap": {
+      "baseUrl": "https://framinosona.github.io/Github_Actions",
+      "changefreq": "weekly",
+      "priority": 0.5
+    }
+  }
+}

@@ -1,0 +1,15 @@
+.navbar .navbar-brand {
+  gap: 1rem;
+}
+
+/* mermaid graph TD label */
+foreignObject span.nodeLabel p{
+  color: darkslategray;
+}
+
+#logo{
+  width: 32px;
+  background-color: white;
+  padding: 4px;
+  border-radius: 16px;
+}
