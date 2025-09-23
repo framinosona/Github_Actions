@@ -1,0 +1,256 @@
+name: '📄 Generate DocFX PDF'
+description: 'Generates PDF documentation using DocFX .NET Global Tool'
+author: 'Francois Raminosona'
+
+inputs:
+  config:
+    description: 'Path to the docfx configuration file (default: docfx.json)'
+    required: false
+    default: 'docfx.json'
+  output:
+    description: 'Specify the output base directory'
+    required: false
+    default: '_site'
+  log-level:
+    description: 'Set log level to error, warning, info, verbose or diagnostic'
+    required: false
+    default: 'info'
+  log-file:
+    description: 'Save log as structured JSON to the specified file'
+    required: false
+    default: ''
+  verbose:
+    description: 'Set log level to verbose'
+    required: false
+    default: 'false'
+  warnings-as-errors:
+    description: 'Treats warnings as errors'
+    required: false
+    default: 'false'
+  docfx-version:
+    description: 'Version of DocFX tool to install'
+    required: false
+    default: ''
+  show-summary:
+    description: 'Whether to show the action summary'
+    required: false
+    default: 'false'
+
+outputs:
+  output-path:
+    description: 'Full path to the generated PDF output directory'
+    value: ${{ steps.generate.outputs.output-path }}
+  config-path:
+    description: 'Path to the DocFX configuration file used'
+    value: ${{ steps.generate.outputs.config-path }}
+  pdf-files:
+    description: 'Number of PDF files generated'
+    value: ${{ steps.analyze.outputs.pdf-files }}
+  output-size:
+    description: 'Total size of the output directory in bytes'
+    value: ${{ steps.analyze.outputs.output-size }}
+  execution-time:
+    description: 'Time taken to generate PDF in seconds'
+    value: ${{ steps.generate.outputs.execution-time }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: "✅ Validate inputs"
+      shell: bash
+      run: |
+        echo "🔍 Validating DocFX PDF inputs..."
+
+        # Validate config file exists if specified and not default
+        if [ "${{ inputs.config }}" != "docfx.json" ] && [ ! -f "${{ inputs.config }}" ]; then
+          echo "❌ Error: DocFX configuration file not found: ${{ inputs.config }}"
+          exit 1
+        fi
+
+        # Validate log level
+        if [ -n "${{ inputs.log-level }}" ]; then
+          case "${{ inputs.log-level }}" in
+            error|warning|info|verbose|diagnostic) ;;
+            *) echo "❌ Error: Invalid log level. Must be one of: error, warning, info, verbose, diagnostic"; exit 1 ;;
+          esac
+        fi
+
+        # Validate boolean inputs
+        for param in verbose warnings-as-errors; do
+          case $param in
+            verbose) value="${{ inputs.verbose }}" ;;
+            warnings-as-errors) value="${{ inputs.warnings-as-errors }}" ;;
+          esac
+          if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
+            echo "❌ Error: Parameter $param must be 'true' or 'false', got: $value"
+            exit 1
+          fi
+        done
+
+        echo "✅ Input validation passed"
+
+    - name: "📦 Install DocFX tool"
+      uses: "./dotnet-tool-install"
+      with:
+        tool-name: 'docfx'
+        tool-version: ${{ inputs.docfx-version }}
+
+    - name: "📄 Generate PDF with DocFX"
+      id: generate
+      shell: bash
+      run: |
+        echo "🚀 Generating PDF with DocFX..."
+
+        # Record start time
+        START_TIME=$(date +%s)
+
+        # Build command arguments array
+        COMMAND_ARGS=("pdf")
+
+        # Add config file if not default or if default exists
+        if [ "${{ inputs.config }}" != "docfx.json" ] || [ -f "docfx.json" ]; then
+          COMMAND_ARGS+=("${{ inputs.config }}")
+          echo "📋 Using config file: ${{ inputs.config }}"
+        fi
+
+        # Add output directory
+        if [ -n "${{ inputs.output }}" ]; then
+          COMMAND_ARGS+=("--output" "${{ inputs.output }}")
+          echo "📁 Output directory: ${{ inputs.output }}"
+        fi
+
+        # Add log level
+        if [ -n "${{ inputs.log-level }}" ]; then
+          COMMAND_ARGS+=("--logLevel" "${{ inputs.log-level }}")
+          echo "📊 Log level: ${{ inputs.log-level }}"
+        fi
+
+        # Add log file
+        if [ -n "${{ inputs.log-file }}" ]; then
+          COMMAND_ARGS+=("--log" "${{ inputs.log-file }}")
+          echo "📄 Log file: ${{ inputs.log-file }}"
+        fi
+
+        # Add boolean flags
+        [ "${{ inputs.verbose }}" = "true" ] && COMMAND_ARGS+=("--verbose") && echo "🔍 Verbose logging enabled"
+        [ "${{ inputs.warnings-as-errors }}" = "true" ] && COMMAND_ARGS+=("--warningsAsErrors") && echo "⚠️ Treating warnings as errors"
+
+        # Create full command for logging
+        FULL_COMMAND="docfx ${COMMAND_ARGS[*]}"
+        echo "📋 Executing: $FULL_COMMAND"
+
+        # Execute DocFX PDF
+        if docfx "${COMMAND_ARGS[@]}"; then
+          echo "✅ PDF generation completed successfully"
+        else
+          echo "❌ PDF generation failed"
+          exit 1
+        fi
+
+        # Calculate execution time
+        END_TIME=$(date +%s)
+        EXECUTION_TIME=$((END_TIME - START_TIME))
+        echo "execution-time=$EXECUTION_TIME" >> $GITHUB_OUTPUT
+
+        # Set outputs
+        OUTPUT_PATH=$(realpath "${{ inputs.output }}")
+        echo "output-path=$OUTPUT_PATH" >> $GITHUB_OUTPUT
+
+        CONFIG_PATH=$(realpath "${{ inputs.config }}")
+        echo "config-path=$CONFIG_PATH" >> $GITHUB_OUTPUT
+
+    - name: "📊 Analyze generated PDFs"
+      id: analyze
+      shell: bash
+      run: |
+        echo "📊 Analyzing generated PDFs..."
+
+        OUTPUT_DIR="${{ steps.generate.outputs.output-path }}"
+
+        if [ -d "$OUTPUT_DIR" ]; then
+          # Count PDF files
+          PDF_FILES=$(find "$OUTPUT_DIR" -name "*.pdf" -type f | wc -l | tr -d ' ')
+          echo "📄 PDF files generated: $PDF_FILES"
+          echo "pdf-files=$PDF_FILES" >> $GITHUB_OUTPUT
+
+          # Calculate total size
+          if command -v du >/dev/null 2>&1; then
+            if du -sb "$OUTPUT_DIR" >/dev/null 2>&1; then
+              # GNU du
+              OUTPUT_SIZE=$(du -sb "$OUTPUT_DIR" | cut -f1)
+            else
+              # BSD du (macOS)
+              OUTPUT_SIZE=$(du -sk "$OUTPUT_DIR" | cut -f1)
+              OUTPUT_SIZE=$((OUTPUT_SIZE * 1024))
+            fi
+          else
+            OUTPUT_SIZE="unknown"
+          fi
+
+          echo "📏 Total output size: $OUTPUT_SIZE bytes"
+          echo "output-size=$OUTPUT_SIZE" >> $GITHUB_OUTPUT
+
+          # List generated PDF files
+          if [ "$PDF_FILES" -gt 0 ]; then
+            echo "📋 Generated PDF files:"
+            find "$OUTPUT_DIR" -name "*.pdf" -type f | while read -r file; do
+              if command -v stat >/dev/null 2>&1; then
+                if stat -f%z "$file" >/dev/null 2>&1; then
+                  # macOS/BSD stat
+                  SIZE=$(stat -f%z "$file")
+                else
+                  # GNU stat
+                  SIZE=$(stat -c%s "$file")
+                fi
+                echo "  📄 $(basename "$file") ($SIZE bytes)"
+              else
+                echo "  📄 $(basename "$file")"
+              fi
+            done
+          fi
+
+        else
+          echo "❌ Output directory not found: $OUTPUT_DIR"
+          echo "pdf-files=0" >> $GITHUB_OUTPUT
+          echo "output-size=0" >> $GITHUB_OUTPUT
+        fi
+
+    - name: "📊 Action Summary"
+      if: ${{ inputs.show-summary == 'true' }}
+      shell: bash
+      run: |
+        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+        <details><summary>Expand for details - 📊 DocFX PDF Generation Summary</summary>
+
+        ## 🔧 Input Parameters
+        | Parameter | Value |
+        |-----------|-------|
+        | 📋 Config File | `${{ inputs.config }}` |
+        | 📁 Output Directory | `${{ inputs.output }}` |
+        | 📊 Log Level | `${{ inputs.log-level }}` |
+        | 🔍 Verbose Logging | `${{ inputs.verbose }}` |
+        | ⚠️ Warnings as Errors | `${{ inputs.warnings-as-errors }}` |
+
+        ## 📤 Generation Results
+        | Metric | Value |
+        |--------|-------|
+        | 📁 Output Path | `${{ steps.generate.outputs.output-path }}` |
+        | 📋 Config Path | `${{ steps.generate.outputs.config-path }}` |
+        | 📄 PDF Files Generated | `${{ steps.analyze.outputs.pdf-files }}` |
+        | 📏 Total Size | `${{ steps.analyze.outputs.output-size }} bytes` |
+        | ⏱️ Execution Time | `${{ steps.generate.outputs.execution-time }} seconds` |
+
+        ## 🔧 Process Details
+        | Step | Status |
+        |------|--------|
+        | ✅ Input Validation | `✅ Completed` |
+        | 📦 Tool Installation | `✅ Completed` |
+        | 📄 PDF Generation | `${{ steps.generate.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | 📊 Output Analysis | `${{ steps.analyze.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+
+        </details>
+        EOF
+
+branding:
+  icon: 'file-text'
+  color: 'blue'
