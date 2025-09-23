@@ -140,74 +140,55 @@ runs:
 
         echo "manifest-created=$MANIFEST_CREATED" >> $GITHUB_OUTPUT
 
-    - name: "🔧 Build install command arguments"
+    - name: "🔧 Build arguments"
       id: build-args
       shell: bash
       run: |
-        echo "🔧 Building .NET tool install arguments..."
+        echo "🔧 Building dotnet tool install arguments..."
 
         # Start with base arguments
-        ARGS=()
-        ARGS+=("install")
-        ARGS+=("${{ inputs.tool-name }}")
+        ARGS="install '${{ inputs.tool-name }}'"
 
         # Add conditional arguments
         if [ -n "${{ inputs.tool-version }}" ]; then
-          ARGS+=("--version" "${{ inputs.tool-version }}")
-          echo "📦 Added version: ${{ inputs.tool-version }}"
+          ARGS="$ARGS --version '${{ inputs.tool-version }}'"
         fi
 
         if [ "${{ inputs.global }}" = "true" ]; then
-          ARGS+=("--global")
-          echo "🌍 Added global flag"
+          ARGS="$ARGS --global"
         fi
 
         if [ "${{ inputs.prerelease }}" = "true" ]; then
-          ARGS+=("--prerelease")
-          echo "🧪 Added prerelease flag"
+          ARGS="$ARGS --prerelease"
         fi
 
         if [ -n "${{ inputs.tool-path }}" ]; then
-          ARGS+=("--tool-path" "${{ inputs.tool-path }}")
-          echo "🛤️ Added tool path: ${{ inputs.tool-path }}"
+          ARGS="$ARGS --tool-path '${{ inputs.tool-path }}'"
         fi
 
         if [ -n "${{ inputs.add-source }}" ]; then
-          ARGS+=("--add-source" "${{ inputs.add-source }}")
-          echo "🔗 Added source: ${{ inputs.add-source }}"
+          ARGS="$ARGS --add-source '${{ inputs.add-source }}'"
         fi
 
         if [ -n "${{ inputs.configfile }}" ]; then
-          ARGS+=("--configfile" "${{ inputs.configfile }}")
-          echo "⚙️ Added config file: ${{ inputs.configfile }}"
+          ARGS="$ARGS --configfile '${{ inputs.configfile }}'"
         fi
 
         if [ -n "${{ inputs.framework }}" ]; then
-          ARGS+=("--framework" "${{ inputs.framework }}")
-          echo "🎯 Added framework: ${{ inputs.framework }}"
+          ARGS="$ARGS --framework '${{ inputs.framework }}'"
         fi
 
-        # Build final arguments string for the dotnet action
-        FINAL_ARGS=""
-        for arg in "${ARGS[@]}"; do
-          FINAL_ARGS="${FINAL_ARGS}- ${arg}\n"
-        done
+        echo "📋 Generated arguments: $ARGS"
 
-        # Remove trailing newline and set output
-        FINAL_ARGS=$(echo -e "$FINAL_ARGS" | sed '$d')
-
-        echo "📋 Final arguments:"
-        echo "$FINAL_ARGS"
-        echo "argument-list<<EOF" >> $GITHUB_OUTPUT
-        echo "$FINAL_ARGS" >> $GITHUB_OUTPUT
-        echo "EOF" >> $GITHUB_OUTPUT
+        # Output the arguments string
+        echo "arguments=$ARGS" >> $GITHUB_OUTPUT
 
     - name: "🔧 Install .NET tool"
       id: install-tool
       uses: ./dotnet
       with:
         command: "tool"
-        arguments: ${{ steps.build-args.outputs.argument-list }}
+        arguments: ${{ steps.build-args.outputs.arguments }}
         working-directory: ${{ inputs.working-directory }}
         force-verbosity: ${{ inputs.verbosity }}
 

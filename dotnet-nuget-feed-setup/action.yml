@@ -118,22 +118,47 @@ runs:
 
         echo "✅ Input validation passed"
 
+    - name: "🔧 Build arguments"
+      id: build-args
+      shell: bash
+      run: |
+        echo "🔧 Building dotnet nuget add source arguments..."
+
+        # Start with base arguments
+        ARGS="add source '${{ inputs.source }}' --name '${{ inputs.name }}'"
+
+        # Add conditional arguments
+        if [ -n "${{ inputs.username }}" ]; then
+          ARGS="$ARGS --username '${{ inputs.username }}'"
+        fi
+
+        if [ -n "${{ inputs.password }}" ]; then
+          ARGS="$ARGS --password '${{ inputs.password }}'"
+        fi
+
+        if [ "${{ inputs.store-password-in-clear-text }}" = "true" ]; then
+          ARGS="$ARGS --store-password-in-clear-text"
+        fi
+
+        if [ -n "${{ inputs.valid-authentication-types }}" ]; then
+          ARGS="$ARGS --valid-authentication-types '${{ inputs.valid-authentication-types }}'"
+        fi
+
+        if [ -n "${{ inputs.configfile }}" ]; then
+          ARGS="$ARGS --configfile '${{ inputs.configfile }}'"
+        fi
+
+        echo "📋 Generated arguments: $ARGS"
+
+        # Output the arguments string
+        echo "arguments=$ARGS" >> $GITHUB_OUTPUT
+
     - name: "🔗 Add NuGet source"
       id: add-source
       uses: ./dotnet
       with:
         command: "nuget"
-        arguments: |
-          - add
-          - source
-          - ${{ inputs.source }}
-          - --name
-          - ${{ inputs.name }}
-          ${{ inputs.username != '' && format('--username {0}', inputs.username) || '' }}
-          ${{ inputs.password != '' && format('--password {0}', inputs.password) || '' }}
-          ${{ inputs.store-password-in-clear-text == 'true' && '--store-password-in-clear-text' || '' }}
-          ${{ inputs.valid-authentication-types != '' && format('--valid-authentication-types {0}', inputs.valid-authentication-types) || '' }}
-          ${{ inputs.configfile != '' && format('--configfile {0}', inputs.configfile) || '' }}
+        arguments: ${{ steps.build-args.outputs.arguments }}
         working-directory: ${{ inputs.working-directory }}
         force-verbosity: ${{ inputs.verbosity }}
 

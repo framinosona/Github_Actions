@@ -161,22 +161,59 @@ runs:
         echo "package-name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
         echo "package-version=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
 
+    - name: "🔧 Build arguments"
+      id: build-args
+      shell: bash
+      run: |
+        echo "🔧 Building dotnet nuget push arguments..."
+
+        # Start with base arguments
+        ARGS="push '${{ inputs.package-path }}'"
+
+        # Add conditional arguments
+        if [ -n "${{ inputs.source }}" ]; then
+          ARGS="$ARGS --source '${{ inputs.source }}'"
+        fi
+
+        if [ -n "${{ inputs.api-key }}" ]; then
+          ARGS="$ARGS --api-key '${{ inputs.api-key }}'"
+        fi
+
+        if [ -n "${{ inputs.symbol-source }}" ]; then
+          ARGS="$ARGS --symbol-source '${{ inputs.symbol-source }}'"
+        fi
+
+        if [ -n "${{ inputs.symbol-api-key }}" ]; then
+          ARGS="$ARGS --symbol-api-key '${{ inputs.symbol-api-key }}'"
+        fi
+
+        if [ "${{ inputs.timeout }}" != "300" ]; then
+          ARGS="$ARGS --timeout ${{ inputs.timeout }}"
+        fi
+
+        if [ "${{ inputs.skip-duplicate }}" = "true" ]; then
+          ARGS="$ARGS --skip-duplicate"
+        fi
+
+        if [ "${{ inputs.no-symbols }}" = "true" ]; then
+          ARGS="$ARGS --no-symbols"
+        fi
+
+        if [ "${{ inputs.force-english-output }}" = "true" ]; then
+          ARGS="$ARGS --force-english-output"
+        fi
+
+        echo "📋 Generated arguments: $ARGS"
+
+        # Output the arguments string
+        echo "arguments=$ARGS" >> $GITHUB_OUTPUT
+
     - name: "📦 Push NuGet package"
       id: push-package
       uses: ./dotnet
       with:
         command: "nuget"
-        arguments: |
-          - push
-          - ${{ inputs.package-path }}
-          ${{ inputs.source != '' && format('--source {0}', inputs.source) || '' }}
-          ${{ inputs.api-key != '' && format('--api-key {0}', inputs.api-key) || '' }}
-          ${{ inputs.symbol-source != '' && format('--symbol-source {0}', inputs.symbol-source) || '' }}
-          ${{ inputs.symbol-api-key != '' && format('--symbol-api-key {0}', inputs.symbol-api-key) || '' }}
-          ${{ inputs.timeout != '300' && format('--timeout {0}', inputs.timeout) || '' }}
-          ${{ inputs.skip-duplicate == 'true' && '--skip-duplicate' || '' }}
-          ${{ inputs.no-symbols == 'true' && '--no-symbols' || '' }}
-          ${{ inputs.force-english-output == 'true' && '--force-english-output' || '' }}
+        arguments: ${{ steps.build-args.outputs.arguments }}
         working-directory: ${{ inputs.working-directory }}
         force-verbosity: ${{ inputs.verbosity }}
 
