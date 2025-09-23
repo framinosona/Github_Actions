@@ -1,0 +1,314 @@
+name: '🏷️ Generate Badge'
+description: 'Generate static badges using shields.io with customizable styling and output options'
+author: 'Francois Raminosona'
+
+inputs:
+  label:
+    description: 'Left-hand side text of the badge (optional if using badge-content format)'
+    required: false
+    default: ''
+  message:
+    description: 'Right-hand side text/message of the badge'
+    required: true
+  color:
+    description: 'Background color of the right part (hex, rgb, rgba, hsl, hsla and css named colors supported)'
+    required: false
+    default: 'blue'
+  label-color:
+    description: 'Background color of the left part (hex, rgb, rgba, hsl, hsla and css named colors supported)'
+    required: false
+    default: ''
+  style:
+    description: 'Badge style - flat, flat-square, plastic, for-the-badge, social'
+    required: false
+    default: 'flat'
+  logo:
+    description: 'Icon slug from simple-icons (e.g., github, docker, node-dot-js)'
+    required: false
+    default: ''
+  logo-color:
+    description: 'Color of the logo (hex, rgb, rgba, hsl, hsla and css named colors supported)'
+    required: false
+    default: ''
+  logo-size:
+    description: 'Logo size - set to "auto" for adaptive resizing'
+    required: false
+    default: ''
+  output-file:
+    description: 'File path to save the badge URL (optional)'
+    required: false
+    default: ''
+  output-format:
+    description: 'Output format - url, markdown, html, svg'
+    required: false
+    default: 'url'
+  cache-seconds:
+    description: 'HTTP cache lifetime in seconds'
+    required: false
+    default: ''
+  show-summary:
+    description: 'Whether to show the action summary'
+    required: false
+    default: 'false'
+
+outputs:
+  badge-url:
+    description: 'The generated shields.io badge URL'
+    value: ${{ steps.generate.outputs.badge-url }}
+  badge-markdown:
+    description: 'Badge in Markdown format'
+    value: ${{ steps.generate.outputs.badge-markdown }}
+  badge-html:
+    description: 'Badge in HTML format'
+    value: ${{ steps.generate.outputs.badge-html }}
+  output-file-path:
+    description: 'Path to the output file if created'
+    value: ${{ steps.generate.outputs.output-file-path }}
+  svg-content:
+    description: 'The SVG content of the badge (when format is svg)'
+    value: ${{ steps.generate.outputs.svg-content }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: "✅ Validate inputs"
+      shell: bash
+      run: |
+        echo "🔍 Validating inputs..."
+
+        # Validate required message parameter
+        if [ -z "${{ inputs.message }}" ]; then
+          echo "❌ Error: Message parameter is required"
+          exit 1
+        fi
+
+        # Validate style parameter
+        if [ -n "${{ inputs.style }}" ]; then
+          case "${{ inputs.style }}" in
+            flat|flat-square|plastic|for-the-badge|social) ;;
+            *) echo "❌ Error: Invalid style. Must be one of: flat, flat-square, plastic, for-the-badge, social"; exit 1 ;;
+          esac
+        fi
+
+        # Validate output format
+        if [ -n "${{ inputs.output-format }}" ]; then
+          case "${{ inputs.output-format }}" in
+            url|markdown|html|svg) ;;
+            *) echo "❌ Error: Invalid output format. Must be one of: url, markdown, html, svg"; exit 1 ;;
+          esac
+        fi
+
+        # Validate output file directory exists if specified
+        if [ -n "${{ inputs.output-file }}" ]; then
+          output_dir=$(dirname "${{ inputs.output-file }}")
+          if [ ! -d "$output_dir" ]; then
+            echo "📁 Creating output directory: $output_dir"
+            mkdir -p "$output_dir"
+          fi
+        fi
+
+        # Validate cache-seconds is numeric if specified
+        if [ -n "${{ inputs.cache-seconds }}" ]; then
+          if ! [[ "${{ inputs.cache-seconds }}" =~ ^[0-9]+$ ]]; then
+            echo "❌ Error: cache-seconds must be a numeric value"
+            exit 1
+          fi
+        fi
+
+        echo "✅ Input validation passed"
+
+    - name: "🏷️ Generate Badge"
+      id: generate
+      shell: bash
+      run: |
+        echo "🚀 Generating shields.io badge..."
+
+        # URL encode function
+        url_encode() {
+          echo "$1" | sed 's/ /%20/g' | sed 's/_/__/g' | sed 's/-/--/g'
+        }
+
+        # Build badge content
+        if [ -n "${{ inputs.label }}" ]; then
+          # Label-Message-Color format
+          label_encoded=$(url_encode "${{ inputs.label }}")
+          message_encoded=$(url_encode "${{ inputs.message }}")
+          badge_content="${label_encoded}-${message_encoded}-${{ inputs.color }}"
+        else
+          # Message-Color format
+          message_encoded=$(url_encode "${{ inputs.message }}")
+          badge_content="${message_encoded}-${{ inputs.color }}"
+        fi
+
+        # Build base URL
+        base_url="https://img.shields.io/badge/${badge_content}"
+
+        # Build query parameters
+        params=""
+
+        # Add style parameter
+        if [ -n "${{ inputs.style }}" ] && [ "${{ inputs.style }}" != "flat" ]; then
+          params="${params}&style=${{ inputs.style }}"
+        fi
+
+        # Add logo parameters
+        if [ -n "${{ inputs.logo }}" ]; then
+          params="${params}&logo=${{ inputs.logo }}"
+        fi
+
+        if [ -n "${{ inputs.logo-color }}" ]; then
+          params="${params}&logoColor=${{ inputs.logo-color }}"
+        fi
+
+        if [ -n "${{ inputs.logo-size }}" ]; then
+          params="${params}&logoSize=${{ inputs.logo-size }}"
+        fi
+
+        # Add label color
+        if [ -n "${{ inputs.label-color }}" ]; then
+          params="${params}&labelColor=${{ inputs.label-color }}"
+        fi
+
+        # Add cache seconds
+        if [ -n "${{ inputs.cache-seconds }}" ]; then
+          params="${params}&cacheSeconds=${{ inputs.cache-seconds }}"
+        fi
+
+        # Remove leading & if params exist
+        if [ -n "$params" ]; then
+          params="?${params#&}"
+        fi
+
+        # Complete URL
+        badge_url="${base_url}${params}"
+
+        echo "🎯 Generated badge URL: $badge_url"
+
+        # Generate different formats
+        if [ -n "${{ inputs.label }}" ]; then
+          alt_text="${{ inputs.label }}: ${{ inputs.message }}"
+        else
+          alt_text="${{ inputs.message }}"
+        fi
+
+        badge_markdown="![${alt_text}](${badge_url})"
+        badge_html="<img src=\"${badge_url}\" alt=\"${alt_text}\" />"
+
+        # Set outputs
+        echo "badge-url=${badge_url}" >> $GITHUB_OUTPUT
+        echo "badge-markdown=${badge_markdown}" >> $GITHUB_OUTPUT
+        echo "badge-html=${badge_html}" >> $GITHUB_OUTPUT
+
+        # Download SVG content if needed
+        svg_content=""
+        if [ "${{ inputs.output-format }}" = "svg" ] || [ -n "${{ inputs.output-file }}" ]; then
+          echo "📥 Downloading SVG content from shields.io..."
+          if command -v curl >/dev/null 2>&1; then
+            svg_content=$(curl -s "${badge_url}")
+          elif command -v wget >/dev/null 2>&1; then
+            svg_content=$(wget -qO- "${badge_url}")
+          else
+            echo "❌ Error: Neither curl nor wget is available for downloading SVG content"
+            exit 1
+          fi
+
+          if [ -n "$svg_content" ] && [[ "$svg_content" =~ \<svg ]]; then
+            echo "✅ SVG content downloaded successfully"
+            echo "svg-content=${svg_content}" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Error: Failed to download valid SVG content"
+            exit 1
+          fi
+        fi
+
+        # Save to file if requested
+        if [ -n "${{ inputs.output-file }}" ]; then
+          case "${{ inputs.output-format }}" in
+            url)
+              echo "${badge_url}" > "${{ inputs.output-file }}"
+              ;;
+            markdown)
+              echo "${badge_markdown}" > "${{ inputs.output-file }}"
+              ;;
+            html)
+              echo "${badge_html}" > "${{ inputs.output-file }}"
+              ;;
+            svg)
+              if [ -n "$svg_content" ]; then
+                echo "${svg_content}" > "${{ inputs.output-file }}"
+                echo "📁 SVG file saved to: ${{ inputs.output-file }}"
+              else
+                echo "❌ Error: No SVG content available to save"
+                exit 1
+              fi
+              ;;
+          esac
+
+          output_file_full_path=$(realpath "${{ inputs.output-file }}")
+          echo "output-file-path=${output_file_full_path}" >> $GITHUB_OUTPUT
+          echo "📁 Badge saved to: ${output_file_full_path}"
+        else
+          echo "output-file-path=" >> $GITHUB_OUTPUT
+        fi
+
+        echo "✅ Badge generation completed successfully"
+
+    - name: "📊 Action Summary"
+      if: always() && inputs.show-summary == 'true'
+      shell: bash
+      run: |
+        # Determine final status
+        if [ "${{ steps.generate.outcome }}" = "success" ]; then
+          status_icon="✅"
+          status_text="Success"
+        else
+          status_icon="❌"
+          status_text="Failed"
+        fi
+
+        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+        <details><summary>Expand for details - 📊 Generate Badge Summary</summary>
+
+        ## 🔧 Input Parameters
+        | Parameter | Value |
+        |-----------|-------|
+        | 🏷️ Label | `${{ inputs.label || '(none)' }}` |
+        | 💬 Message | `${{ inputs.message }}` |
+        | 🎨 Color | `${{ inputs.color }}` |
+        | 🎨 Label Color | `${{ inputs.label-color || '(default)' }}` |
+        | 🎭 Style | `${{ inputs.style }}` |
+        | 🔗 Logo | `${{ inputs.logo || '(none)' }}` |
+        | 🎨 Logo Color | `${{ inputs.logo-color || '(default)' }}` |
+        | 📏 Logo Size | `${{ inputs.logo-size || '(default)' }}` |
+        | 📁 Output File | `${{ inputs.output-file || '(none)' }}` |
+        | 📋 Output Format | `${{ inputs.output-format }}` |
+        | ⏱️ Cache Seconds | `${{ inputs.cache-seconds || '(default)' }}` |
+
+        ## 📤 Badge Results
+        | Metric | Value |
+        |--------|-------|
+        | 🌐 Badge URL | [${{ steps.generate.outputs.badge-url }}](${{ steps.generate.outputs.badge-url }}) |
+        | 📝 Markdown | `${{ steps.generate.outputs.badge-markdown }}` |
+        | 🔗 HTML | `${{ steps.generate.outputs.badge-html }}` |
+        | 🎨 SVG Content | `${{ steps.generate.outputs.svg-content != '' && 'Available' || 'Not generated' }}` |
+        | 📁 Output File Path | `${{ steps.generate.outputs.output-file-path || '(not created)' }}` |
+        | ${{ env.status_icon }} Status | `${{ env.status_text }}` |
+
+        ## 🖼️ Badge Preview
+        ${{ steps.generate.outputs.badge-markdown }}
+
+        ## ⚙️ Process Details
+        | Step | Status |
+        |------|--------|
+        | ✅ Input Validation | `✅ Completed` |
+        | 🏷️ Badge Generation | `${{ steps.generate.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+
+        </details>
+        EOF
+      env:
+        status_icon: ${{ steps.generate.outcome == 'success' && '✅' || '❌' }}
+        status_text: ${{ steps.generate.outcome == 'success' && 'Success' || 'Failed' }}
+
+branding:
+  icon: 'award'
+  color: 'blue'
