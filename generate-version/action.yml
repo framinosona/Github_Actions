@@ -1,0 +1,468 @@
+name: '🔢 Generate Version'
+description: 'Generates semantic version numbers based on Git tags and branch information'
+author: 'Francois Raminosona'
+
+inputs:
+  major:
+    description: 'Major version number'
+    required: true
+  minor:
+    description: 'Minor version number'
+    required: true
+  main-branch:
+    description: 'Name of the main branch'
+    required: false
+    default: ${{ github.event.repository.default_branch }}
+  build-id:
+    description: 'Build ID for revision numbering (defaults to GitHub run number)'
+    required: false
+    default: ${{ github.run_number }}
+  tag-prefix:
+    description: 'Prefix for version tags (e.g., "v" for "v1.0.0")'
+    required: false
+    default: 'v'
+  branch-suffix-max-length:
+    description: 'Maximum length for branch name suffix'
+    required: false
+    default: '20'
+  output-txt:
+    description: 'Path to output txt file with key=value pairs'
+    required: false
+    default: ''
+  output-props:
+    description: 'Path to output .NET props file'
+    required: false
+    default: ''
+  fetch-depth:
+    description: 'Depth of Git history to fetch for tag analysis'
+    required: false
+    default: '0'
+  show-summary:
+    description: 'Whether to show the action summary'
+    required: false
+    default: 'false'
+
+outputs:
+  VERSION_MAJOR:
+    description: 'Major version number'
+    value: ${{ steps.generate.outputs.VERSION_MAJOR }}
+  VERSION_MINOR:
+    description: 'Minor version number'
+    value: ${{ steps.generate.outputs.VERSION_MINOR }}
+  VERSION_PATCH:
+    description: 'Patch version number'
+    value: ${{ steps.generate.outputs.VERSION_PATCH }}
+  VERSION_SUFFIX:
+    description: 'Version suffix (branch name for non-main branches)'
+    value: ${{ steps.generate.outputs.VERSION_SUFFIX }}
+  VERSION_REVISION:
+    description: 'Revision number (build ID for non-main branches)'
+    value: ${{ steps.generate.outputs.VERSION_REVISION }}
+  VERSION_BUILDID:
+    description: 'Build ID used for versioning'
+    value: ${{ steps.generate.outputs.VERSION_BUILDID }}
+  VERSION_CORE:
+    description: 'Core version (major.minor.patch)'
+    value: ${{ steps.generate.outputs.VERSION_CORE }}
+  VERSION_EXTENSION:
+    description: 'Version extension (suffix.revision for branches)'
+    value: ${{ steps.generate.outputs.VERSION_EXTENSION }}
+  VERSION_FULL:
+    description: 'Full version (core + extension)'
+    value: ${{ steps.generate.outputs.VERSION_FULL }}
+  VERSION_ASSEMBLY:
+    description: 'Assembly version for .NET (major.minor.patch.buildid)'
+    value: ${{ steps.generate.outputs.VERSION_ASSEMBLY }}
+  VERSION_BRANCHNAME:
+    description: 'Current branch name'
+    value: ${{ steps.generate.outputs.VERSION_BRANCHNAME }}
+  VERSION_OUTPUTTXT:
+    description: 'Path to generated txt file (if created)'
+    value: ${{ steps.generate.outputs.VERSION_OUTPUTTXT }}
+  VERSION_OUTPUTPROPS:
+    description: 'Path to generated props file (if created)'
+    value: ${{ steps.generate.outputs.VERSION_OUTPUTPROPS }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: "✅ Validate inputs"
+      shell: bash
+      run: |
+        echo "🔍 Validating version generation inputs..."
+
+        # Validate major version
+        if ! [[ "${{ inputs.major }}" =~ ^[0-9]+$ ]]; then
+          echo "❌ Error: Major version must be a non-negative integer, got: ${{ inputs.major }}"
+          exit 1
+        fi
+
+        # Validate minor version
+        if ! [[ "${{ inputs.minor }}" =~ ^[0-9]+$ ]]; then
+          echo "❌ Error: Minor version must be a non-negative integer, got: ${{ inputs.minor }}"
+          exit 1
+        fi
+
+        # Validate build-id
+        if ! [[ "${{ inputs.build-id }}" =~ ^[0-9]+$ ]]; then
+          echo "❌ Error: Build ID must be a non-negative integer, got: ${{ inputs.build-id }}"
+          exit 1
+        fi
+
+        # Validate fetch-depth
+        if ! [[ "${{ inputs.fetch-depth }}" =~ ^[0-9]+$ ]]; then
+          echo "❌ Error: Fetch depth must be a non-negative integer, got: ${{ inputs.fetch-depth }}"
+          exit 1
+        fi
+
+        # Validate branch-suffix-max-length
+        if ! [[ "${{ inputs.branch-suffix-max-length }}" =~ ^[0-9]+$ ]]; then
+          echo "❌ Error: Branch suffix max length must be a positive integer, got: ${{ inputs.branch-suffix-max-length }}"
+          exit 1
+        fi
+
+        # Validate output file paths if provided
+        if [ -n "${{ inputs.output-txt }}" ]; then
+          OUTPUT_DIR=$(dirname "${{ inputs.output-txt }}")
+          if [ ! -d "$OUTPUT_DIR" ] && [ "$OUTPUT_DIR" != "." ]; then
+            echo "📁 Creating directory for output txt: $OUTPUT_DIR"
+          fi
+        fi
+
+        if [ -n "${{ inputs.output-props }}" ]; then
+          OUTPUT_DIR=$(dirname "${{ inputs.output-props }}")
+          if [ ! -d "$OUTPUT_DIR" ] && [ "$OUTPUT_DIR" != "." ]; then
+            echo "📁 Creating directory for output props: $OUTPUT_DIR"
+          fi
+        fi
+
+        echo "✅ Input validation passed"
+
+    - name: "🔍 Fetch Git history"
+      shell: bash
+      run: |
+        echo "🔍 Fetching Git history for tag analysis..."
+
+        # Fetch full history if fetch-depth is 0, otherwise fetch specified depth
+        if [ "${{ inputs.fetch-depth }}" = "0" ]; then
+          echo "📥 Fetching full Git history..."
+          git fetch --unshallow --tags || git fetch --tags
+        else
+          echo "📥 Fetching Git history with depth ${{ inputs.fetch-depth }}..."
+          git fetch --depth=${{ inputs.fetch-depth }} --tags
+        fi
+
+        # Verify we have access to tags
+        TAG_COUNT=$(git tag -l | wc -l)
+        echo "🏷️ Found $TAG_COUNT existing tags"
+
+        echo "✅ Git history fetch completed"
+
+    - name: "🔢 Generate version numbers"
+      id: generate
+      shell: bash
+      run: |
+        echo "🔢 Generating version numbers..."
+
+        # Helper function to set environment variables and outputs
+        setEnvironmentVariable() {
+            echo "$1=$2" >> "$GITHUB_ENV"
+            echo "🔧 Environment variable set: $1=$2"
+            echo "$1=$2" >> "$GITHUB_OUTPUT"
+            echo "📤 Output set: $1=$2"
+        }
+
+        # Input values
+        major_version="${{ inputs.major }}"
+        minor_version="${{ inputs.minor }}"
+        main_branch="${{ inputs.main-branch }}"
+        build_id="${{ inputs.build-id }}"
+        tag_prefix="${{ inputs.tag-prefix }}"
+        branch_suffix_max_length="${{ inputs.branch-suffix-max-length }}"
+
+        echo "📊 Input parameters:"
+        echo "  🔢 Major: $major_version"
+        echo "  🔢 Minor: $minor_version"
+        echo "  🌿 Main branch: $main_branch"
+        echo "  🆔 Build ID: $build_id"
+        echo "  🏷️ Tag prefix: $tag_prefix"
+
+        # Get current branch name
+        if [ "${{ github.head_ref }}" != "" ]; then
+          # For pull requests
+          branch_name="${{ github.head_ref }}"
+        else
+          # For push events
+          branch_name="${{ github.ref_name }}"
+        fi
+
+        echo "🌿 Current branch: $branch_name"
+
+        # Find the highest patch version for the given major.minor
+        echo "🔍 Searching for existing tags matching ${major_version}.${minor_version}.*"
+
+        # Get all tags that match the pattern major.minor.patch (with optional prefix)
+        if [ -n "$tag_prefix" ]; then
+          MATCHING_TAGS=$(git tag -l "${tag_prefix}${major_version}.${minor_version}.*" | sort -V)
+        else
+          MATCHING_TAGS=$(git tag -l "${major_version}.${minor_version}.*" | sort -V)
+        fi
+
+        patch_version=0
+        latest_tag=""
+
+        if [ -n "$MATCHING_TAGS" ]; then
+          echo "📋 Found matching tags:"
+          echo "$MATCHING_TAGS" | while read -r tag; do
+            echo "  🏷️ $tag"
+          done
+
+          # Get the latest tag and extract patch version
+          latest_tag=$(echo "$MATCHING_TAGS" | tail -1)
+          echo "🔝 Latest matching tag: $latest_tag"
+
+          # Extract patch version from the latest tag
+          if [ -n "$tag_prefix" ]; then
+            version_part=${latest_tag#$tag_prefix}
+          else
+            version_part=$latest_tag
+          fi
+
+          # Parse major.minor.patch from version_part
+          if [[ "$version_part" =~ ^[0-9]+\.[0-9]+\.([0-9]+) ]]; then
+            existing_patch=${BASH_REMATCH[1]}
+            patch_version=$((existing_patch + 1))
+            echo "📈 Incrementing patch from $existing_patch to $patch_version"
+          else
+            echo "⚠️ Could not parse patch version from tag, starting at 0"
+            patch_version=0
+          fi
+        else
+          echo "📋 No existing tags found for ${major_version}.${minor_version}, starting patch at 0"
+          patch_version=0
+        fi
+
+        # Build core version
+        version_core="${major_version}.${minor_version}.${patch_version}"
+        echo "🎯 Core version: $version_core"
+
+        # Handle branch-specific versioning
+        if [ "$branch_name" = "$main_branch" ]; then
+          echo "🌿 On main branch - no suffix/revision"
+          suffix=""
+          revision_version=""
+          version_extension=""
+        else
+          echo "🌿 On feature branch - adding suffix and revision"
+
+          # Clean and truncate branch name for suffix
+          suffix=$(echo "$branch_name" | sed 's/[^a-zA-Z0-9]/-/g' | tr '[:upper:]' '[:lower:]')
+          if [ ${#suffix} -gt $branch_suffix_max_length ]; then
+            suffix=${suffix:0:$branch_suffix_max_length}
+          fi
+
+          revision_version="$build_id"
+          version_extension="${suffix}.${revision_version}"
+
+          echo "📎 Suffix: $suffix"
+          echo "🔄 Revision: $revision_version"
+          echo "🔗 Extension: $version_extension"
+        fi
+
+        # Build full version
+        if [ -n "$version_extension" ]; then
+          version_full="${version_core}-${version_extension}"
+        else
+          version_full="$version_core"
+        fi
+
+        # Build assembly version (always includes build_id as 4th component)
+        version_assembly="${major_version}.${minor_version}.${patch_version}.${build_id}"
+
+        echo "📦 Final versions:"
+        echo "  🎯 Core: $version_core"
+        echo "  🔗 Extension: $version_extension"
+        echo "  🎯 Full: $version_full"
+        echo "  📚 Assembly: $version_assembly"
+
+        # Set all environment variables and outputs
+        setEnvironmentVariable "VERSION_MAJOR" "$major_version"
+        setEnvironmentVariable "VERSION_MINOR" "$minor_version"
+        setEnvironmentVariable "VERSION_PATCH" "$patch_version"
+        setEnvironmentVariable "VERSION_SUFFIX" "$suffix"
+        setEnvironmentVariable "VERSION_REVISION" "$revision_version"
+        setEnvironmentVariable "VERSION_BUILDID" "$build_id"
+        setEnvironmentVariable "VERSION_CORE" "$version_core"
+        setEnvironmentVariable "VERSION_EXTENSION" "$version_extension"
+        setEnvironmentVariable "VERSION_FULL" "$version_full"
+        setEnvironmentVariable "VERSION_ASSEMBLY" "$version_assembly"
+        setEnvironmentVariable "VERSION_BRANCHNAME" "$branch_name"
+        setEnvironmentVariable "VERSION_SCRIPTCALLED" "true"
+
+        # Generate txt file if requested
+        output_txt="${{ inputs.output-txt }}"
+        if [ -n "$output_txt" ]; then
+          echo "📝 Generating txt file: $output_txt"
+          mkdir -p "$(dirname "$output_txt")" && touch "$output_txt"
+          {
+            echo "VERSION_MAJOR=$major_version"
+            echo "VERSION_MINOR=$minor_version"
+            echo "VERSION_PATCH=$patch_version"
+            echo "VERSION_SUFFIX=$suffix"
+            echo "VERSION_REVISION=$revision_version"
+            echo "VERSION_BUILDID=$build_id"
+            echo "VERSION_CORE=$version_core"
+            echo "VERSION_EXTENSION=$version_extension"
+            echo "VERSION_FULL=$version_full"
+            echo "VERSION_ASSEMBLY=$version_assembly"
+            echo "VERSION_BRANCHNAME=$branch_name"
+            echo "VERSION_SCRIPTCALLED=true"
+          } > "$output_txt"
+          echo "✅ Generated $output_txt"
+          setEnvironmentVariable "VERSION_OUTPUTTXT" "$output_txt"
+        fi
+
+        # Generate props file if requested
+        output_props="${{ inputs.output-props }}"
+        if [ -n "$output_props" ]; then
+          echo "📝 Generating props file: $output_props"
+          mkdir -p "$(dirname "$output_props")" && touch "$output_props"
+          {
+            echo "<Project>"
+            echo "    <PropertyGroup>"
+            echo "        <Version_Major>$major_version</Version_Major>"
+            echo "        <Version_Minor>$minor_version</Version_Minor>"
+            echo "        <Version_Patch>$patch_version</Version_Patch>"
+            echo "        <Version_Suffix>$suffix</Version_Suffix>"
+            echo "        <Version_Revision>$revision_version</Version_Revision>"
+            echo "        <Version_BuildId>$build_id</Version_BuildId>"
+            echo "        <Version_Core>$version_core</Version_Core>"
+            echo "        <Version_Extension>$version_extension</Version_Extension>"
+            echo "        <Version_Full>$version_full</Version_Full>"
+            echo "        <Version_Assembly>$version_assembly</Version_Assembly>"
+            echo "        <Version_BranchName>$branch_name</Version_BranchName>"
+            echo "        <Version_ScriptCalled>true</Version_ScriptCalled>"
+            echo "    </PropertyGroup>"
+            echo "</Project>"
+          } > "$output_props"
+          echo "✅ Generated $output_props"
+          setEnvironmentVariable "VERSION_OUTPUTPROPS" "$output_props"
+        fi
+
+        echo "✅ Version generation completed successfully"
+
+    - name: "🔍 Verify generated versions"
+      id: verify
+      shell: bash
+      run: |
+        echo "🔍 Verifying generated versions..."
+
+        # Verify all required outputs are set
+        REQUIRED_VARS=(
+          "VERSION_MAJOR" "VERSION_MINOR" "VERSION_PATCH"
+          "VERSION_CORE" "VERSION_FULL" "VERSION_ASSEMBLY"
+          "VERSION_BRANCHNAME" "VERSION_BUILDID"
+        )
+
+        for var in "${REQUIRED_VARS[@]}"; do
+          if [ -z "${!var:-}" ]; then
+            echo "❌ Error: Required variable $var is not set"
+            exit 1
+          else
+            echo "✅ $var=${!var}"
+          fi
+        done
+
+        # Verify semantic version format
+        if ! [[ "$VERSION_CORE" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "❌ Error: Invalid semantic version format: $VERSION_CORE"
+          exit 1
+        fi
+
+        # Verify assembly version format
+        if ! [[ "$VERSION_ASSEMBLY" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "❌ Error: Invalid assembly version format: $VERSION_ASSEMBLY"
+          exit 1
+        fi
+
+        # Verify output files if they were requested
+        if [ -n "${{ inputs.output-txt }}" ]; then
+          if [ -f "${{ inputs.output-txt }}" ]; then
+            echo "✅ Output txt file created: ${{ inputs.output-txt }}"
+            echo "📄 Content preview:"
+            head -5 "${{ inputs.output-txt }}" | sed 's/^/  /'
+          else
+            echo "❌ Error: Output txt file not created: ${{ inputs.output-txt }}"
+            exit 1
+          fi
+        fi
+
+        if [ -n "${{ inputs.output-props }}" ]; then
+          if [ -f "${{ inputs.output-props }}" ]; then
+            echo "✅ Output props file created: ${{ inputs.output-props }}"
+            echo "📄 Content preview:"
+            head -10 "${{ inputs.output-props }}" | sed 's/^/  /'
+          else
+            echo "❌ Error: Output props file not created: ${{ inputs.output-props }}"
+            exit 1
+          fi
+        fi
+
+        echo "✅ Version verification completed successfully"
+
+    - name: "📊 Action Summary"
+      if: ${{ inputs.show-summary == 'true' }}
+      shell: bash
+      run: |
+        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+        <details><summary>Expand for details - 📊 Version Generation Summary</summary>
+
+        ## 🔧 Input Parameters
+        | Parameter | Value |
+        |-----------|-------|
+        | 🔢 Major Version | `${{ inputs.major }}` |
+        | 🔢 Minor Version | `${{ inputs.minor }}` |
+        | 🌿 Main Branch | `${{ inputs.main-branch }}` |
+        | 🆔 Build ID | `${{ inputs.build-id }}` |
+        | 🏷️ Tag Prefix | `${{ inputs.tag-prefix }}` |
+        | 📏 Branch Suffix Max Length | `${{ inputs.branch-suffix-max-length }}` |
+
+        ## 📤 Generated Versions
+        | Version Type | Value |
+        |--------------|-------|
+        | 🎯 Core Version | `${{ steps.generate.outputs.VERSION_CORE }}` |
+        | 🔗 Full Version | `${{ steps.generate.outputs.VERSION_FULL }}` |
+        | 📚 Assembly Version | `${{ steps.generate.outputs.VERSION_ASSEMBLY }}` |
+        | 🌿 Branch Name | `${{ steps.generate.outputs.VERSION_BRANCHNAME }}` |
+        | 📎 Suffix | `${{ steps.generate.outputs.VERSION_SUFFIX || 'none' }}` |
+        | 🔄 Revision | `${{ steps.generate.outputs.VERSION_REVISION || 'none' }}` |
+
+        ## 📁 Output Files
+        | File Type | Path | Status |
+        |-----------|------|--------|
+        | 📝 Txt File | `${{ inputs.output-txt || 'not requested' }}` | `${{ inputs.output-txt != '' && '✅ Generated' || '⏭️ Skipped' }}` |
+        | 📄 Props File | `${{ inputs.output-props || 'not requested' }}` | `${{ inputs.output-props != '' && '✅ Generated' || '⏭️ Skipped' }}` |
+
+        ## 🔧 Process Details
+        | Step | Status |
+        |------|--------|
+        | ✅ Input Validation | `✅ Completed` |
+        | 🔍 Git History Fetch | `✅ Completed` |
+        | 🔢 Version Generation | `${{ steps.generate.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | 🔍 Version Verification | `${{ steps.verify.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+
+        ## 📋 Version Components Breakdown
+        | Component | Value | Description |
+        |-----------|-------|-------------|
+        | Major | `${{ steps.generate.outputs.VERSION_MAJOR }}` | Major version number (input) |
+        | Minor | `${{ steps.generate.outputs.VERSION_MINOR }}` | Minor version number (input) |
+        | Patch | `${{ steps.generate.outputs.VERSION_PATCH }}` | Auto-incremented from Git tags |
+        | Build ID | `${{ steps.generate.outputs.VERSION_BUILDID }}` | Build identifier for this run |
+        | Extension | `${{ steps.generate.outputs.VERSION_EXTENSION || 'none' }}` | Branch-specific version extension |
+
+        </details>
+        EOF
+
+branding:
+  icon: 'hash'
+  color: 'blue'
