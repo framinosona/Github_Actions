@@ -1,0 +1,459 @@
+name: '🚀 Create GitHub Release'
+description: 'Creates GitHub releases with assets using GitHub CLI'
+author: 'Francois Raminosona'
+
+inputs:
+  tag:
+    description: 'Git tag for the release (if not provided, will be auto-generated or use existing tag)'
+    required: false
+    default: ''
+  title:
+    description: 'Release title'
+    required: false
+    default: ''
+  notes:
+    description: 'Release notes content'
+    required: false
+    default: ''
+  notes-file:
+    description: 'Path to file containing release notes'
+    required: false
+    default: ''
+  notes-from-tag:
+    description: 'Use tag annotation or commit message as release notes'
+    required: false
+    default: 'false'
+  notes-start-tag:
+    description: 'Tag to use as starting point for generating release notes'
+    required: false
+    default: ''
+  generate-notes:
+    description: 'Automatically generate title and notes via GitHub Release Notes API'
+    required: false
+    default: 'false'
+  draft:
+    description: 'Save the release as a draft instead of publishing it'
+    required: false
+    default: 'false'
+  prerelease:
+    description: 'Mark the release as a prerelease'
+    required: false
+    default: 'false'
+  latest:
+    description: 'Mark this release as "Latest" (true/false/auto)'
+    required: false
+    default: 'auto'
+  target:
+    description: 'Target branch or full commit SHA for automatic tag creation'
+    required: false
+    default: ''
+  verify-tag:
+    description: 'Abort if the git tag does not already exist in the remote repository'
+    required: false
+    default: 'false'
+  discussion-category:
+    description: 'Start a discussion in the specified category'
+    required: false
+    default: ''
+  fail-on-no-commits:
+    description: 'Fail if there are no commits since the last release'
+    required: false
+    default: 'false'
+  assets:
+    description: 'Assets to upload (newline-separated list of file paths or patterns)'
+    required: false
+    default: ''
+  assets-dir:
+    description: 'Directory containing assets to upload (uploads all files in directory)'
+    required: false
+    default: ''
+  repo:
+    description: 'Target repository in OWNER/REPO format (defaults to current repository)'
+    required: false
+    default: ''
+  github-token:
+    description: 'GitHub token for authentication'
+    required: false
+    default: ${{ github.token }}
+  show-summary:
+    description: 'Whether to show the action summary'
+    required: false
+    default: 'false'
+
+outputs:
+  release-id:
+    description: 'ID of the created release'
+    value: ${{ steps.create.outputs.release-id }}
+  release-url:
+    description: 'URL of the created release'
+    value: ${{ steps.create.outputs.release-url }}
+  release-tag:
+    description: 'Tag of the created release'
+    value: ${{ steps.create.outputs.release-tag }}
+  release-name:
+    description: 'Name/title of the created release'
+    value: ${{ steps.create.outputs.release-name }}
+  assets-uploaded:
+    description: 'Number of assets uploaded'
+    value: ${{ steps.create.outputs.assets-uploaded }}
+  upload-url:
+    description: 'Upload URL for the release'
+    value: ${{ steps.create.outputs.upload-url }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: "✅ Validate inputs"
+      shell: bash
+      run: |
+        echo "🔍 Validating GitHub release inputs..."
+
+        # Validate that either notes, notes-file, notes-from-tag, or generate-notes is provided
+        if [ -z "${{ inputs.notes }}" ] && [ -z "${{ inputs.notes-file }}" ] && [ "${{ inputs.notes-from-tag }}" != "true" ] && [ "${{ inputs.generate-notes }}" != "true" ]; then
+          echo "⚠️ Warning: No release notes specified. Consider using notes, notes-file, notes-from-tag, or generate-notes"
+        fi
+
+        # Validate notes-file exists if provided
+        if [ -n "${{ inputs.notes-file }}" ] && [ ! -f "${{ inputs.notes-file }}" ]; then
+          echo "❌ Error: Notes file not found: ${{ inputs.notes-file }}"
+          exit 1
+        fi
+
+        # Validate assets directory exists if provided
+        if [ -n "${{ inputs.assets-dir }}" ] && [ ! -d "${{ inputs.assets-dir }}" ]; then
+          echo "❌ Error: Assets directory not found: ${{ inputs.assets-dir }}"
+          exit 1
+        fi
+
+        # Validate boolean inputs
+        for param in notes-from-tag generate-notes draft prerelease verify-tag fail-on-no-commits; do
+          case $param in
+            notes-from-tag) value="${{ inputs.notes-from-tag }}" ;;
+            generate-notes) value="${{ inputs.generate-notes }}" ;;
+            draft) value="${{ inputs.draft }}" ;;
+            prerelease) value="${{ inputs.prerelease }}" ;;
+            verify-tag) value="${{ inputs.verify-tag }}" ;;
+            fail-on-no-commits) value="${{ inputs.fail-on-no-commits }}" ;;
+          esac
+          if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
+            echo "❌ Error: Parameter $param must be 'true' or 'false', got: $value"
+            exit 1
+          fi
+        done
+
+        # Validate latest input
+        if [ -n "${{ inputs.latest }}" ]; then
+          case "${{ inputs.latest }}" in
+            true|false|auto) ;;
+            *) echo "❌ Error: latest must be 'true', 'false', or 'auto'"; exit 1 ;;
+          esac
+        fi
+
+        # Validate repository format if provided
+        if [ -n "${{ inputs.repo }}" ]; then
+          if ! [[ "${{ inputs.repo }}" =~ ^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$ ]]; then
+            echo "❌ Error: Repository must be in OWNER/REPO format"
+            exit 1
+          fi
+        fi
+
+        # Validate tag format if provided
+        if [ -n "${{ inputs.tag }}" ]; then
+          if [[ "${{ inputs.tag }}" =~ [[:space:]] ]]; then
+            echo "❌ Error: Tag cannot contain spaces"
+            exit 1
+          fi
+        fi
+
+        echo "✅ Input validation passed"
+
+    - name: "🔧 Setup GitHub CLI"
+      shell: bash
+      run: |
+        echo "🔧 Setting up GitHub CLI..."
+
+        # Check if gh is available
+        if ! command -v gh >/dev/null 2>&1; then
+          echo "❌ Error: GitHub CLI (gh) is not installed"
+          echo "💡 Make sure to use a runner that has GitHub CLI pre-installed"
+          exit 1
+        fi
+
+        # Authenticate with GitHub CLI
+        echo "${{ inputs.github-token }}" | gh auth login --with-token
+
+        # Verify authentication
+        if gh auth status >/dev/null 2>&1; then
+          echo "✅ GitHub CLI authentication successful"
+        else
+          echo "❌ Error: GitHub CLI authentication failed"
+          exit 1
+        fi
+
+    - name: "🚀 Create GitHub release"
+      id: create
+      shell: bash
+      run: |
+        echo "🚀 Creating GitHub release..."
+
+        # Build command arguments array
+        COMMAND_ARGS=("release" "create")
+
+        # Add tag if provided
+        if [ -n "${{ inputs.tag }}" ]; then
+          COMMAND_ARGS+=("${{ inputs.tag }}")
+          echo "🏷️ Using tag: ${{ inputs.tag }}"
+        fi
+
+        # Add repository if provided
+        if [ -n "${{ inputs.repo }}" ]; then
+          COMMAND_ARGS+=("--repo" "${{ inputs.repo }}")
+          echo "📁 Target repository: ${{ inputs.repo }}"
+        fi
+
+        # Add title if provided
+        if [ -n "${{ inputs.title }}" ]; then
+          COMMAND_ARGS+=("--title" "${{ inputs.title }}")
+          echo "📝 Title: ${{ inputs.title }}"
+        fi
+
+        # Add notes options (mutually exclusive)
+        if [ -n "${{ inputs.notes }}" ]; then
+          COMMAND_ARGS+=("--notes" "${{ inputs.notes }}")
+          echo "📄 Using provided notes"
+        elif [ -n "${{ inputs.notes-file }}" ]; then
+          COMMAND_ARGS+=("--notes-file" "${{ inputs.notes-file }}")
+          echo "📄 Using notes from file: ${{ inputs.notes-file }}"
+        elif [ "${{ inputs.notes-from-tag }}" = "true" ]; then
+          COMMAND_ARGS+=("--notes-from-tag")
+          echo "📄 Using notes from tag annotation"
+        elif [ "${{ inputs.generate-notes }}" = "true" ]; then
+          COMMAND_ARGS+=("--generate-notes")
+          echo "📄 Auto-generating notes via GitHub API"
+        fi
+
+        # Add notes start tag if provided
+        if [ -n "${{ inputs.notes-start-tag }}" ]; then
+          COMMAND_ARGS+=("--notes-start-tag" "${{ inputs.notes-start-tag }}")
+          echo "📍 Notes start tag: ${{ inputs.notes-start-tag }}"
+        fi
+
+        # Add boolean flags
+        [ "${{ inputs.draft }}" = "true" ] && COMMAND_ARGS+=("--draft") && echo "📋 Creating as draft"
+        [ "${{ inputs.prerelease }}" = "true" ] && COMMAND_ARGS+=("--prerelease") && echo "🚧 Marking as prerelease"
+        [ "${{ inputs.verify-tag }}" = "true" ] && COMMAND_ARGS+=("--verify-tag") && echo "✅ Verifying tag exists"
+        [ "${{ inputs.fail-on-no-commits }}" = "true" ] && COMMAND_ARGS+=("--fail-on-no-commits") && echo "🔍 Checking for new commits"
+
+        # Add latest flag
+        if [ "${{ inputs.latest }}" = "true" ]; then
+          COMMAND_ARGS+=("--latest")
+          echo "⭐ Marking as latest release"
+        elif [ "${{ inputs.latest }}" = "false" ]; then
+          COMMAND_ARGS+=("--latest=false")
+          echo "📋 Not marking as latest release"
+        fi
+
+        # Add target if provided
+        if [ -n "${{ inputs.target }}" ]; then
+          COMMAND_ARGS+=("--target" "${{ inputs.target }}")
+          echo "🎯 Target: ${{ inputs.target }}"
+        fi
+
+        # Add discussion category if provided
+        if [ -n "${{ inputs.discussion-category }}" ]; then
+          COMMAND_ARGS+=("--discussion-category" "${{ inputs.discussion-category }}")
+          echo "💬 Discussion category: ${{ inputs.discussion-category }}"
+        fi
+
+        # Prepare assets list
+        ASSETS_LIST=()
+        ASSETS_COUNT=0
+
+        # Add individual assets if provided
+        if [ -n "${{ inputs.assets }}" ]; then
+          echo "📦 Processing individual assets..."
+          while IFS= read -r asset; do
+            if [ -n "$asset" ]; then
+              if [[ "$asset" == *"*"* ]]; then
+                # Handle glob patterns
+                for file in $asset; do
+                  if [ -f "$file" ]; then
+                    ASSETS_LIST+=("$file")
+                    echo "  📎 Found asset: $file"
+                    ((ASSETS_COUNT++))
+                  fi
+                done
+              else
+                # Handle direct file paths
+                if [ -f "$asset" ]; then
+                  ASSETS_LIST+=("$asset")
+                  echo "  📎 Added asset: $asset"
+                  ((ASSETS_COUNT++))
+                else
+                  echo "  ⚠️ Asset not found: $asset"
+                fi
+              fi
+            fi
+          done <<< "${{ inputs.assets }}"
+        fi
+
+        # Add assets from directory if provided
+        if [ -n "${{ inputs.assets-dir }}" ]; then
+          echo "📁 Processing assets directory: ${{ inputs.assets-dir }}"
+          for file in "${{ inputs.assets-dir }}"/*; do
+            if [ -f "$file" ]; then
+              ASSETS_LIST+=("$file")
+              echo "  📎 Found asset: $file"
+              ((ASSETS_COUNT++))
+            fi
+          done
+        fi
+
+        # Add assets to command
+        for asset in "${ASSETS_LIST[@]}"; do
+          COMMAND_ARGS+=("$asset")
+        done
+
+        # Create full command for logging (without token)
+        DISPLAY_COMMAND="gh ${COMMAND_ARGS[*]}"
+        echo "📋 Executing: $DISPLAY_COMMAND"
+
+        # Execute GitHub CLI command and capture output
+        if RELEASE_OUTPUT=$(gh "${COMMAND_ARGS[@]}" 2>&1); then
+          echo "✅ Release created successfully"
+          echo "$RELEASE_OUTPUT"
+
+          # Extract release information from output or API
+          RELEASE_URL=$(echo "$RELEASE_OUTPUT" | grep -o 'https://github.com/[^/]*/[^/]*/releases/tag/[^[:space:]]*' | head -1)
+
+          if [ -n "$RELEASE_URL" ]; then
+            echo "🔗 Release URL: $RELEASE_URL"
+            echo "release-url=$RELEASE_URL" >> $GITHUB_OUTPUT
+
+            # Extract tag from URL
+            RELEASE_TAG=$(echo "$RELEASE_URL" | sed 's|.*/tag/||')
+            echo "release-tag=$RELEASE_TAG" >> $GITHUB_OUTPUT
+
+            # Get additional release information via API
+            if [ -n "${{ inputs.repo }}" ]; then
+              REPO_PARAM="--repo ${{ inputs.repo }}"
+            else
+              REPO_PARAM=""
+            fi
+
+            # Get release info from GitHub API
+            if RELEASE_INFO=$(gh api repos/{owner}/{repo}/releases/tags/$RELEASE_TAG $REPO_PARAM 2>/dev/null); then
+              RELEASE_ID=$(echo "$RELEASE_INFO" | jq -r '.id // empty')
+              RELEASE_NAME=$(echo "$RELEASE_INFO" | jq -r '.name // empty')
+              UPLOAD_URL=$(echo "$RELEASE_INFO" | jq -r '.upload_url // empty' | sed 's/{?name,label}//')
+
+              echo "release-id=${RELEASE_ID:-unknown}" >> $GITHUB_OUTPUT
+              echo "release-name=${RELEASE_NAME:-unknown}" >> $GITHUB_OUTPUT
+              echo "upload-url=${UPLOAD_URL:-unknown}" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+          echo "assets-uploaded=$ASSETS_COUNT" >> $GITHUB_OUTPUT
+          echo "🏷️ Release tag: ${RELEASE_TAG:-${{ inputs.tag }}}"
+          echo "📦 Assets uploaded: $ASSETS_COUNT"
+
+        else
+          echo "❌ Release creation failed"
+          echo "$RELEASE_OUTPUT"
+          exit 1
+        fi
+
+    - name: "📊 Verify release"
+      id: verify
+      shell: bash
+      run: |
+        echo "🔍 Verifying release creation..."
+
+        RELEASE_TAG="${{ steps.create.outputs.release-tag }}"
+        if [ -z "$RELEASE_TAG" ]; then
+          RELEASE_TAG="${{ inputs.tag }}"
+        fi
+
+        if [ -n "$RELEASE_TAG" ]; then
+          # Verify release exists
+          if [ -n "${{ inputs.repo }}" ]; then
+            REPO_PARAM="--repo ${{ inputs.repo }}"
+          else
+            REPO_PARAM=""
+          fi
+
+          if gh release view "$RELEASE_TAG" $REPO_PARAM >/dev/null 2>&1; then
+            echo "✅ Release verified successfully"
+
+            # Get release details
+            RELEASE_DETAILS=$(gh release view "$RELEASE_TAG" $REPO_PARAM --json id,name,tagName,url,isDraft,isPrerelease,assets)
+
+            DRAFT_STATUS=$(echo "$RELEASE_DETAILS" | jq -r '.isDraft')
+            PRERELEASE_STATUS=$(echo "$RELEASE_DETAILS" | jq -r '.isPrerelease')
+            ASSETS_COUNT=$(echo "$RELEASE_DETAILS" | jq '.assets | length')
+
+            echo "📋 Release Status:"
+            echo "  🏷️ Tag: $RELEASE_TAG"
+            echo "  📋 Draft: $DRAFT_STATUS"
+            echo "  🚧 Prerelease: $PRERELEASE_STATUS"
+            echo "  📦 Assets: $ASSETS_COUNT"
+
+          else
+            echo "❌ Release verification failed - release not found"
+            exit 1
+          fi
+        else
+          echo "⚠️ No release tag available for verification"
+        fi
+
+    - name: "📊 Action Summary"
+      if: ${{ inputs.show-summary == 'true' }}
+      shell: bash
+      run: |
+        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+        <details><summary>Expand for details - 📊 GitHub Release Creation Summary</summary>
+
+        ## 🔧 Input Parameters
+        | Parameter | Value |
+        |-----------|-------|
+        | 🏷️ Tag | `${{ inputs.tag || 'auto-generated' }}` |
+        | 📝 Title | `${{ inputs.title || 'auto-generated' }}` |
+        | 📋 Draft | `${{ inputs.draft }}` |
+        | 🚧 Prerelease | `${{ inputs.prerelease }}` |
+        | ⭐ Latest | `${{ inputs.latest }}` |
+        | 🎯 Target | `${{ inputs.target || 'default branch' }}` |
+        | 📁 Repository | `${{ inputs.repo || 'current' }}` |
+
+        ## 📤 Release Results
+        | Metric | Value |
+        |--------|-------|
+        | 🆔 Release ID | `${{ steps.create.outputs.release-id }}` |
+        | 🔗 Release URL | `${{ steps.create.outputs.release-url }}` |
+        | 🏷️ Release Tag | `${{ steps.create.outputs.release-tag }}` |
+        | 📝 Release Name | `${{ steps.create.outputs.release-name }}` |
+        | 📦 Assets Uploaded | `${{ steps.create.outputs.assets-uploaded }}` |
+        | 🔗 Upload URL | `${{ steps.create.outputs.upload-url }}` |
+
+        ## ⚙️ Release Configuration
+        | Option | Status |
+        |--------|--------|
+        | 📄 Generate Notes | `${{ inputs.generate-notes }}` |
+        | 📄 Notes from Tag | `${{ inputs.notes-from-tag }}` |
+        | ✅ Verify Tag | `${{ inputs.verify-tag }}` |
+        | 🔍 Fail on No Commits | `${{ inputs.fail-on-no-commits }}` |
+        | 💬 Discussion Category | `${{ inputs.discussion-category || 'none' }}` |
+
+        ## 🔧 Process Details
+        | Step | Status |
+        |------|--------|
+        | ✅ Input Validation | `✅ Completed` |
+        | 🔧 GitHub CLI Setup | `✅ Completed` |
+        | 🚀 Release Creation | `${{ steps.create.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | 🔍 Release Verification | `${{ steps.verify.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+
+        </details>
+        EOF
+
+branding:
+  icon: 'tag'
+  color: 'blue'
