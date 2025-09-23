@@ -267,13 +267,17 @@ runs:
           echo "📦 Processing individual assets..."
           while IFS= read -r asset; do
             if [ -n "$asset" ]; then
+              echo "🔍 Checking asset: '$asset'"
               if [[ "$asset" == *"*"* ]]; then
                 # Handle glob patterns
+                echo "🌐 Processing glob pattern: $asset"
                 for file in $asset; do
                   if [ -f "$file" ]; then
                     ASSETS_LIST+=("$file")
                     echo "  📎 Found asset: $file"
                     ((ASSETS_COUNT++))
+                  else
+                    echo "  ⚠️ Glob file not found: $file"
                   fi
                 done
               else
@@ -288,31 +292,65 @@ runs:
               fi
             fi
           done <<< "${{ inputs.assets }}"
+          echo "✅ Asset processing completed. Total assets: $ASSETS_COUNT"
         fi
 
         # Add assets from directory if provided
         if [ -n "${{ inputs.assets-dir }}" ]; then
           echo "📁 Processing assets directory: ${{ inputs.assets-dir }}"
-          for file in "${{ inputs.assets-dir }}"/*; do
-            if [ -f "$file" ]; then
-              ASSETS_LIST+=("$file")
-              echo "  📎 Found asset: $file"
-              ((ASSETS_COUNT++))
-            fi
-          done
+          if [ -d "${{ inputs.assets-dir }}" ]; then
+            for file in "${{ inputs.assets-dir }}"/*; do
+              if [ -f "$file" ]; then
+                ASSETS_LIST+=("$file")
+                echo "  📎 Found asset: $file"
+                ((ASSETS_COUNT++))
+              fi
+            done
+            echo "✅ Directory processing completed. Files found: $ASSETS_COUNT"
+          else
+            echo "❌ Error: Assets directory does not exist: ${{ inputs.assets-dir }}"
+            exit 1
+          fi
         fi
 
         # Add assets to command
+        echo "📦 Adding $ASSETS_COUNT assets to release command..."
         for asset in "${ASSETS_LIST[@]}"; do
-          COMMAND_ARGS+=("$asset")
+          if [ -f "$asset" ]; then
+            COMMAND_ARGS+=("$asset")
+            echo "  ✅ Asset added to command: $asset"
+          else
+            echo "  ❌ Error: Asset file not found when adding to command: $asset"
+            exit 1
+          fi
         done
 
         # Create full command for logging (without token)
         DISPLAY_COMMAND="gh ${COMMAND_ARGS[*]}"
         echo "📋 Executing: $DISPLAY_COMMAND"
+        echo "🔍 Command array length: ${#COMMAND_ARGS[@]}"
+        echo "🔍 Assets count: $ASSETS_COUNT"
+
+        # Verify GitHub CLI is available
+        if ! command -v gh >/dev/null 2>&1; then
+          echo "❌ Error: GitHub CLI (gh) is not available"
+          exit 1
+        fi
+
+        # Verify authentication status
+        if ! gh auth status >/dev/null 2>&1; then
+          echo "❌ Error: GitHub CLI authentication failed"
+          exit 1
+        fi
 
         # Execute GitHub CLI command and capture output
-        if RELEASE_OUTPUT=$(gh "${COMMAND_ARGS[@]}" 2>&1); then
+        echo "🚀 Executing GitHub CLI release command..."
+        set +e  # Temporarily disable exit on error to capture output
+        RELEASE_OUTPUT=$(gh "${COMMAND_ARGS[@]}" 2>&1)
+        EXIT_CODE=$?
+        set -e  # Re-enable exit on error
+
+        if [ $EXIT_CODE -eq 0 ]; then
           echo "✅ Release created successfully"
           echo "$RELEASE_OUTPUT"
 
@@ -351,8 +389,10 @@ runs:
           echo "📦 Assets uploaded: $ASSETS_COUNT"
 
         else
-          echo "❌ Release creation failed"
+          echo "❌ Release creation failed with exit code: $EXIT_CODE"
+          echo "❌ GitHub CLI output:"
           echo "$RELEASE_OUTPUT"
+          echo "❌ Command that failed: $DISPLAY_COMMAND"
           exit 1
         fi
 

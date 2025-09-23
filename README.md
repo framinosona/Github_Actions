@@ -8,15 +8,15 @@ A comprehensive collection of reusable GitHub Actions for .NET development, docu
 
 ## ✨ Features
 
-🔢 **Smart Versioning** - Semantic version calculation based on Git tags  
-🏷️ **Dynamic Tagging** - Automated Git tag creation and management  
-🎨 **Badge Generation** - Custom SVG badges with shields.io integration  
-🚀 **Release Automation** - GitHub release creation with assets  
-📚 **Documentation** - DocFX-powered static site generation  
-🌐 **GitHub Pages** - Automated documentation deployment  
-🛠️ **Tool Management** - .NET global tool installation and management  
-📦 **Package Publishing** - NuGet package upload and feed management  
-🔐 **Security** - Apple certificate installation for code signing  
+🔢 **Smart Versioning** - Semantic version calculation based on Git tags
+🏷️ **Dynamic Tagging** - Automated Git tag creation and management
+🎨 **Badge Generation** - Custom SVG badges with shields.io integration
+🚀 **Release Automation** - GitHub release creation with assets
+📚 **Documentation** - DocFX-powered static site generation
+🌐 **GitHub Pages** - Automated documentation deployment
+🛠️ **Tool Management** - .NET global tool installation and management
+📦 **Package Publishing** - NuGet package upload and feed management
+🔐 **Security** - Apple certificate installation for code signing
 
 ## 📋 Available Actions
 
@@ -85,14 +85,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Generate Version
         id: version
         uses: framinosona/Github_Actions/generate-version@main
         with:
           major: '1'
           minor: '0'
-          
+
       - name: Create Release
         uses: framinosona/Github_Actions/github-release@main
         with:
@@ -116,7 +116,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          
+
       - name: Generate Version
         id: version
         uses: framinosona/Github_Actions/generate-version@main
@@ -124,13 +124,13 @@ jobs:
           major: '2'
           minor: '1'
           output-txt: 'version.txt'
-          
+
       - name: Create Git Tag
         uses: framinosona/Github_Actions/git-tag@main
         with:
           tag: ${{ steps.version.outputs.VERSION_FULL }}
           message: 'Release ${{ steps.version.outputs.VERSION_FULL }}'
-          
+
       - name: Generate Badge
         uses: framinosona/Github_Actions/generate-badge@main
         with:
@@ -138,12 +138,12 @@ jobs:
           message: ${{ steps.version.outputs.VERSION_FULL }}
           output-file: 'badge.svg'
           output-format: 'svg'
-          
+
       - name: Build Documentation
         uses: framinosona/Github_Actions/dotnet-docfx-build@main
         with:
           metadata: '{"_appTitle":"My Project"}'
-          
+
       - name: Create Release
         uses: framinosona/Github_Actions/github-release@main
         with:
