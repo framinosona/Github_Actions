@@ -47,6 +47,7 @@ jobs:
       version-tag: ${{ steps.git-tag.outputs.tag-name }}
       release-url: ${{ steps.release.outputs.release-url }}
       docfx-path: ${{ steps.docfx.outputs.output-path }}
+      should-deploy-docs: ${{ env.IS_MAIN_BRANCH == 'true' || env.FORCE_RELEASE == 'true' }}
 
     steps:
       - name: '📥 Checkout Repository'
@@ -168,6 +169,7 @@ jobs:
 
   deploy-pages:
     name: '🌐 Deploy to GitHub Pages'
+    if: needs.build-and-release.outputs.should-deploy-docs == 'true'
     needs: build-and-release
     runs-on: ubuntu-latest
     environment:
