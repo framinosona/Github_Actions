@@ -6,10 +6,10 @@ Intelligent semantic version generation based on Git tags, branch analysis, and 
 
 - 🔍 **Git Tag Analysis** - Automatically finds and increments patch versions based on existing tags
 - 🌿 **Branch-Aware Versioning** - Different versioning strategies for main vs feature branches
-- 📦 **Multiple Output Formats** - Environment variables, action outputs, txt files, and .NET props
+- 📦 **Multiple Output Formats** - Environment variables, action outputs, txt files, .NET props, and JSON
 - 🏷️ **Flexible Tag Patterns** - Supports custom tag prefixes and semantic versioning
 - 🔄 **Build Integration** - Incorporates build IDs and revision numbers
-- 📊 **Comprehensive Outputs** - 12+ version components for various use cases
+- 📊 **Comprehensive Outputs** - 13+ version components for various use cases
 
 ## Usage
 
@@ -25,19 +25,6 @@ Generate version for main branch (major.minor.patch):
     minor: '2'
 ```
 
-### Feature Branch Versioning
-
-Generate version for feature branch with suffix and revision:
-
-```yaml
-- name: Generate Feature Version
-  uses: ./generate-version
-  with:
-    major: '1'
-    minor: '3'
-    build-id: ${{ github.run_number }}
-```
-
 ### Complete Integration with File Outputs
 
 ```yaml
@@ -46,10 +33,9 @@ Generate version for feature branch with suffix and revision:
   with:
     major: '2'
     minor: '0'
-    tag-prefix: 'v'
     output-txt: 'version.txt'
     output-props: 'Directory.Build.props'
-    main-branch: 'main'
+    output-json: 'version.json'
 ```
 
 ## Inputs
@@ -71,8 +57,9 @@ Generate version for feature branch with suffix and revision:
 | `branch-suffix-max-length` | Max length for branch name suffix | `20` | `15` |
 | `output-txt` | Path to output txt file | `''` | `version.txt` |
 | `output-props` | Path to output .NET props file | `''` | `Directory.Build.props` |
+| `output-json` | Path to output JSON file | `''` | `version.json` |
 | `fetch-depth` | Git history depth for tag analysis | `0` | `100` |
-| `show-summary` | Show action summary | `true` | `false` |
+| `show-summary` | Show action summary | `false` | `true` |
 
 ## Outputs
 
@@ -83,9 +70,11 @@ Generate version for feature branch with suffix and revision:
 | `VERSION_MAJOR` | Major version number | `1` | `1` |
 | `VERSION_MINOR` | Minor version number | `2` | `2` |
 | `VERSION_PATCH` | Auto-incremented patch | `3` | `3` |
+| `VERSION_PREFIX` | Tag prefix used | `v` | `v` |
 | `VERSION_CORE` | Core semantic version | `1.2.3` | `1.2.3` |
 | `VERSION_FULL` | Full version string | `1.2.3` | `1.2.3-feature-xyz.42` |
-| `VERSION_ASSEMBLY` | .NET assembly version | `1.2.3.100` | `1.2.3.100` |
+| `VERSION_ASSEMBLY` | .NET assembly version | `1.2.3.0` | `1.2.3.42` |
+| `VERSION_FOR_TAG` | Version for Git tag | `v1.2.3` | `v1.2.3-feature-xyz.42` |
 
 ### Branch-Specific Components
 
@@ -103,6 +92,7 @@ Generate version for feature branch with suffix and revision:
 |--------|-------------|---------|
 | `VERSION_OUTPUTTXT` | Path to generated txt file | `version.txt` |
 | `VERSION_OUTPUTPROPS` | Path to generated props file | `Directory.Build.props` |
+| `VERSION_OUTPUTJSON` | Path to generated JSON file | `version.json` |
 
 ## Versioning Logic
 
@@ -118,11 +108,13 @@ The action analyzes existing Git tags to determine the next patch version:
 ### Branch-Based Versioning
 
 #### Main Branch
+
 - **Core Version**: `{major}.{minor}.{patch}`
 - **Full Version**: Same as core version
 - **No Suffix/Revision**: Clean semantic version
 
 #### Feature Branches
+
 - **Core Version**: `{major}.{minor}.{patch}`
 - **Suffix**: Sanitized branch name (max length configurable)
 - **Revision**: Build ID
@@ -157,6 +149,7 @@ jobs:
       version: ${{ steps.version.outputs.VERSION_FULL }}
       core: ${{ steps.version.outputs.VERSION_CORE }}
       assembly: ${{ steps.version.outputs.VERSION_ASSEMBLY }}
+      for_tag: ${{ steps.version.outputs.VERSION_FOR_TAG }}
     steps:
     - uses: actions/checkout@v4
       with:
@@ -168,9 +161,9 @@ jobs:
       with:
         major: '1'
         minor: '0'
-        tag-prefix: 'v'
         output-txt: 'version.txt'
         output-props: 'Directory.Build.props'
+        output-json: 'version.json'
 
     - name: Upload Version Files
       uses: actions/upload-artifact@v4
@@ -179,6 +172,7 @@ jobs:
         path: |
           version.txt
           Directory.Build.props
+          version.json
 
   build:
     needs: version
@@ -229,36 +223,161 @@ jobs:
       with:
         major: ${{ github.event.inputs.major }}
         minor: ${{ github.event.inputs.minor }}
-        main-branch: 'main'
 
-    - name: Create Git Tag
-      run: |
-        git tag v${{ steps.version.outputs.VERSION_CORE }}
-        git push origin v${{ steps.version.outputs.VERSION_CORE }}
+    - name: Create Tag
+      uses: ./git-tag
+      with:
+        tag: '${{ steps.version.outputs.VERSION_FOR_TAG }}'
 
     - name: Create GitHub Release
       uses: ./github-release
       with:
-        tag: v${{ steps.version.outputs.VERSION_CORE }}
-        title: 'Release v${{ steps.version.outputs.VERSION_CORE }}'
+        tag: '${{ steps.version.outputs.VERSION_FOR_TAG }}'
+        title: 'Release ${{ steps.version.outputs.VERSION_FOR_TAG }}'
         generate-notes: 'true'
 ```
 
-### .NET Project Integration
+### MSBuild Integration
+
+Integrate version outputs directly into MSBuild and .NET projects using command-line parameters or props files.
+
+#### Command-Line Parameters Approach
 
 ```yaml
-- name: Generate .NET Version
+- name: Generate Version
+  id: version
   uses: ./generate-version
   with:
-    major: '2'
-    minor: '1'
-    output-props: 'src/Directory.Build.props'
+    major: '1'
+    minor: '0'
 
-- name: Build .NET Project
+- name: Build with Version Parameters
   run: |
-    dotnet restore
-    dotnet build --configuration Release
-    dotnet pack --configuration Release
+    dotnet build \
+      -p:Version_Full=${{ steps.version.outputs.VERSION_FULL }} \
+      -p:Version_Assembly=${{ steps.version.outputs.VERSION_ASSEMBLY }} \
+      --configuration Release
+
+- name: Pack with Version Parameters
+  run: |
+    dotnet pack \
+      -p:Version_Full=${{ steps.version.outputs.VERSION_FULL }} \
+      -p:Version_Assembly=${{ steps.version.outputs.VERSION_ASSEMBLY }} \
+      --configuration Release
+```
+
+#### Props File Import Approach
+
+```yaml
+- name: Generate Version Props
+  uses: ./generate-version
+  with:
+    major: '1'
+    minor: '0'
+    output-props: '${{ github.workspace }}/version.props'
+
+- name: Build with Props Import
+  run: |
+    dotnet build \
+      -p:Version_Props_Path="${{ github.workspace }}/version.props" \
+      --configuration Release
+
+- name: Pack with Props Import
+  run: |
+    dotnet pack \
+      -p:Version_Props_Path="${{ github.workspace }}/version.props" \
+      --configuration Release
+```
+
+#### MSBuild Project Configuration
+
+Add this configuration to your `.csproj`, `Directory.Build.props`, or `.targets` file:
+
+```xml
+<!-- Import version props if available -->
+<Import Project="$(Version_Props_Path)" Condition="Exists('$(Version_Props_Path)')" />
+
+<!-- ==================== PACK : VERSION ==================== -->
+<PropertyGroup>
+  <!-- Default version, when building locally -->
+  <Version_Full Condition=" '$(Version_Full)' == '' ">1.0.0</Version_Full>
+  <Version_Assembly Condition=" '$(Version_Assembly)' == '' ">$(Version_Full).0</Version_Assembly>
+
+  <!-- Apply Version parts according to packaging standards -->
+  <Version>$(Version_Full)</Version>
+  <PackageVersion>$(Version_Full)</PackageVersion>
+
+  <AssemblyInformationalVersion>$(Version_Full)</AssemblyInformationalVersion>
+  <AssemblyVersion>$(Version_Assembly)</AssemblyVersion>
+  <AssemblyFileVersion>$(Version_Assembly)</AssemblyFileVersion>
+
+  <!-- For mobile/desktop applications -->
+  <ApplicationDisplayVersion>$(Version_Full)</ApplicationDisplayVersion>
+  <ApplicationVersion>$(Version_Revision)</ApplicationVersion>
+</PropertyGroup>
+```
+
+#### Advanced MSBuild Integration
+
+```yaml
+name: Build with Advanced Versioning
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Generate Version
+      id: version
+      uses: ./generate-version
+      with:
+        major: '2'
+        minor: '1'
+        tag-prefix: 'v'
+        output-props: 'build/Version.props'
+        output-json: 'build/version.json'
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build with all version properties
+      run: |
+        dotnet build \
+          -p:Version_Props_Path="$(pwd)/build/Version.props" \
+          -p:Version_Full=${{ steps.version.outputs.VERSION_FULL }} \
+          -p:Version_Assembly=${{ steps.version.outputs.VERSION_ASSEMBLY }} \
+          -p:Version_Core=${{ steps.version.outputs.VERSION_CORE }} \
+          -p:Version_Major=${{ steps.version.outputs.VERSION_MAJOR }} \
+          -p:Version_Minor=${{ steps.version.outputs.VERSION_MINOR }} \
+          -p:Version_Patch=${{ steps.version.outputs.VERSION_PATCH }} \
+          -p:Version_Prefix=${{ steps.version.outputs.VERSION_PREFIX }} \
+          -p:Version_Suffix=${{ steps.version.outputs.VERSION_SUFFIX }} \
+          -p:Version_Revision=${{ steps.version.outputs.VERSION_REVISION }} \
+          -p:Version_BuildId=${{ steps.version.outputs.VERSION_BUILDID }} \
+          -p:Version_BranchName="${{ steps.version.outputs.VERSION_BRANCHNAME }}" \
+          --configuration Release
+
+    - name: Create NuGet packages
+      run: |
+        dotnet pack \
+          -p:Version_Props_Path="$(pwd)/build/Version.props" \
+          --configuration Release \
+          --no-build \
+          --output ./packages
+
+    - name: Upload packages
+      uses: actions/upload-artifact@v4
+      with:
+        name: nuget-packages-${{ steps.version.outputs.VERSION_FULL }}
+        path: ./packages/*.nupkg
 ```
 
 ### Multi-Environment Versioning
@@ -295,10 +414,11 @@ steps:
 
 ### Key=Value Text File (output-txt)
 
-```
+```txt
 VERSION_MAJOR=1
 VERSION_MINOR=2
 VERSION_PATCH=3
+VERSION_PREFIX=v
 VERSION_SUFFIX=feature-auth
 VERSION_REVISION=42
 VERSION_BUILDID=100
@@ -318,6 +438,7 @@ VERSION_SCRIPTCALLED=true
         <Version_Major>1</Version_Major>
         <Version_Minor>2</Version_Minor>
         <Version_Patch>3</Version_Patch>
+        <Version_Prefix>v</Version_Prefix>
         <Version_Suffix>feature-auth</Version_Suffix>
         <Version_Revision>42</Version_Revision>
         <Version_BuildId>100</Version_BuildId>
@@ -329,6 +450,26 @@ VERSION_SCRIPTCALLED=true
         <Version_ScriptCalled>true</Version_ScriptCalled>
     </PropertyGroup>
 </Project>
+```
+
+### JSON File (output-json)
+
+```json
+{
+  "VERSION_MAJOR": "1",
+  "VERSION_MINOR": "2",
+  "VERSION_PATCH": "3",
+  "VERSION_PREFIX": "v",
+  "VERSION_SUFFIX": "feature-auth",
+  "VERSION_REVISION": "42",
+  "VERSION_BUILDID": "100",
+  "VERSION_CORE": "1.2.3",
+  "VERSION_EXTENSION": "feature-auth.42",
+  "VERSION_FULL": "1.2.3-feature-auth.42",
+  "VERSION_ASSEMBLY": "1.2.3.100",
+  "VERSION_BRANCHNAME": "feature/auth",
+  "VERSION_SCRIPTCALLED": true
+}
 ```
 
 ## Requirements
@@ -407,33 +548,36 @@ Branch names are sanitized for use as version suffixes:
 
 #### ❌ No Git Tags Found
 
-```
+```txt
 Found 0 existing tags
 ```
 
 **Solutions:**
+
 1. Ensure `fetch-depth: 0` in checkout action
 2. Create initial tags if repository is new
 3. Check tag prefix matches existing tags
 
 #### ❌ Invalid Version Numbers
 
-```
+```txt
 Error: Major version must be a non-negative integer
 ```
 
 **Solutions:**
+
 1. Ensure major/minor are numeric strings
 2. Use quotes around version numbers in YAML
 3. Validate input values before passing to action
 
 #### ❌ Git History Issues
 
-```
+```txt
 Error: Failed to fetch Git history
 ```
 
 **Solutions:**
+
 1. Use `fetch-depth: 0` for full history
 2. Ensure repository has proper Git setup
 3. Check repository permissions
@@ -548,6 +692,7 @@ This action is distributed under the same license as the repository.
 ## Support
 
 For issues related to:
+
 - **Git operations:** Check [Git Documentation](https://git-scm.com/doc)
 - **Semantic versioning:** Check [SemVer Specification](https://semver.org/)
 - **Action bugs:** Create an issue in this repository
