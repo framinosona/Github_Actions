@@ -330,6 +330,7 @@ Full Git objects with metadata:
 ### Validation Errors
 
 The action validates:
+
 - Tag name format (no spaces, no '..' sequences)
 - Email format for Git configuration
 - Boolean parameter values
@@ -413,12 +414,14 @@ target: ${{ env.DEPLOY_SHA }}
 
 #### ❌ Permission Denied
 
-```
+```txt
 Permission denied (publickey)
 ```
 
 **Solutions:**
+
 1. Ensure `github-token` has write permissions:
+
    ```yaml
    permissions:
      contents: write
@@ -428,17 +431,20 @@ Permission denied (publickey)
 
 #### ❌ Tag Already Exists
 
-```
+```txt
 Error: Tag v1.0.0 already exists and fail-if-exists is true
 ```
 
 **Solutions:**
+
 1. Use force mode:
+
    ```yaml
    force: 'true'
    ```
 
 2. Allow existing tags:
+
    ```yaml
    fail-if-exists: 'false'
    ```
@@ -447,22 +453,24 @@ Error: Tag v1.0.0 already exists and fail-if-exists is true
 
 #### ❌ Invalid Tag Name
 
-```
+```txt
 Error: Tag name cannot contain spaces
 ```
 
 **Solutions:**
+
 1. Remove spaces from tag names
 2. Use hyphens instead of spaces
 3. Validate tag names before passing to action
 
 #### ❌ Target Not Found
 
-```
+```txt
 Error: Target 'unknown-branch' not found
 ```
 
 **Solutions:**
+
 1. Verify target branch/commit exists
 2. Use `HEAD` for current commit
 3. Fetch required branches before tagging
@@ -564,6 +572,7 @@ message: 'Production release v${{ env.VERSION }}'
 ### Branch Protection
 
 Consider tag protection in repository settings:
+
 - Protect important tags from deletion
 - Require reviews for tag creation
 - Restrict tag creation to specific users/teams
@@ -585,6 +594,7 @@ This action is distributed under the same license as the repository.
 ## Support
 
 For issues related to:
+
 - **Git operations:** Check [Git Documentation](https://git-scm.com/docs/git-tag)
 - **GitHub tokens:** Check [GitHub Token Documentation](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token)
 - **Action bugs:** Create an issue in this repository
