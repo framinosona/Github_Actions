@@ -151,10 +151,6 @@ runs:
         echo "::group::🔧 Building Tool Installation Arguments"
         echo "::debug::Building dotnet arguments for tool installation"
 
-        run: |
-        echo "::group::🔧 Building Tool Installation Arguments"
-        echo "::debug::Building dotnet arguments for tool installation"
-
         # Start with base arguments
         ARGS="install '${{ inputs.tool-name }}'"
 
