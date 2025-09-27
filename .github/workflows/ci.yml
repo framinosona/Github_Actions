@@ -171,7 +171,6 @@ jobs:
     name: '🌐 Deploy to GitHub Pages'
     if: needs.build-and-release.outputs.should-deploy-docs == 'true'
     needs: build-and-release
-    if: needs.build-and-release.outputs.should-deploy-docs == 'true'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
