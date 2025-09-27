@@ -1,4 +1,4 @@
-name: '🔢 Generate Version'
+name: '🔢 Git > Generate Version'
 description: 'Generates semantic version numbers based on Git tags and branch information'
 author: 'Francois Raminosona'
 

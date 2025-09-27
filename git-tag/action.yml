@@ -1,4 +1,4 @@
-name: '🏷️ Create Git Tag'
+name: '🏷️ Git > Create Tag'
 description: 'Creates and pushes Git tags with validation and configuration'
 author: 'Francois Raminosona'
 

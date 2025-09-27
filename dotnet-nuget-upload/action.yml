@@ -1,4 +1,4 @@
-name: "📦 Upload NuGet Package"
+name: "📦 .NET > Upload NuGet Package"
 description: "Uploads a NuGet package to a specified feed using dotnet nuget push"
 author: 'Francois Raminosona'
 

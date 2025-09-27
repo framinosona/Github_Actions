@@ -1,4 +1,4 @@
-name: "🔧 Install .NET Tool"
+name: "🔧 .NET > Install Tool"
 description: "Installs a .NET global or local tool with automatic tool manifest creation"
 author: 'Francois Raminosona'
 

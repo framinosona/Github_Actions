@@ -1,4 +1,4 @@
-name: "📄 Generate CycloneDX SBOM"
+name: "🛡️ SBOM > Generate with CycloneDX"
 description: "Generates Software Bill of Materials (SBOM) using CycloneDX .NET Global Tool"
 author: "Francois Raminosona"
 

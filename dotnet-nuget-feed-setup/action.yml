@@ -1,4 +1,4 @@
-name: "🔗 Setup NuGet Feed"
+name: "🔗 .NET > Setup NuGet Feed"
 description: "Adds a NuGet package source using dotnet nuget add source with authentication support"
 author: 'Francois Raminosona'
 

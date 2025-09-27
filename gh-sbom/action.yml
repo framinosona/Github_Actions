@@ -1,4 +1,4 @@
-name: '📦 Generate SBOM with gh-sbom'
+name: '📦 SBOM > Generate with gh-sbom'
 description: 'Generate Software Bill of Materials (SBOM) for GitHub repositories using the gh-sbom CLI extension'
 author: 'Francois Raminosona'
 

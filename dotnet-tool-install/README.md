@@ -15,6 +15,7 @@ Installs a .NET global or local tool with automatic tool manifest creation and c
 ## Usage
 
 ### Basic Usage - Install Global Tool
+
 ```yaml
 - name: Install Entity Framework Core CLI
   uses: ./dotnet-tool-install
@@ -24,6 +25,7 @@ Installs a .NET global or local tool with automatic tool manifest creation and c
 ```
 
 ### Basic Usage - Install Local Tool
+
 ```yaml
 - name: Install local development tools
   uses: ./dotnet-tool-install
@@ -33,6 +35,7 @@ Installs a .NET global or local tool with automatic tool manifest creation and c
 ```
 
 ### Advanced Usage - Specific Version with Custom Source
+
 ```yaml
 - name: Install specific tool version from custom feed
   uses: ./dotnet-tool-install
@@ -48,6 +51,7 @@ Installs a .NET global or local tool with automatic tool manifest creation and c
 ```
 
 ### Enterprise Usage - With Configuration File
+
 ```yaml
 - name: Install tool with custom NuGet config
   uses: ./dotnet-tool-install
@@ -86,6 +90,7 @@ Installs a .NET global or local tool with automatic tool manifest creation and c
 ## Examples
 
 ### Example 1: Install Global Entity Framework CLI
+
 ```yaml
 name: Setup EF Core Tools
 on: [push]
@@ -112,6 +117,7 @@ jobs:
 ```
 
 ### Example 2: Install Local Development Tools
+
 ```yaml
 name: Setup Development Environment
 on: [push]
@@ -146,6 +152,7 @@ jobs:
 ```
 
 ### Example 3: Install from Custom Feed with Specific Version
+
 ```yaml
 name: Install Enterprise Tools
 on: [push]
@@ -175,6 +182,7 @@ jobs:
 ```
 
 ### Example 4: Matrix Installation for Multiple Tools
+
 ```yaml
 name: Install Multiple Tools
 on: [push]
@@ -215,11 +223,13 @@ jobs:
 ## Tool Manifest Behavior
 
 ### Local Tools
+
 - 📝 **Automatic Creation**: If installing a local tool and no `.config/dotnet-tools.json` exists, one will be created automatically
 - 📍 **Location**: Tool manifest is created in the working directory under `.config/dotnet-tools.json`
 - 🔍 **Detection**: The action reports whether a new manifest was created via the `tool-manifest-created` output
 
 ### Global Tools
+
 - 🌍 **No Manifest**: Global tools don't require or use tool manifests
 - 📦 **System-wide**: Installed to the user's global tool location
 - 🛤️ **Custom Path**: Use `tool-path` input to specify a custom installation directory
@@ -248,32 +258,40 @@ This action leverages the powerful `dotnet` action for command execution, provid
 ### Common Issues
 
 1. **Tool Already Installed**
+
    ```
    Tool 'dotnet-ef' is already installed.
    ```
+
    - This is normal and not an error
    - The action will still complete successfully
    - Use `dotnet tool update` if you need to update the version
 
 2. **Permission Denied**
+
    ```
    Access to the path '/usr/local/share/dotnet/tools' is denied.
    ```
+
    - Common with global tool installation on Linux/macOS
    - Use `sudo` in a separate step or install as local tool instead
 
 3. **Tool Not Found**
+
    ```
    No executable found matching command "dotnet-mytool"
    ```
+
    - Verify the tool name is correct
    - Check if the tool supports your target framework
    - Ensure the tool source is accessible
 
 4. **NuGet Authentication**
+
    ```
    Unable to load the service index for source
    ```
+
    - Configure authentication for private feeds
    - Use environment variables or `configfile` input
 

@@ -1,4 +1,4 @@
-name: '📖 DocFX Generate Metadata'
+name: '📖 DocFX > Generate Metadata'
 description: 'Generates YAML metadata files from source code using DocFX .NET Global Tool'
 author: 'Francois Raminosona'
 

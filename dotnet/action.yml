@@ -1,4 +1,4 @@
-name: "🚀 Run .NET Command"
+name: "🚀 .NET > Run Command"
 description: "Runs a .NET command with automatic verbosity handling based on debug settings"
 author: 'Francois Raminosona'
 
