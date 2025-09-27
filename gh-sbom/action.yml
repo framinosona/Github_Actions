@@ -1,0 +1,233 @@
+name: '📦 Generate SBOM with gh-sbom'
+description: 'Generate Software Bill of Materials (SBOM) for GitHub repositories using the gh-sbom CLI extension'
+author: 'Francois Raminosona'
+
+inputs:
+  repository:
+    description: 'Repository to generate SBOM for (format: owner/repo). Uses current repository if not specified'
+    required: false
+    default: ''
+  format:
+    description: 'SBOM format to generate'
+    required: false
+    default: 'spdx'
+  include-license:
+    description: 'Include license information from clearlydefined.io for CycloneDX format (SPDX always includes license information)'
+    required: false
+    default: 'false'
+  output-file:
+    description: 'Path to save the generated SBOM file. Outputs to stdout if not specified'
+    required: false
+    default: ''
+  github-token:
+    description: 'GitHub token for authentication. Uses GITHUB_TOKEN by default'
+    required: false
+    default: '${{ github.token }}'
+  show-summary:
+    description: 'Whether to show the action summary'
+    required: false
+    default: 'false'
+
+outputs:
+  sbom-format:
+    description: 'The format of the generated SBOM (spdx or cyclonedx)'
+    value: ${{ steps.generate-sbom.outputs.sbom-format }}
+  output-file:
+    description: 'Path to the generated SBOM file (if saved to file)'
+    value: ${{ steps.generate-sbom.outputs.output-file }}
+  component-count:
+    description: 'Number of components found in the SBOM'
+    value: ${{ steps.generate-sbom.outputs.component-count }}
+  exit-code:
+    description: 'Exit code of the gh-sbom command'
+    value: ${{ steps.generate-sbom.outputs.exit-code }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: "✅ Validate inputs"
+      shell: bash
+      run: |
+        echo "::group::🔍 Input Validation"
+        echo "::debug::Validating inputs for gh-sbom action"
+
+        # Mask sensitive data FIRST
+        if [ -n "${{ inputs.github-token }}" ]; then
+          echo "::add-mask::${{ inputs.github-token }}"
+        fi
+
+        # Validate format parameter
+        case "${{ inputs.format }}" in
+          spdx|cyclonedx) ;;
+          *) echo "::error::Invalid format '${{ inputs.format }}'. Must be 'spdx' or 'cyclonedx'"; exit 1 ;;
+        esac
+
+        # Validate boolean parameters
+        case "${{ inputs.include-license }}" in
+          true|false) ;;
+          *) echo "::error::Invalid include-license value '${{ inputs.include-license }}'. Must be 'true' or 'false'"; exit 1 ;;
+        esac
+
+        case "${{ inputs.show-summary }}" in
+          true|false) ;;
+          *) echo "::error::Invalid show-summary value '${{ inputs.show-summary }}'. Must be 'true' or 'false'"; exit 1 ;;
+        esac
+
+        # Validate repository format if provided
+        if [ -n "${{ inputs.repository }}" ]; then
+          if [[ ! "${{ inputs.repository }}" =~ ^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$ ]]; then
+            echo "::error::Invalid repository format '${{ inputs.repository }}'. Must be 'owner/repo'"
+            exit 1
+          fi
+        fi
+
+        # Validate output file directory exists if specified
+        if [ -n "${{ inputs.output-file }}" ]; then
+          output_dir=$(dirname "${{ inputs.output-file }}")
+          if [ "$output_dir" != "." ] && [ ! -d "$output_dir" ]; then
+            echo "::error file=${{ inputs.output-file }}::Output directory does not exist: $output_dir"
+            exit 1
+          fi
+        fi
+
+        echo "::notice::Input validation completed successfully"
+        echo "::endgroup::"
+
+    - name: "🔧 Setup gh-sbom extension"
+      shell: bash
+      run: |
+        echo "::group::📦 Setting up gh-sbom extension"
+        echo "::debug::GitHub CLI version: $(gh --version)"
+
+        # Set GitHub token for authentication
+        echo "${{ inputs.github-token }}" | gh auth login --with-token
+
+        # Check if gh-sbom extension is installed
+        if ! gh extension list | grep -q "advanced-security/gh-sbom"; then
+          echo "::debug::Installing gh-sbom extension..."
+          gh extension install advanced-security/gh-sbom
+        else
+          echo "::debug::gh-sbom extension already installed"
+          # Optionally upgrade to latest version
+          gh extension upgrade advanced-security/gh-sbom || echo "::warning::Failed to upgrade gh-sbom extension"
+        fi
+
+        echo "::notice::gh-sbom extension setup completed successfully"
+        echo "::endgroup::"
+
+    - name: "📦 Generate SBOM"
+      id: generate-sbom
+      shell: bash
+      run: |
+        echo "::group::🚀 Generating SBOM"
+        echo "::debug::Executing SBOM generation with gh-sbom"
+
+        # Build command arguments
+        ARGS=()
+
+        if [ -n "${{ inputs.repository }}" ]; then
+          ARGS+=("-r" "${{ inputs.repository }}")
+          echo "::debug::Using repository: ${{ inputs.repository }}"
+        else
+          echo "::debug::Using current repository"
+        fi
+
+        if [ "${{ inputs.format }}" = "cyclonedx" ]; then
+          ARGS+=("-c")
+          echo "::debug::Using CycloneDX format"
+        else
+          echo "::debug::Using SPDX format (default)"
+        fi
+
+        if [ "${{ inputs.include-license }}" = "true" ] && [ "${{ inputs.format }}" = "cyclonedx" ]; then
+          ARGS+=("-l")
+          echo "::debug::Including license information"
+        elif [ "${{ inputs.include-license }}" = "true" ] && [ "${{ inputs.format }}" = "spdx" ]; then
+          echo "::debug::License information automatically included for SPDX format"
+        fi
+
+        echo "::debug::Command arguments: ${ARGS[*]}"
+
+        # Execute gh sbom command
+        set +e
+        if [ -n "${{ inputs.output-file }}" ]; then
+          echo "::debug::Saving SBOM to file: ${{ inputs.output-file }}"
+          gh sbom "${ARGS[@]}" > "${{ inputs.output-file }}"
+          exit_code=$?
+        else
+          echo "::debug::Outputting SBOM to stdout"
+          gh sbom "${ARGS[@]}"
+          exit_code=$?
+        fi
+        set -e
+
+        # Set outputs
+        echo "sbom-format=${{ inputs.format }}" >> $GITHUB_OUTPUT
+        echo "exit-code=$exit_code" >> $GITHUB_OUTPUT
+
+        if [ -n "${{ inputs.output-file }}" ]; then
+          echo "output-file=${{ inputs.output-file }}" >> $GITHUB_OUTPUT
+
+          # Count components if file was created successfully
+          if [ $exit_code -eq 0 ] && [ -f "${{ inputs.output-file }}" ]; then
+            if [ "${{ inputs.format }}" = "spdx" ]; then
+              component_count=$(jq '.packages | length' "${{ inputs.output-file }}" 2>/dev/null || echo "0")
+            else
+              component_count=$(jq '.components | length' "${{ inputs.output-file }}" 2>/dev/null || echo "0")
+            fi
+            echo "component-count=$component_count" >> $GITHUB_OUTPUT
+            echo "::debug::Found $component_count components"
+          else
+            echo "component-count=0" >> $GITHUB_OUTPUT
+          fi
+        else
+          echo "output-file=" >> $GITHUB_OUTPUT
+          echo "component-count=0" >> $GITHUB_OUTPUT
+        fi
+
+        if [ $exit_code -eq 0 ]; then
+          echo "::notice::SBOM generated successfully"
+        else
+          echo "::error::SBOM generation failed with exit code $exit_code"
+          exit $exit_code
+        fi
+
+        echo "::endgroup::"
+
+    - name: "📊 Action Summary"
+      if: always() && inputs.show-summary == 'true'
+      shell: bash
+      run: |
+        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+        <details><summary>Expand for details - 📊 Generate SBOM Summary</summary>
+
+        ## 🔧 Input Parameters
+        | Parameter | Value |
+        |-----------|-------|
+        | 📝 Repository | `${{ inputs.repository || 'current repository' }}` |
+        | 📋 Format | `${{ inputs.format }}` |
+        | 📄 Include License | `${{ inputs.include-license }}` |
+        | 💾 Output File | `${{ inputs.output-file || 'stdout' }}` |
+
+        ## 📤 Action Results
+        | Metric | Value |
+        |--------|-------|
+        | 🎯 SBOM Format | `${{ steps.generate-sbom.outputs.sbom-format }}` |
+        | 📁 Output File | `${{ steps.generate-sbom.outputs.output-file || 'stdout' }}` |
+        | 📊 Component Count | `${{ steps.generate-sbom.outputs.component-count }}` |
+        | ✅ Exit Code | `${{ steps.generate-sbom.outputs.exit-code }}` |
+        | 📈 Status | `${{ steps.generate-sbom.outputs.exit-code == '0' && '✅ Success' || '❌ Failed' }}` |
+
+        ## ⚙️ Process Details
+        | Step | Status |
+        |------|--------|
+        | ✅ Input Validation | `✅ Completed` |
+        | � Setup Extension | `✅ Completed` |
+        | 📦 Generate SBOM | `${{ steps.generate-sbom.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+
+        </details>
+        EOF
+
+branding:
+  icon: 'package'
+  color: 'blue'
