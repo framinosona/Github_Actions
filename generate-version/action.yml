@@ -77,9 +77,15 @@ outputs:
   VERSION_ASSEMBLY:
     description: 'Assembly version for .NET (major.minor.patch.buildid)'
     value: ${{ steps.generate.outputs.VERSION_ASSEMBLY }}
+  VERSION_FOR_TAG:
+    description: 'Version string suitable for Git tags (with prefix)'
+    value: ${{ steps.generate.outputs.VERSION_PREFIX }}${{ steps.generate.outputs.VERSION_FULL }}
   VERSION_BRANCHNAME:
     description: 'Current branch name'
     value: ${{ steps.generate.outputs.VERSION_BRANCHNAME }}
+  VERSION_PREFIX:
+    description: 'Tag prefix used for version tags'
+    value: ${{ steps.generate.outputs.VERSION_PREFIX }}
   VERSION_OUTPUTTXT:
     description: 'Path to generated txt file (if created)'
     value: ${{ steps.generate.outputs.VERSION_OUTPUTTXT }}
@@ -295,17 +301,20 @@ runs:
 
         # Build assembly version (always includes build_id as 4th component)
         version_assembly="${major_version}.${minor_version}.${patch_version}.${build_id}"
+        version_for_tag="${tag_prefix}${version_full}"
 
         echo "📦 Final versions:"
         echo "  🎯 Core: $version_core"
         echo "  🔗 Extension: $version_extension"
         echo "  🎯 Full: $version_full"
         echo "  📚 Assembly: $version_assembly"
+        echo "  🏷️ For Tag: $version_for_tag"
 
         # Set all environment variables and outputs
         setEnvironmentVariable "VERSION_MAJOR" "$major_version"
         setEnvironmentVariable "VERSION_MINOR" "$minor_version"
         setEnvironmentVariable "VERSION_PATCH" "$patch_version"
+        setEnvironmentVariable "VERSION_PREFIX" "$tag_prefix"
         setEnvironmentVariable "VERSION_SUFFIX" "$suffix"
         setEnvironmentVariable "VERSION_REVISION" "$revision_version"
         setEnvironmentVariable "VERSION_BUILDID" "$build_id"
@@ -313,6 +322,7 @@ runs:
         setEnvironmentVariable "VERSION_EXTENSION" "$version_extension"
         setEnvironmentVariable "VERSION_FULL" "$version_full"
         setEnvironmentVariable "VERSION_ASSEMBLY" "$version_assembly"
+        setEnvironmentVariable "VERSION_FOR_TAG" "$version_for_tag"
         setEnvironmentVariable "VERSION_BRANCHNAME" "$branch_name"
         setEnvironmentVariable "VERSION_SCRIPTCALLED" "true"
 
@@ -325,6 +335,7 @@ runs:
             echo "VERSION_MAJOR=$major_version"
             echo "VERSION_MINOR=$minor_version"
             echo "VERSION_PATCH=$patch_version"
+            echo "VERSION_PREFIX=$tag_prefix"
             echo "VERSION_SUFFIX=$suffix"
             echo "VERSION_REVISION=$revision_version"
             echo "VERSION_BUILDID=$build_id"
@@ -332,6 +343,7 @@ runs:
             echo "VERSION_EXTENSION=$version_extension"
             echo "VERSION_FULL=$version_full"
             echo "VERSION_ASSEMBLY=$version_assembly"
+            echo "VERSION_FOR_TAG=$version_for_tag"
             echo "VERSION_BRANCHNAME=$branch_name"
             echo "VERSION_SCRIPTCALLED=true"
           } > "$output_txt"
@@ -350,6 +362,7 @@ runs:
             echo "        <Version_Major>$major_version</Version_Major>"
             echo "        <Version_Minor>$minor_version</Version_Minor>"
             echo "        <Version_Patch>$patch_version</Version_Patch>"
+            echo "        <Version_Prefix>$tag_prefix</Version_Prefix>"
             echo "        <Version_Suffix>$suffix</Version_Suffix>"
             echo "        <Version_Revision>$revision_version</Version_Revision>"
             echo "        <Version_BuildId>$build_id</Version_BuildId>"
@@ -357,6 +370,7 @@ runs:
             echo "        <Version_Extension>$version_extension</Version_Extension>"
             echo "        <Version_Full>$version_full</Version_Full>"
             echo "        <Version_Assembly>$version_assembly</Version_Assembly>"
+            echo "        <Version_ForTag>$version_for_tag</Version_ForTag>"
             echo "        <Version_BranchName>$branch_name</Version_BranchName>"
             echo "        <Version_ScriptCalled>true</Version_ScriptCalled>"
             echo "    </PropertyGroup>"
@@ -376,6 +390,7 @@ runs:
             echo "  \"VERSION_MAJOR\": \"$major_version\","
             echo "  \"VERSION_MINOR\": \"$minor_version\","
             echo "  \"VERSION_PATCH\": \"$patch_version\","
+            echo "  \"VERSION_PREFIX\": \"$tag_prefix\","
             echo "  \"VERSION_SUFFIX\": \"$suffix\","
             echo "  \"VERSION_REVISION\": \"$revision_version\","
             echo "  \"VERSION_BUILDID\": \"$build_id\","
@@ -383,6 +398,7 @@ runs:
             echo "  \"VERSION_EXTENSION\": \"$version_extension\","
             echo "  \"VERSION_FULL\": \"$version_full\","
             echo "  \"VERSION_ASSEMBLY\": \"$version_assembly\","
+            echo "  \"VERSION_FOR_TAG\": \"$version_for_tag\","
             echo "  \"VERSION_BRANCHNAME\": \"$branch_name\","
             echo "  \"VERSION_SCRIPTCALLED\": true"
             echo "}"
@@ -404,7 +420,8 @@ runs:
         REQUIRED_VARS=(
           "VERSION_MAJOR" "VERSION_MINOR" "VERSION_PATCH"
           "VERSION_CORE" "VERSION_FULL" "VERSION_ASSEMBLY"
-          "VERSION_BRANCHNAME" "VERSION_BUILDID"
+          "VERSION_BRANCHNAME" "VERSION_BUILDID" "VERSION_PREFIX"
+          "VERSION_FOR_TAG"
         )
 
         for var in "${REQUIRED_VARS[@]}"; do
@@ -505,7 +522,9 @@ runs:
         | 🎯 Core Version | `${{ steps.generate.outputs.VERSION_CORE }}` |
         | 🔗 Full Version | `${{ steps.generate.outputs.VERSION_FULL }}` |
         | 📚 Assembly Version | `${{ steps.generate.outputs.VERSION_ASSEMBLY }}` |
+        | 🏷️ For Tag | `${{ steps.generate.outputs.VERSION_FOR_TAG }}` |
         | 🌿 Branch Name | `${{ steps.generate.outputs.VERSION_BRANCHNAME }}` |
+        | 🏷️ Tag Prefix | `${{ steps.generate.outputs.VERSION_PREFIX }}` |
         | 📎 Suffix | `${{ steps.generate.outputs.VERSION_SUFFIX || 'none' }}` |
         | 🔄 Revision | `${{ steps.generate.outputs.VERSION_REVISION || 'none' }}` |
 
