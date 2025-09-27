@@ -146,6 +146,17 @@ runs:
         echo "::group::🔍 CycloneDX Input Validation"
         echo "::debug::Validating CycloneDX inputs for SBOM generation"
 
+        # Mask sensitive data FIRST
+        if [ -n "${{ inputs.github-token }}" ]; then
+          echo "::add-mask::${{ inputs.github-token }}"
+        fi
+        if [ -n "${{ inputs.github-bearer-token }}" ]; then
+          echo "::add-mask::${{ inputs.github-bearer-token }}"
+        fi
+        if [ -n "${{ inputs.nuget-password }}" ]; then
+          echo "::add-mask::${{ inputs.nuget-password }}"
+        fi
+
         # Validate required path parameter
         if [ -z "${{ inputs.path }}" ]; then
           echo "::error::Path parameter is required"

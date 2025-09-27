@@ -103,11 +103,12 @@ runs:
     - name: "✅ Validate inputs"
       shell: bash
       run: |
-        echo "::debug::Validating DocFX Metadata inputs..."
+        echo "::group::🔍 DocFX Metadata Input Validation"
+        echo "::debug::Validating DocFX metadata inputs for API documentation generation"
 
         # Validate config file exists if specified and not default
         if [ "${{ inputs.config }}" != "docfx.json" ] && [ ! -f "${{ inputs.config }}" ]; then
-          echo "::error::DocFX configuration file not found: ${{ inputs.config }}"
+          echo "::error file=${{ inputs.config }}::DocFX configuration file not found: ${{ inputs.config }}"
           exit 1
         fi
 
@@ -170,11 +171,12 @@ runs:
 
         # Validate filter file exists if specified
         if [ -n "${{ inputs.filter }}" ] && [ ! -f "${{ inputs.filter }}" ]; then
-          echo "::error::Filter config file not found: ${{ inputs.filter }}"
+          echo "::error file=${{ inputs.filter }}::Filter config file not found: ${{ inputs.filter }}"
           exit 1
         fi
 
-        echo "✅ Input validation passed"
+        echo "::notice::Input validation completed successfully"
+        echo "::endgroup::"
 
     - name: "📦 Install DocFX tool"
       uses: "./dotnet-tool-install"
@@ -186,7 +188,8 @@ runs:
       id: build-args
       shell: bash
       run: |
-        echo "🔧 Building DocFX metadata arguments..."
+        echo "::group::🔧 Building DocFX Arguments"
+        echo "::debug::Building dotnet arguments for DocFX metadata generation"
 
         # Start with base arguments
         ARGS="run docfx metadata"
@@ -254,10 +257,11 @@ runs:
           ARGS="$ARGS --property '${{ inputs.property }}'"
         fi
 
-        echo "📋 Generated arguments: $ARGS"
+        echo "::debug::Generated arguments: $ARGS"
 
         # Output the arguments string
         echo "arguments=$ARGS" >> $GITHUB_OUTPUT
+        echo "::endgroup::"
 
     - name: "📖 Generate metadata with DocFX"
       id: generate
@@ -270,14 +274,15 @@ runs:
       id: analyze
       shell: bash
       run: |
-        echo "📊 Analyzing generated metadata..."
+        echo "::group::📊 Analyzing Generated Metadata"
+        echo "::debug::Analyzing generated DocFX metadata files"
 
         OUTPUT_DIR="${{ steps.build-args.outputs.output-path }}"
 
         if [ -d "$OUTPUT_DIR" ]; then
           # Count files
           FILES_COUNT=$(find "$OUTPUT_DIR" -type f | wc -l | tr -d ' ')
-          echo "📄 Metadata files generated: $FILES_COUNT"
+          echo "::debug::Metadata files generated: $FILES_COUNT"
           echo "files-count=$FILES_COUNT" >> $GITHUB_OUTPUT
 
           # Calculate total size
@@ -294,25 +299,25 @@ runs:
             OUTPUT_SIZE="unknown"
           fi
 
-          echo "📏 Total output size: $OUTPUT_SIZE bytes"
+          echo "::debug::Total output size: $OUTPUT_SIZE bytes"
           echo "output-size=$OUTPUT_SIZE" >> $GITHUB_OUTPUT
 
           # List metadata files by type
-          echo "📋 Generated metadata files:"
+          echo "::debug::Generated metadata files by type:"
           case "${{ inputs.output-format }}" in
             mref)
               find "$OUTPUT_DIR" -name "*.yml" -o -name "*.yaml" | head -10 | while read -r file; do
-                echo "  📄 $file"
+                echo "::debug::  📄 $file"
               done
               ;;
             markdown)
               find "$OUTPUT_DIR" -name "*.md" | head -10 | while read -r file; do
-                echo "  📄 $file"
+                echo "::debug::  📄 $file"
               done
               ;;
             apiPage)
               find "$OUTPUT_DIR" -name "*.json" | head -10 | while read -r file; do
-                echo "  📄 $file"
+                echo "::debug::  📄 $file"
               done
               ;;
           esac
@@ -322,6 +327,8 @@ runs:
           echo "files-count=0" >> $GITHUB_OUTPUT
           echo "output-size=0" >> $GITHUB_OUTPUT
         fi
+
+        echo "::endgroup::"
 
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'

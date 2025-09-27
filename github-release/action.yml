@@ -95,7 +95,13 @@ runs:
     - name: "✅ Validate inputs"
       shell: bash
       run: |
-        echo "::debug::Validating GitHub release inputs..."
+        echo "::group::🔍 GitHub Release Creation Input Validation"
+        echo "::debug::Validating inputs for GitHub release creation"
+
+        # Mask sensitive data FIRST
+        if [ -n "${{ inputs.github-token }}" ]; then
+          echo "::add-mask::${{ inputs.github-token }}"
+        fi
 
         # Validate that either notes, notes-file, notes-from-tag, or generate-notes is provided
         if [ -z "${{ inputs.notes }}" ] && [ -z "${{ inputs.notes-file }}" ] && [ "${{ inputs.notes-from-tag }}" != "true" ] && [ "${{ inputs.generate-notes }}" != "true" ]; then
@@ -143,12 +149,13 @@ runs:
         # Validate tag format if provided
         if [ -n "${{ inputs.tag }}" ]; then
           if [[ "${{ inputs.tag }}" =~ [[:space:]] ]]; then
-                        echo "::error::Tag name cannot contain spaces"
+            echo "::error::Tag name cannot contain spaces: ${{ inputs.tag }}"
             exit 1
           fi
         fi
 
-        echo "✅ Input validation passed"
+        echo "::notice::Input validation completed successfully"
+        echo "::endgroup::"
 
     - name: "🔧 Setup GitHub CLI"
       shell: bash

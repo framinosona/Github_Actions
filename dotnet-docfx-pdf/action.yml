@@ -59,11 +59,12 @@ runs:
     - name: "✅ Validate inputs"
       shell: bash
       run: |
-        echo "::debug::Validating DocFX PDF inputs..."
+        echo "::group::🔍 DocFX PDF Input Validation"
+        echo "::debug::Validating DocFX PDF inputs for documentation generation"
 
         # Validate config file exists if specified and not default
         if [ "${{ inputs.config }}" != "docfx.json" ] && [ ! -f "${{ inputs.config }}" ]; then
-          echo "::error::DocFX configuration file not found: ${{ inputs.config }}"
+          echo "::error file=${{ inputs.config }}::DocFX configuration file not found: ${{ inputs.config }}"
           exit 1
         fi
 
@@ -87,7 +88,8 @@ runs:
           fi
         done
 
-        echo "✅ Input validation passed"
+        echo "::notice::Input validation completed successfully"
+        echo "::endgroup::"
 
     - name: "📦 Install DocFX tool"
       uses: "./dotnet-tool-install"
@@ -99,7 +101,8 @@ runs:
       id: build-args
       shell: bash
       run: |
-        echo "🔧 Building DocFX PDF arguments..."
+        echo "::group::🔧 Building DocFX PDF Arguments"
+        echo "::debug::Building dotnet arguments for DocFX PDF generation"
 
         # Start with base arguments
         ARGS="run docfx pdf"
@@ -132,10 +135,11 @@ runs:
         [ "${{ inputs.verbose }}" = "true" ] && ARGS="$ARGS --verbose"
         [ "${{ inputs.warnings-as-errors }}" = "true" ] && ARGS="$ARGS --warningsAsErrors"
 
-        echo "📋 Generated arguments: $ARGS"
+        echo "::debug::Generated arguments: $ARGS"
 
         # Output the arguments string
         echo "arguments=$ARGS" >> $GITHUB_OUTPUT
+        echo "::endgroup::"
 
     - name: "📄 Generate PDF with DocFX"
       id: generate
@@ -148,7 +152,8 @@ runs:
       id: analyze
       shell: bash
       run: |
-        echo "📊 Analyzing generated PDF files..."
+        echo "::group::📊 Analyzing Generated PDF Files"
+        echo "::debug::Analyzing generated DocFX PDF files"
 
         OUTPUT_DIR="${{ steps.build-args.outputs.output-path }}"
 
@@ -205,6 +210,8 @@ runs:
           echo "output-size=0" >> $GITHUB_OUTPUT
           echo "pdf-files=" >> $GITHUB_OUTPUT
         fi
+
+        echo "::endgroup::"
 
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'

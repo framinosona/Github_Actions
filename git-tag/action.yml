@@ -77,7 +77,13 @@ runs:
     - name: "✅ Validate inputs"
       shell: bash
       run: |
-        echo "::debug::Validating Git tag inputs..."
+        echo "::group::🔍 Git Tag Creation Input Validation"
+        echo "::debug::Validating inputs for Git tag creation"
+
+        # Mask sensitive data FIRST
+        if [ -n "${{ inputs.github-token }}" ]; then
+          echo "::add-mask::${{ inputs.github-token }}"
+        fi
 
         # Validate tag name is provided and not empty
         if [ -z "${{ inputs.tag }}" ]; then
@@ -123,10 +129,11 @@ runs:
 
         # Validate target if provided
         if [ -n "${{ inputs.target }}" ]; then
-          echo "🎯 Target specified: ${{ inputs.target }}"
+          echo "::debug::Target specified: ${{ inputs.target }}"
         fi
 
-        echo "✅ Input validation passed"
+        echo "::notice::Input validation completed successfully"
+        echo "::endgroup::"
 
     - name: "🔧 Configure Git"
       shell: bash

@@ -67,7 +67,8 @@ runs:
     - name: "✅ Validate inputs"
       shell: bash
       run: |
-        echo "::debug::Validating inputs..."
+        echo "::group::🔍 .NET Tool Installation Input Validation"
+        echo "::debug::Validating inputs for .NET tool installation"
 
         # Validate tool name is not empty
         if [ -z "${{ inputs.tool-name }}" ]; then
@@ -103,18 +104,20 @@ runs:
 
         # Validate configfile exists if specified
         if [ -n "${{ inputs.configfile }}" ] && [ ! -f "${{ inputs.configfile }}" ]; then
-          echo "::error::Configuration file not found: ${{ inputs.configfile }}"
+          echo "::error file=${{ inputs.configfile }}::Configuration file not found: ${{ inputs.configfile }}"
           exit 1
         fi
 
-        echo "✅ Input validation passed"
+        echo "::notice::Input validation completed successfully"
+        echo "::endgroup::"
 
     - name: "📝 Create tool manifest if needed"
       id: create-manifest
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       run: |
-        echo "::debug::Checking for tool manifest..."
+        echo "::group::📝 Creating Tool Manifest"
+        echo "::debug::Checking for tool manifest file"
 
         MANIFEST_CREATED="false"
 
@@ -122,29 +125,35 @@ runs:
         if [ "${{ inputs.global }}" = "false" ]; then
           # Check if tool manifest exists, create if not
           if [ ! -f .config/dotnet-tools.json ]; then
-            echo "📝 Creating tool manifest..."
+            echo "::debug::Creating tool manifest"
             dotnet new tool-manifest
             if [ $? -eq 0 ]; then
               MANIFEST_CREATED="true"
-              echo "✅ Tool manifest created successfully"
+              echo "::notice::Tool manifest created successfully"
             else
               echo "::error::Failed to create tool manifest"
               exit 1
             fi
           else
-            echo "ℹ️ Tool manifest already exists"
+            echo "::debug::Tool manifest already exists"
           fi
         else
-          echo "ℹ️ Installing as global tool - no manifest needed"
+          echo "::debug::Installing as global tool - no manifest needed"
         fi
 
         echo "manifest-created=$MANIFEST_CREATED" >> $GITHUB_OUTPUT
+        echo "::endgroup::"
 
     - name: "🔧 Build arguments"
       id: build-args
       shell: bash
       run: |
-        echo "🔧 Building dotnet arguments..."
+        echo "::group::🔧 Building Tool Installation Arguments"
+        echo "::debug::Building dotnet arguments for tool installation"
+
+        run: |
+        echo "::group::🔧 Building Tool Installation Arguments"
+        echo "::debug::Building dotnet arguments for tool installation"
 
         # Start with base arguments
         ARGS="install '${{ inputs.tool-name }}'"
@@ -178,10 +187,11 @@ runs:
           ARGS="$ARGS --framework '${{ inputs.framework }}'"
         fi
 
-        echo "📋 Generated arguments: $ARGS"
+        echo "::debug::Generated arguments: $ARGS"
 
         # Output the arguments string
         echo "arguments=$ARGS" >> $GITHUB_OUTPUT
+        echo "::endgroup::"
 
     - name: "🔧 Install .NET tool"
       id: install-tool
@@ -197,7 +207,8 @@ runs:
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       run: |
-        echo "::debug::Extracting installed tool version..."
+        echo "::group::🔍 Extracting Tool Version"
+        echo "::debug::Extracting installed tool version information"
 
         INSTALLED_VERSION="unknown"
 
@@ -212,12 +223,13 @@ runs:
 
         if [ -n "$VERSION_OUTPUT" ]; then
           INSTALLED_VERSION="$VERSION_OUTPUT"
-          echo "✅ Detected installed version: $INSTALLED_VERSION"
+          echo "::notice::Detected installed version: $INSTALLED_VERSION"
         else
-          echo "::warning::Could not determine installed version"
+          echo "::warning::Could not determine installed tool version"
         fi
 
         echo "installed-version=$INSTALLED_VERSION" >> $GITHUB_OUTPUT
+        echo "::endgroup::"
 
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'

@@ -74,7 +74,8 @@ runs:
     - name: "✅ Validate inputs"
       shell: bash
       run: |
-        echo "::debug::Validating inputs..."
+        echo "::group::🔍 Badge Generation Input Validation"
+        echo "::debug::Validating inputs for shields.io badge generation"
 
         # Validate required message parameter
         if [ -z "${{ inputs.message }}" ]; then
@@ -107,15 +108,16 @@ runs:
           fi
         fi
 
-        # Validate cache-seconds is numeric if specified
+                # Validate cache-seconds is numeric if specified
         if [ -n "${{ inputs.cache-seconds }}" ]; then
           if ! [[ "${{ inputs.cache-seconds }}" =~ ^[0-9]+$ ]]; then
-            echo "::error::cache-seconds must be a numeric value"
+            echo "::error::Cache seconds must be a non-negative integer, got: ${{ inputs.cache-seconds }}"
             exit 1
           fi
         fi
 
-        echo "✅ Input validation passed"
+        echo "::notice::Input validation completed successfully"
+        echo "::endgroup::"
 
     - name: "🏷️ Generate Badge"
       id: generate
