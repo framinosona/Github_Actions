@@ -88,7 +88,7 @@ jobs:
       - name: '🏷️ Create Git Tag'
         uses: framinosona/github_actions/git-tag@main
         with:
-          tag: ${{ needs.version.outputs.version-fortag }}
+          tag: ${{ needs.version.outputs.version-full }}
           message: 'Release ${{ needs.version.outputs.version-full }}'
           prefix: 'v'
           fail-if-exists: 'true'
