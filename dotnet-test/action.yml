@@ -200,7 +200,7 @@ runs:
         echo "::debug::Validating logger input: ${{ inputs.logger }}"
 
         # Basic validation for common mistakes (e.g., unbalanced semicolons)
-        if [[ "${{ inputs.logger }}" =~ ;; ]]; then
+        if [[ "${{ inputs.logger }}" =~ ";;" ]]; then
           echo "::error::Logger configuration contains consecutive semicolons: ${{ inputs.logger }}"
           exit 1
         fi
