@@ -382,6 +382,48 @@ runs:
         artifacts-path: ${{ inputs.artifacts-path }}
         show-summary: ${{ inputs.show-summary }}
 
+    - name: "🔍 Find generated files (.trx, .cobertura.xml)"
+      shell: bash
+      run: |
+        echo "::debug::Searching for generated test result files in artifacts-path, results-directory, and working-directory..."
+        SEARCH_DIRS=()
+        if [ -n "${{ inputs.artifacts-path }}" ]; then
+          SEARCH_DIRS+=("${{ inputs.artifacts-path }}")
+        fi
+        if [ -n "${{ inputs.results-directory }}" ]; then
+          SEARCH_DIRS+=("${{ inputs.results-directory }}")
+        fi
+        if [ -n "${{ inputs.working-directory }}" ]; then
+          SEARCH_DIRS+=("${{ inputs.working-directory }}")
+        fi
+
+        for dir in "${SEARCH_DIRS[@]}"; do
+          if [ -d "$dir" ]; then
+            echo "::debug::Searching in directory: $dir"
+
+            # Find .trx files
+            TRX_FILES=$(find "$dir" -type f -name "*.trx")
+            for file in $TRX_FILES; do
+              echo "::debug::Found .trx file: $file"
+              echo "::add-matcher::$(pwd)/.github/test-matchers/trx-matcher.json"
+              echo "::notice file=$file::Test result file generated: $file"
+            done
+
+            # Find .cobertura.xml files
+            COBERTURA_FILES=$(find "$dir" -type f -name "*.cobertura.xml")
+            for file in $COBERTURA_FILES; do
+              echo "::debug::Found .cobertura.xml file: $file"
+              echo "::add-matcher::$(pwd)/.github/test-matchers/cobertura-matcher.json"
+              echo "::notice file=$file::Code coverage report generated: $file"
+            done
+          else
+            echo "::debug::Directory does not exist, skipping: $dir"
+          fi
+        done
+
+        # Final debug message
+        echo "::debug::Test result files search completed."
+
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash
