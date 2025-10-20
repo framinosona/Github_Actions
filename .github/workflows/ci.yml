@@ -52,7 +52,7 @@ jobs:
 
       - name: '📚 Build Documentation'
         id: docfx
-        uses: ./dotnet-docfx-build
+        uses: framinosona/github_actions/dotnet-docfx-build@main
         with:
           config: 'docfx.json'
           output: 'output/docs/site'
@@ -86,7 +86,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: '🏷️ Create Git Tag'
-        uses: ./git-tag
+        uses: framinosona/github_actions/git-tag@main
         with:
           tag: ${{ needs.version.outputs.version-fortag }}
           message: 'Release ${{ needs.version.outputs.version-full }}'
@@ -101,7 +101,7 @@ jobs:
 
     steps:
       - name: '🚀 Create GitHub Release'
-        uses: ./github-release
+        uses: framinosona/github_actions/github-release@main
         with:
           tag: ${{ needs.version.outputs.version-fortag }}
           title: 'Release ${{ needs.version.outputs.version-full }}'
