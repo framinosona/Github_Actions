@@ -1,6 +1,6 @@
-name: "🚀 .NET > Run Command"
+name: "🚀 Run .NET Command"
 description: "Runs a .NET command with automatic verbosity handling based on debug settings"
-author: 'Francois Raminosona'
+author: "Francois Raminosona"
 
 inputs:
   command:
@@ -11,33 +11,21 @@ inputs:
     required: false
     default: ""
   arguments:
-    description: "Additional arguments to pass to the dotnet command (can be a string or YAML array for complex arguments)"
+    description: "Additional arguments to pass to the dotnet command"
     required: false
     default: ""
   working-directory:
     description: "Working directory for the command"
     required: false
     default: "."
-  force-verbosity:
+  verbosity:
     description: "Force a specific verbosity level (overrides auto-detection)"
     required: false
     default: ""
-  configuration:
-    description: "Build configuration to use (e.g., 'Debug', 'Release')"
-    required: false
-    default: "Release"
-  no-logo:
+  nologo:
     description: "Suppress the Microsoft logo and startup information"
     required: false
     default: "true"
-  framework:
-    description: "Target framework (e.g., 'net8.0', 'net6.0')"
-    required: false
-    default: ""
-  runtime:
-    description: "Target runtime (e.g., 'win-x64', 'linux-x64', 'osx-arm64')"
-    required: false
-    default: ""
   no-restore:
     description: "Skip automatic restore"
     required: false
@@ -46,14 +34,34 @@ inputs:
     description: "Skip building the project before running"
     required: false
     default: "false"
+  configuration:
+    description: "Build configuration to use (e.g., 'Debug', 'Release')"
+    required: false
+    default: "Release"
+  framework:
+    description: "Target framework (e.g., 'net8.0', 'net6.0')"
+    required: false
+    default: ""
+  runtime:
+    description: "Target runtime (e.g., 'win-x64', 'linux-x64', 'osx-arm64')"
+    required: false
+    default: ""
+  arch:
+    description: "Target architecture (e.g., 'x64', 'arm64')"
+    required: false
+    default: ""
   output:
-    description: "Output directory path"
+    description: "Output directory path, will convert into "
+    required: false
+    default: ""
+  artifacts-path:
+    description: "Path to store artifacts (if applicable)"
     required: false
     default: ""
   show-summary:
-    description: 'Whether to show the action summary'
+    description: "Whether to show the action summary"
     required: false
-    default: 'false'
+    default: "false"
 
 outputs:
   exit-code:
@@ -66,46 +74,22 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - name: "✅ Validate inputs"
+    - name: "ℹ️ Environment info"
       shell: bash
       run: |
-        echo "::group::🔍 Input Validation"
-        echo "::debug::Environment info - Working directory: $(pwd)"
-        echo "::debug::Environment info - .NET version: $(dotnet --version 2>/dev/null || echo 'Not found')"
-        echo "::debug::Environment info - Available runtimes: $(dotnet --list-runtimes 2>/dev/null || echo 'None')"
+        echo "ℹ️ Working directory: $(pwd)"
+        echo "ℹ️ .NET version: $(dotnet --version 2>/dev/null || echo 'Not found')"
+        echo "ℹ️ Available runtimes: $(dotnet --list-runtimes 2>/dev/null || echo 'None')"
 
-        echo "::debug::Validating inputs..."
+        # Reset environment variable
 
-        # Validate command is not empty
-        if [ -z "${{ inputs.command }}" ]; then
-          echo "::error::Command cannot be empty"
-          exit 1
-        fi
-
-        # Validate path exists if provided
-        if [ -n "${{ inputs.path }}" ] && [ ! -e "${{ inputs.path }}" ]; then
-          echo "::error file=${{ inputs.path }}::Specified path does not exist: ${{ inputs.path }}"
-          exit 1
-        fi
-
-        # Validate working directory exists
-        if [ ! -d "${{ inputs.working-directory }}" ]; then
-          echo "::error::Working directory does not exist: ${{ inputs.working-directory }}"
-          exit 1
-        fi
-
-        # Validate verbosity level if forced
-        if [ -n "${{ inputs.force-verbosity }}" ]; then
-          case "${{ inputs.force-verbosity }}" in
-            quiet|minimal|normal|detailed|diagnostic) ;;
-            *) echo "::error::Invalid verbosity level: ${{ inputs.force-verbosity }}. Must be one of: quiet, minimal, normal, detailed, diagnostic"; exit 1 ;;
-          esac
-        fi
-
-        # Validate boolean inputs
-        for param in no-logo no-restore no-build; do
+    - name: "✅ Validate input : booleans"
+      shell: bash
+      run: |
+        echo "::debug::Validating boolean inputs..."
+        for param in nologo no-restore no-build; do
           case $param in
-            no-logo) value="${{ inputs.no-logo }}" ;;
+            nologo) value="${{ inputs.nologo }}" ;;
             no-restore) value="${{ inputs.no-restore }}" ;;
             no-build) value="${{ inputs.no-build }}" ;;
           esac
@@ -115,234 +99,215 @@ runs:
           fi
         done
 
-        # Validate configuration if provided
-        if [ -n "${{ inputs.configuration }}" ]; then
-          case "${{ inputs.configuration }}" in
-            Debug|Release|MinSizeRel|RelWithDebInfo) ;;
-            *) echo "::warning::Unusual configuration value: ${{ inputs.configuration }}" ;;
-          esac
-        fi
+        echo "✅ Boolean inputs validation completed successfully"
 
-        # Validate framework format if provided (basic check)
-        if [ -n "${{ inputs.framework }}" ]; then
-          if ! [[ "${{ inputs.framework }}" =~ ^(net[0-9]+\.[0-9]+|netstandard[0-9]+\.[0-9]+|netcoreapp[0-9]+\.[0-9]+|netframework[0-9]+\.[0-9]+)$ ]]; then
-            echo "::warning::Framework format may be invalid: ${{ inputs.framework }}"
-          fi
-        fi
-
-        # Validate runtime format if provided (basic check)
-        if [ -n "${{ inputs.runtime }}" ]; then
-          if ! [[ "${{ inputs.runtime }}" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
-            echo "::warning::Runtime identifier format may be invalid: ${{ inputs.runtime }}"
-          fi
-        fi
-
-        echo "✅ Input validation completed successfully"
-        echo "::endgroup::"
-
-    - name: "🚀 Run dotnet command with auto-verbosity"
-      id: run-command
+    - name: "✅ Validate input : command"
       shell: bash
-      working-directory: ${{ inputs.working-directory }}
       run: |
-        echo "::group::🚀 Preparing dotnet command execution"
-        echo "::debug::Preparing to execute dotnet command: ${{ inputs.command }}"
+        echo "::debug::Validating command input: ${{ inputs.command }}"
+
+        if [ -z "${{ inputs.command }}" ]; then
+          echo "::error::Command input is required"
+          exit 1
+        fi
+
+        echo "✅ Command validation completed successfully"
+
+    - name: "✅ Validate input : path"
+      if: ${{ inputs.path != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating path input: ${{ inputs.path }}"
+
+        if [ ! -e "${{ inputs.path }}" ]; then
+          echo "::error file=${{ inputs.path }}::Specified path does not exist: ${{ inputs.path }}"
+          exit 1
+        fi
+
+        echo "✅ Path validation completed successfully"
+
+    - name: "✅ Validate input : working-directory"
+      shell: bash
+      run: |
+        echo "::debug::Validating working-directory input: ${{ inputs.working-directory }}"
+
+        if [ -z "${{ inputs.working-directory }}" ]; then
+          echo "::error::Working directory input is required"
+          exit 1
+        fi
+
+        if [ ! -d "${{ inputs.working-directory }}" ]; then
+          echo "::error file=${{ inputs.working-directory }}::Working directory does not exist or is not a directory: ${{ inputs.working-directory }}"
+          exit 1
+        fi
+
+        echo "✅ Working directory validation completed successfully"
+
+    - name: "✅ Validate input : verbosity"
+      if: ${{ inputs.verbosity != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating verbosity input: ${{ inputs.verbosity }}"
+
+        case "${{ inputs.verbosity }}" in
+          quiet|minimal|normal|detailed|diagnostic) ;;
+          *) echo "::error::Invalid verbosity level: ${{ inputs.verbosity }}. Must be one of: quiet, minimal, normal, detailed, diagnostic"; exit 1 ;;
+        esac
+
+        echo "✅ Verbosity validation completed successfully"
+
+    - name: "🔧 Set verbosity level"
+      id: validate-verbosity
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.verbosity }}" ]; then
+          echo "verbosity=${{ inputs.verbosity }}" >> $GITHUB_OUTPUT
+        elif [ "$RUNNER_DEBUG" == "true" ] || [ "$ACTIONS_STEP_DEBUG" == "true" ]; then
+          echo "verbosity=diagnostic" >> $GITHUB_OUTPUT
+        else
+          echo "verbosity=minimal" >> $GITHUB_OUTPUT
+        fi
+
+    - name: "✅ Validate input : configuration"
+      if: ${{ inputs.configuration != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating configuration input: ${{ inputs.configuration }}"
+
+        case "${{ inputs.configuration }}" in
+          Debug|Release|MinSizeRel|RelWithDebInfo) ;;
+          *) echo "::warning::Unusual configuration value: ${{ inputs.configuration }}" ;;
+        esac
+
+        echo "✅ Configuration validation completed successfully"
+
+    - name: "✅ Validate input : framework"
+      if: ${{ inputs.framework != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating framework input: ${{ inputs.framework }}"
+
+        if ! [[ "${{ inputs.framework }}" =~ ^(net[0-9]+\.[0-9]+|netstandard[0-9]+\.[0-9]+|netcoreapp[0-9]+\.[0-9]+|netframework[0-9]+\.[0-9]+)$ ]]; then
+          echo "::warning::Framework format may be invalid: ${{ inputs.framework }}"
+        fi
+
+        echo "✅ Framework validation completed successfully"
+
+    - name: "✅ Validate input : runtime"
+      if: ${{ inputs.runtime != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating runtime input: ${{ inputs.runtime }}"
+
+        if ! [[ "${{ inputs.runtime }}" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+          echo "::warning::Runtime identifier format may be invalid: ${{ inputs.runtime }}"
+        fi
+
+        echo "✅ Runtime validation completed successfully"
+
+    - name: "✅ Validate input : arch"
+      if: ${{ inputs.arch != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating arch input: ${{ inputs.arch }}"
+
+        if ! [[ "${{ inputs.arch }}" =~ ^(x86|x64|arm|arm64)$ ]]; then
+          echo "::warning::Arch format may be invalid: ${{ inputs.arch }}"
+        fi
+
+        echo "✅ Arch validation completed successfully"
+
+    - name: "🏗️ Build argument list"
+      id: build-args
+      shell: bash
+      run: |
+        echo "::debug::Building argument list..."
 
         # Define command support maps (cached for performance)
         declare -A COMMAND_SUPPORT=(
           ["verbosity"]="build|restore|pack|publish|test|clean|msbuild|workload"
           ["configuration"]="build|publish|test|pack|run"
-          ["no-logo"]="build|restore|pack|publish|test|clean|msbuild|run|nuget|add|remove|list"
           ["framework"]="build|publish|test|pack|run"
           ["runtime"]="build|publish|test|pack|run"
+          ["arch"]="build|publish|run"
+          ["output"]="build|publish|pack|run|tool"
+          ["nologo"]="build|restore|pack|publish|test|clean|msbuild|run|add|remove|list"
           ["no-restore"]="build|test|publish|pack"
-          ["output"]="build|publish|pack"
           ["no-build"]="test|publish"
+          ["artifacts-path"]="build|restore|publish|pack|test|clean|run"
         )
 
         # Function to check command support
         supports_option() {
           local option="$1"
           local command="${{ inputs.command }}"
-          echo "$command" | grep -qE "^(${COMMAND_SUPPORT[$option]})$"
+          echo "$command" | grep -iqE "^(${COMMAND_SUPPORT[$option]})$"
         }
 
-        # Determine verbosity level
-        if [ -n "${{ inputs.force-verbosity }}" ]; then
-          VERBOSITY="${{ inputs.force-verbosity }}"
-        elif [ "$ACTIONS_STEP_DEBUG" = "true" ] || [ "$ACTIONS_RUNNER_DEBUG" = "true" ]; then
-          VERBOSITY="detailed"
-        else
-          VERBOSITY="minimal"
-        fi
+        # Start building arguments
+        ARGUMENTS="${{ inputs.command }}"
 
-        # Check if command supports verbosity
-        if supports_option "verbosity"; then
-          VERBOSITY_ARG="--verbosity $VERBOSITY"
-          echo "::debug::Command '${{ inputs.command }}' supports verbosity - using: $VERBOSITY"
-        else
-          VERBOSITY_ARG=""
-          echo "::debug::Command '${{ inputs.command }}' does not support verbosity"
-        fi
-
-        # Check if command supports configuration
-        if supports_option "configuration"; then
-          CONFIGURATION_ARG="--configuration ${{ inputs.configuration }}"
-          echo "::debug::Command '${{ inputs.command }}' supports configuration - using: ${{ inputs.configuration }}"
-        else
-          CONFIGURATION_ARG=""
-          echo "::debug::Command '${{ inputs.command }}' does not support configuration"
-        fi
-
-        # Check if command supports --no-logo
-        if supports_option "no-logo" && [ "${{ inputs.no-logo }}" = "true" ]; then
-          NO_LOGO_ARG="--nologo"
-          echo "::debug::Command '${{ inputs.command }}' supports no-logo - suppressing startup information"
-        else
-          NO_LOGO_ARG=""
-          if [ "${{ inputs.no-logo }}" = "true" ]; then
-            echo "::debug::Command '${{ inputs.command }}' does not support --nologo"
-          fi
-        fi
-
-        # Check if command supports --framework
-        if supports_option "framework" && [ -n "${{ inputs.framework }}" ]; then
-          FRAMEWORK_ARG="--framework ${{ inputs.framework }}"
-          echo "::debug::Command '${{ inputs.command }}' supports framework - using: ${{ inputs.framework }}"
-        else
-          FRAMEWORK_ARG=""
-          if [ -n "${{ inputs.framework }}" ]; then
-            echo "::debug::Command '${{ inputs.command }}' does not support --framework"
-          fi
-        fi
-
-        # Check if command supports --runtime
-        if supports_option "runtime" && [ -n "${{ inputs.runtime }}" ]; then
-          RUNTIME_ARG="--runtime ${{ inputs.runtime }}"
-          echo "::debug::Command '${{ inputs.command }}' supports runtime - using: ${{ inputs.runtime }}"
-        else
-          RUNTIME_ARG=""
-          if [ -n "${{ inputs.runtime }}" ]; then
-            echo "::debug::Command '${{ inputs.command }}' does not support --runtime"
-          fi
-        fi
-
-        # Check if command supports --no-restore
-        if supports_option "no-restore" && [ "${{ inputs.no-restore }}" = "true" ]; then
-          NO_RESTORE_ARG="--no-restore"
-          echo "::debug::Command '${{ inputs.command }}' supports no-restore - skipping automatic restore"
-        else
-          NO_RESTORE_ARG=""
-          if [ "${{ inputs.no-restore }}" = "true" ]; then
-            echo "::debug::Command '${{ inputs.command }}' does not support --no-restore"
-          fi
-        fi
-
-        # Check if command supports --output
-        if supports_option "output" && [ -n "${{ inputs.output }}" ]; then
-          OUTPUT_ARG="--output ${{ inputs.output }}"
-          echo "::debug::Command '${{ inputs.command }}' supports output - using: ${{ inputs.output }}"
-        else
-          OUTPUT_ARG=""
-          if [ -n "${{ inputs.output }}" ]; then
-            echo "::debug::Command '${{ inputs.command }}' does not support --output"
-          fi
-        fi
-
-        # Check if command supports --no-build
-        if supports_option "no-build" && [ "${{ inputs.no-build }}" = "true" ]; then
-          NO_BUILD_ARG="--no-build"
-          echo "::debug::Command '${{ inputs.command }}' supports no-build - skipping build step"
-        else
-          NO_BUILD_ARG=""
-          if [ "${{ inputs.no-build }}" = "true" ]; then
-            echo "::debug::Command '${{ inputs.command }}' does not support --no-build"
-          fi
-        fi
-
-        # Build the command with proper argument handling
-        COMMAND_PARTS=("dotnet" "${{ inputs.command }}")
-
-        # Add path if provided
         if [ -n "${{ inputs.path }}" ]; then
-          COMMAND_PARTS+=("${{ inputs.path }}")
-          echo "::debug::Using path: ${{ inputs.path }}"
+          ARGUMENTS="$ARGUMENTS ${{ inputs.path }}"
         fi
 
-        # Add user arguments if provided (handle both string and array inputs)
-        if [ -n "${{ inputs.arguments }}" ]; then
-          echo "::debug::Adding user arguments"
-          echo "::debug::Raw input received (length: ${#arguments}): ${{ inputs.arguments }}"
+        ARGUMENTS="$ARGUMENTS ${{ inputs.arguments }}"
 
-          # Let's debug what we actually receive
-          arguments='${{ inputs.arguments }}'
-          echo "::debug::Variable assignment result: $arguments"
-          echo "::debug::Variable length: ${#arguments}"
-
-          # Show raw bytes to see what's happening to backslashes
-          echo "::debug::Raw bytes (via xxd):"
-          echo "$arguments" | xxd | head -5
-
-          # Check if arguments look like a YAML array (starts with "- " or is on multiple lines)
-          if [[ "$arguments" =~ ^[[:space:]]*- ]] || [[ "$arguments" =~ $'\n' ]]; then
-            echo "::debug::Detected YAML array format - processing as separate arguments"
-
-            # Process each line, being very careful about backslashes
-            while IFS= read -r line; do
-              echo "::debug::Processing line: '$line'"
-              # Remove leading "- " and whitespace, preserve everything else exactly
-              if [[ "$line" =~ ^[[:space:]]*-[[:space:]]*(.*) ]]; then
-                clean_arg="${BASH_REMATCH[1]}"
-                echo "::debug::Extracted argument: '$clean_arg'"
-                if [ -n "$clean_arg" ]; then
-                  COMMAND_PARTS+=("$clean_arg")
-                  echo "::debug::Added array argument: $clean_arg"
-                fi
-              fi
-            done <<< "$arguments"
-          else
-            echo "::debug::Processing as single string with simple space splitting"
-
-            # Simple approach: just add the entire arguments string as-is
-            # and let the shell handle it naturally
-            ARGUMENTS_STRING="$arguments"
-
-            # Use read to split on spaces while preserving quoted strings
-            IFS=' ' read -ra ARGS <<< "$ARGUMENTS_STRING"
-            for arg in "${ARGS[@]}"; do
-              COMMAND_PARTS+=("$arg")
-              echo "::debug::Added string argument: $arg"
-            done
+        # Boolean flags
+        for param in nologo no-restore no-build; do
+          case $param in
+            nologo) value="${{ inputs.nologo }}" ;;
+            no-restore) value="${{ inputs.no-restore }}" ;;
+            no-build) value="${{ inputs.no-build }}" ;;
+          esac
+          if [ "$value" = "true" ] && supports_option "$param"; then
+            ARGUMENTS="$ARGUMENTS --${param}"
           fi
+        done
+
+        # Verbosity
+        if supports_option "verbosity"; then
+            ARGUMENTS="$ARGUMENTS --verbosity '${{ steps.validate-verbosity.outputs.verbosity }}'"
         fi
 
-        # Add generated arguments only if they're not empty
-        [ -n "$VERBOSITY_ARG" ] && COMMAND_PARTS+=($VERBOSITY_ARG)
-        [ -n "$CONFIGURATION_ARG" ] && COMMAND_PARTS+=($CONFIGURATION_ARG)
-        [ -n "$NO_LOGO_ARG" ] && COMMAND_PARTS+=($NO_LOGO_ARG)
-        [ -n "$FRAMEWORK_ARG" ] && COMMAND_PARTS+=($FRAMEWORK_ARG)
-        [ -n "$RUNTIME_ARG" ] && COMMAND_PARTS+=($RUNTIME_ARG)
-        [ -n "$NO_RESTORE_ARG" ] && COMMAND_PARTS+=($NO_RESTORE_ARG)
-        [ -n "$OUTPUT_ARG" ] && COMMAND_PARTS+=($OUTPUT_ARG)
-        [ -n "$NO_BUILD_ARG" ] && COMMAND_PARTS+=($NO_BUILD_ARG)
+        # Key-value options
+        for param in configuration framework runtime output arch artifacts-path; do
+          case $param in
+            configuration) value="${{ inputs.configuration }}" ;;
+            framework) value="${{ inputs.framework }}" ;;
+            runtime) value="${{ inputs.runtime }}" ;;
+            output) value="${{ inputs.output }}" ;;
+            arch) value="${{ inputs.arch }}" ;;
+            artifacts-path) value="${{ inputs.artifacts-path }}" ;;
+          esac
+          if [ -n "$value" ] && supports_option "$param"; then
+            ARGUMENTS="$ARGUMENTS --$param '$value'"
+          fi
+        done
 
-        # Create readable command string for output
-        FULL_COMMAND="${COMMAND_PARTS[*]}"
+        # Trim leading space
+        ARGUMENTS="${ARGUMENTS# }"
+
+        # Store in environment for the next step
+        echo "arguments=$ARGUMENTS" >> $GITHUB_OUTPUT
+
+        echo "✅ Argument list built successfully: $ARGUMENTS"
+
+    - name: "🚀 Run dotnet command with auto-verbosity"
+      id: run-command
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        echo "::debug::Building final command from environment: ${{ steps.build-args.outputs.arguments }}"
+
+        # Build the full command string
+        FULL_COMMAND="dotnet ${{ steps.build-args.outputs.arguments }}"
         echo "::debug::Final command: $FULL_COMMAND"
 
-        # Log command in debug mode
-        echo "::debug::Command parts array: ${COMMAND_PARTS[*]}"
-        for i in "${!COMMAND_PARTS[@]}"; do
-          echo "::debug::  [$i]: ${COMMAND_PARTS[$i]}"
-        done
-        echo "::endgroup::"
-
-        # Execute the command using the array for better argument handling
-        echo "::group::⚡ Executing dotnet command"
+        # Execute the command using eval for proper argument handling
         echo "✅ Executing: $FULL_COMMAND"
-        "${COMMAND_PARTS[@]}"
+        eval "$FULL_COMMAND"
         EXIT_CODE=$?
-        echo "::endgroup::"
 
         # Enhanced status reporting
         if [ $EXIT_CODE -eq 0 ]; then
@@ -363,7 +328,7 @@ runs:
       shell: bash
       run: |
         cat >> $GITHUB_STEP_SUMMARY << 'EOF'
-        <details><summary>Expand for details - 📊 dotnet ${{ inputs.command }} Summary</summary>
+        <details><summary>⚙️ .NET command : ${{ inputs.command }}</summary>
 
         ## 🔧 Input Parameters
         | Parameter | Value |
@@ -375,6 +340,19 @@ runs:
         | 🎯 Framework | `${{ inputs.framework || 'none' }}` |
         | 🖥️ Runtime | `${{ inputs.runtime || 'none' }}` |
         | 🔧 Arguments | `${{ inputs.arguments || 'none' }}` |
+        | 🔇 No Logo | `${{ inputs.nologo }}` |
+        | 🚫 No Restore | `${{ inputs.no-restore }}` |
+        | 🚫 No Build | `${{ inputs.no-build }}` |
+        | 📤 Output Path | `${{ inputs.output || 'none' }}` |
+        | 🔊 Force Verbosity | `${{ inputs.verbosity || 'auto' }}` |
+
+        ## ⚙️ Process Details
+        | Step | Status |
+        |------|--------|
+        | ✅ Input Validation | `✅ Completed` |
+        | 🚀 Command Construction | `${{ steps.build-args.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | 🔧 Compiled Arguments | `${{ steps.build-args.outputs.arguments }}` |
+        | 🚀 Command Execution | `${{ steps.run-command.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
 
         ## 📤 Execution Results
         | Metric | Value |
@@ -383,24 +361,69 @@ runs:
         | 📊 Status | `${{ steps.run-command.outcome }}` |
         | 🚀 Executed Command | `${{ steps.run-command.outputs.executed-command }}` |
 
-        ## ⚙️ Process Details
-        | Step | Status |
-        |------|--------|
-        | ✅ Input Validation | `✅ Completed` |
-        | 🚀 Command Execution | `${{ steps.run-command.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
-
-        ## 🎛️ Applied Options
-        | Option | Status |
-        |--------|--------|
-        | 🔇 No Logo | `${{ inputs.no-logo }}` |
-        | 🚫 No Restore | `${{ inputs.no-restore }}` |
-        | 🚫 No Build | `${{ inputs.no-build }}` |
-        | 📤 Output Path | `${{ inputs.output || 'none' }}` |
-        | 🔊 Force Verbosity | `${{ inputs.force-verbosity || 'auto' }}` |
-
         </details>
         EOF
 
 branding:
-  icon: 'terminal'
-  color: 'blue'
+  icon: "terminal"
+  color: "blue"
+
+# dotnet --help
+# Usage: dotnet [runtime-options] [path-to-application] [arguments]
+
+# Execute a .NET application.
+
+# runtime-options:
+#   --additionalprobingpath <path>   Path containing probing policy and assemblies to probe for.
+#   --additional-deps <path>         Path to additional deps.json file.
+#   --depsfile                       Path to <application>.deps.json file.
+#   --fx-version <version>           Version of the installed Shared Framework to use to run the application.
+#   --roll-forward <setting>         Roll forward to framework version  (LatestPatch, Minor, LatestMinor, Major, LatestMajor, Disable).
+#   --runtimeconfig                  Path to <application>.runtimeconfig.json file.
+
+# path-to-application:
+#   The path to an application .dll file to execute.
+
+# Usage: dotnet [sdk-options] [command] [command-options] [arguments]
+
+# Execute a .NET SDK command.
+
+# sdk-options:
+#   -d|--diagnostics  Enable diagnostic output.
+#   -h|--help         Show command line help.
+#   --info            Display .NET information.
+#   --list-runtimes   Display the installed runtimes.
+#   --list-sdks       Display the installed SDKs.
+#   --version         Display .NET SDK version in use.
+
+# SDK commands:
+#   build             Build a .NET project.
+#   build-server      Interact with servers started by a build.
+#   clean             Clean build outputs of a .NET project.
+#   format            Apply style preferences to a project or solution.
+#   help              Opens the reference page in a browser for the specified command.
+#   msbuild           Run Microsoft Build Engine (MSBuild) commands.
+#   new               Create a new .NET project or file.
+#   nuget             Provides additional NuGet commands.
+#   pack              Create a NuGet package.
+#   package           Search for, add, remove, or list PackageReferences for a .NET project.
+#   publish           Publish a .NET project for deployment.
+#   reference         Add, remove, or list ProjectReferences for a .NET project.
+#   restore           Restore dependencies specified in a .NET project.
+#   run               Build and run a .NET project output.
+#   sdk               Manage .NET SDK installation.
+#   solution          Modify Visual Studio solution files.
+#   store             Store the specified assemblies in the runtime package store.
+#   test              Run unit tests using the test runner specified in a .NET project.
+#   tool              Install or manage tools that extend the .NET experience.
+#   vstest            Run Microsoft Test Engine (VSTest) commands.
+#   workload          Manage optional workloads.
+
+# Additional commands from bundled tools:
+#   dev-certs         Create and manage development certificates.
+#   fsi               Start F# Interactive / execute F# scripts.
+#   user-jwts         Manage JSON Web Tokens in development.
+#   user-secrets      Manage development user secrets.
+#   watch             Start a file watcher that runs a command when files change.
+
+# Run 'dotnet [command] --help' for more information on a command.

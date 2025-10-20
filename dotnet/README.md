@@ -1,430 +1,317 @@
-# 🚀 Run .NET Command Action
+# 🚀 .NET Command Action
 
-A comprehensive GitHub Action that runs .NET commands with automatic verbosity handling, intelligent argument parsing, and smart option detection based on command compatibility.
+A comprehensive GitHub Action for executing .NET CLI commands with intelligent argument parsing, automatic verbosity handling, and cross-platform support.
 
-## Features
+## ✨ Features
 
-- 🚀 **Smart Command Execution** - Automatically detects which options are supported by each .NET command
-- 🔧 **Auto-Verbosity Detection** - Adjusts verbosity based on debug settings or manual override
-- 📋 **Flexible Arguments** - Supports both string and YAML array formats for complex arguments
-- 🎯 **Command Validation** - Comprehensive input validation with helpful error messages
-- ⚡ **Performance Optimized** - Cached command support maps for fast execution
-- 📊 **Detailed Reporting** - Rich summaries with execution metrics and applied options
+- 🎯 **Smart Command Execution** - Automatic detection of supported options per .NET command
+- 🔧 **Auto-Verbosity Detection** - Adjusts verbosity based on debug settings
+- 📋 **Flexible Arguments** - String and YAML array support for complex scenarios
+- ✅ **Comprehensive Validation** - Input validation with helpful error messages
+- ⚡ **Performance Optimized** - Cached command support maps
 - 🛡️ **Cross-Platform** - Works on Windows, Linux, and macOS runners
+- 📊 **Detailed Reporting** - Rich summaries with execution metrics
 
-## Usage
+## 🚀 Basic Usage
 
-### Basic Usage
+Minimal configuration to get started:
 
 ```yaml
-- name: Build project
-  uses: framinosona/Github_Actions/dotnet@main
+- name: "Build project"
+  uses: Laerdal-Medical/scl-actions/dotnet@main
   with:
-    command: 'build'
+    command: "build"
 ```
 
-### Build with Configuration
-
 ```yaml
-- name: Build release
-  uses: framinosona/Github_Actions/dotnet@main
+- name: "Run tests"
+  uses: Laerdal-Medical/scl-actions/dotnet@main
   with:
-    command: 'build'
-    configuration: 'Release'
-    path: './src/MyProject.csproj'
+    command: "test"
 ```
 
-### Run Tests
-
 ```yaml
-- name: Run tests
-  uses: framinosona/Github_Actions/dotnet@main
+- name: "Restore packages"
+  uses: Laerdal-Medical/scl-actions/dotnet@main
   with:
-    command: 'test'
-    framework: 'net8.0'
-    no-build: 'true'
-    arguments: '--collect:"XPlat Code Coverage"'
+    command: "restore"
 ```
 
-### Complex Arguments with YAML Array
+## 🔧 Advanced Usage
+
+Full configuration with all available options:
 
 ```yaml
-- name: Publish with complex arguments
-  uses: framinosona/Github_Actions/dotnet@main
+- name: "Advanced .NET build and publish"
+  uses: Laerdal-Medical/scl-actions/dotnet@main
   with:
-    command: 'publish'
-    path: './src/WebApp.csproj'
-    configuration: 'Release'
-    runtime: 'linux-x64'
+    command: "publish"
+    path: "./src/MyApp/MyApp.csproj"
+    working-directory: "./backend"
+    configuration: "Release"
+    framework: "net8.0"
+    runtime: "linux-x64"
+    arch: "x64"
+    output: "./dist"
+    verbosity: "detailed"
+    nologo: "true"
+    no-restore: "false"
+    no-build: "false"
+    show-summary: "true"
     arguments: |
-      - --self-contained
-      - --output
-      - ./publish
-      - /p:PublishSingleFile=true
-      - /p:IncludeNativeLibrariesForSelfExtract=true
+      --self-contained
+      --no-dependencies
+      /p:PublishSingleFile=true
+      /p:IncludeNativeLibrariesForSelfExtract=true
 ```
 
-### Custom Working Directory
+## 🔐 Permissions Required
+
+This action requires standard repository permissions:
 
 ```yaml
-- name: Restore packages
-  uses: framinosona/Github_Actions/dotnet@main
-  with:
-    command: 'restore'
-    working-directory: './backend'
-    force-verbosity: 'detailed'
+permissions:
+  contents: read  # Required to checkout repository code
 ```
 
-### Complete CI/CD Workflow
+> **Note**: No additional permissions are required as this action only executes .NET CLI commands on the runner.
+
+## 🏗️ CI/CD Example
+
+Complete workflow for .NET application:
 
 ```yaml
-name: .NET CI/CD Pipeline
-on: [push, pull_request]
+name: "CI/CD Pipeline"
+
+on:
+  push:
+    branches: ["main", "develop"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+      - name: "🔧 Setup .NET"
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: "8.0.x"
 
-      - name: Restore dependencies
-        id: restore
-        uses: framinosona/Github_Actions/dotnet@main
+      - name: "📦 Restore dependencies"
+        uses: Laerdal-Medical/scl-actions/dotnet@main
         with:
-          command: 'restore'
+          command: "restore"
+          verbosity: "minimal"
 
-      - name: Build solution
-        uses: framinosona/Github_Actions/dotnet@main
+      - name: "🏗️ Build solution"
+        uses: Laerdal-Medical/scl-actions/dotnet@main
         with:
-          command: 'build'
-          configuration: 'Release'
-          no-restore: 'true'
+          command: "build"
+          configuration: "Release"
+          no-restore: "true"
+          show-summary: "true"
 
-      - name: Run unit tests
-        uses: framinosona/Github_Actions/dotnet@main
+      - name: "🧪 Run tests"
+        uses: Laerdal-Medical/scl-actions/dotnet@main
         with:
-          command: 'test'
-          configuration: 'Release'
-          no-build: 'true'
-          arguments: '--collect:"XPlat Code Coverage" --logger trx'
+          command: "test"
+          configuration: "Release"
+          no-build: "true"
+          arguments: "--collect:\"XPlat Code Coverage\" --logger trx"
 
-      - name: Publish application
+      - name: "🚀 Publish application"
         if: github.ref == 'refs/heads/main'
-        uses: framinosona/Github_Actions/dotnet@main
+        uses: Laerdal-Medical/scl-actions/dotnet@main
         with:
-          command: 'publish'
-          path: './src/WebApp/WebApp.csproj'
-          configuration: 'Release'
-          runtime: 'linux-x64'
-          output: './dist'
-
-      - name: Show execution details
-        run: |
-          echo "Exit code: ${{ steps.restore.outputs.exit-code }}"
+          command: "publish"
+          path: "./src/WebApp/WebApp.csproj"
+          configuration: "Release"
+          runtime: "linux-x64"
+          output: "./publish"
+          arguments: "--self-contained"
 ```
 
-## Inputs
+## 📋 Inputs
 
 | Input | Description | Required | Default | Example |
 |-------|-------------|----------|---------|---------|
-| `command` | The dotnet command to run | `true` | - | `build`, `test`, `restore`, `publish` |
-| `path` | Path to project/solution file or directory | `false` | `''` | `./src/MyProject.csproj`, `./MySolution.sln` |
-| `arguments` | Additional arguments (string or YAML array) | `false` | `''` | `--no-dependencies`, see examples below |
-| `working-directory` | Working directory for the command | `false` | `.` | `./backend`, `./src` |
-| `force-verbosity` | Force specific verbosity level | `false` | `''` | `quiet`, `minimal`, `normal`, `detailed`, `diagnostic` |
-| `configuration` | Build configuration | `false` | `Release` | `Debug`, `Release` |
-| `no-logo` | Suppress Microsoft logo and startup info | `false` | `true` | `true`, `false` |
-| `framework` | Target framework | `false` | `''` | `net8.0`, `net6.0`, `netstandard2.1` |
-| `runtime` | Target runtime | `false` | `''` | `win-x64`, `linux-x64`, `osx-arm64` |
-| `no-restore` | Skip automatic restore | `false` | `false` | `true`, `false` |
-| `no-build` | Skip building before running | `false` | `false` | `true`, `false` |
-| `output` | Output directory path | `false` | `''` | `./bin`, `./publish` |
-| `show-summary` | Whether to show action summary | `false` | `true` | `true`, `false` |
+| `command` | .NET command to execute | ✅ Yes | - | `build`, `test`, `restore`, `publish` |
+| `path` | Path to project/solution file or directory | ❌ No | `""` | `./src/MyProject.csproj` |
+| `arguments` | Additional command arguments | ❌ No | `""` | `--no-dependencies` |
+| `working-directory` | Working directory for command execution | ❌ No | `"."` | `./backend` |
+| `verbosity` | Force specific verbosity level | ❌ No | `""` | `quiet`, `minimal`, `normal`, `detailed`, `diagnostic` |
+| `nologo` | Suppress Microsoft logo and startup info | ❌ No | `"true"` | `true`, `false` |
+| `no-restore` | Skip automatic restore | ❌ No | `"false"` | `true`, `false` |
+| `no-build` | Skip building before running | ❌ No | `"false"` | `true`, `false` |
+| `configuration` | Build configuration | ❌ No | `"Release"` | `Debug`, `Release` |
+| `framework` | Target framework | ❌ No | `""` | `net8.0`, `net6.0` |
+| `runtime` | Target runtime identifier | ❌ No | `""` | `win-x64`, `linux-x64`, `osx-arm64` |
+| `arch` | Target architecture | ❌ No | `""` | `x86`, `x64`, `arm`, `arm64` |
+| `output` | Output directory path | ❌ No | `""` | `./bin`, `./publish` |
+| `show-summary` | Display action summary | ❌ No | `"false"` | `true`, `false` |
 
-## Outputs
+## 📤 Outputs
 
-| Output | Description | Example |
-|--------|-------------|---------|
-| `exit-code` | Exit code of the dotnet command | `0`, `1` |
-| `executed-command` | The actual command that was executed | `dotnet build --configuration Release --verbosity minimal` |
+| Output | Description | Type | Example |
+|--------|-------------|------|---------|
+| `exit-code` | Exit code of the executed command | `string` | `0`, `1` |
+| `executed-command` | Full command that was executed | `string` | `dotnet build --configuration Release` |
 
-## Command Support Matrix
+## 🔗 Related Actions
 
-The action automatically detects which options are supported by each .NET command:
+| Action | Purpose | Repository |
+|--------|---------|------------|
+| 🧪 **dotnet-test** | Enhanced .NET testing with coverage | `Laerdal-Medical/scl-actions/dotnet-test` |
+| 🔧 **dotnet-tool-install** | Install .NET tools | `Laerdal-Medical/scl-actions/dotnet-tool-install` |
+| 📦 **dotnet-nuget-upload** | Upload NuGet packages | `Laerdal-Medical/scl-actions/dotnet-nuget-upload` |
+| 📚 **dotnet-docfx-build** | Generate documentation | `Laerdal-Medical/scl-actions/dotnet-docfx-build` |
+| 🔍 **dotnet-cyclonedx** | Generate SBOM files | `Laerdal-Medical/scl-actions/dotnet-cyclonedx` |
 
-| Command | Verbosity | Configuration | Framework | Runtime | No-Restore | No-Build | Output | No-Logo |
-|---------|-----------|---------------|-----------|---------|------------|----------|--------|---------|
-| `build` | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
-| `restore` | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| `test` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
-| `publish` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `pack` | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
-| `run` | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ |
-| `clean` | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+## 💡 Examples
 
-## Verbosity Levels
-
-The action automatically adjusts verbosity based on:
-
-1. **Manual Override**: When `force-verbosity` is specified
-2. **Debug Mode**: Uses `detailed` when `ACTIONS_STEP_DEBUG` or `ACTIONS_RUNNER_DEBUG` is `true`
-3. **Default**: Uses `minimal` for normal operations
-
-Available verbosity levels:
-- `quiet` - Minimal output
-- `minimal` - Essential information only
-- `normal` - Standard output
-- `detailed` - Verbose output with additional details
-- `diagnostic` - Maximum verbosity for troubleshooting
-
-## Argument Formats
-
-### String Format (Simple)
-```yaml
-arguments: '--no-dependencies --force'
-```
-
-### YAML Array Format (Complex)
-```yaml
-arguments: |
-  - --no-dependencies
-  - --force
-  - --property:Configuration=Release
-  - /p:Version=1.0.0
-```
-
-### Mixed Examples
-```yaml
-# Package with version and symbols
-arguments: |
-  - --include-symbols
-  - --include-source
-  - /p:PackageVersion=1.2.3
-
-# Test with coverage and filters
-arguments: '--collect:"XPlat Code Coverage" --filter "TestCategory=Unit"'
-
-# Publish self-contained
-arguments: |
-  - --self-contained
-  - /p:PublishSingleFile=true
-  - /p:PublishTrimmed=true
-```
-
-## Examples
-
-### Building Different Configurations
+### Building Multiple Configurations
 
 ```yaml
-- name: Build Debug
-  uses: framinosona/Github_Actions/dotnet@main
+- name: "Build Debug"
+  uses: Laerdal-Medical/scl-actions/dotnet@main
   with:
-    command: 'build'
-    configuration: 'Debug'
+    command: "build"
+    configuration: "Debug"
 
-- name: Build Release
-  uses: framinosona/Github_Actions/dotnet@main
+- name: "Build Release"
+  uses: Laerdal-Medical/scl-actions/dotnet@main
   with:
-    command: 'build'
-    configuration: 'Release'
+    command: "build"
+    configuration: "Release"
 ```
 
 ### Multi-Framework Testing
 
 ```yaml
-- name: Test .NET 6.0
-  uses: framinosona/Github_Actions/dotnet@main
-  with:
-    command: 'test'
-    framework: 'net6.0'
+strategy:
+  matrix:
+    framework: ["net6.0", "net8.0"]
 
-- name: Test .NET 8.0
-  uses: framinosona/Github_Actions/dotnet@main
-  with:
-    command: 'test'
-    framework: 'net8.0'
+steps:
+  - name: "Test ${{ matrix.framework }}"
+    uses: Laerdal-Medical/scl-actions/dotnet@main
+    with:
+      command: "test"
+      framework: ${{ matrix.framework }}
 ```
 
 ### Cross-Platform Publishing
 
 ```yaml
-- name: Publish for Windows
-  uses: framinosona/Github_Actions/dotnet@main
-  with:
-    command: 'publish'
-    runtime: 'win-x64'
-    output: './dist/win'
+strategy:
+  matrix:
+    runtime: ["win-x64", "linux-x64", "osx-arm64"]
 
-- name: Publish for Linux
-  uses: framinosona/Github_Actions/dotnet@main
-  with:
-    command: 'publish'
-    runtime: 'linux-x64'
-    output: './dist/linux'
-
-- name: Publish for macOS
-  uses: framinosona/Github_Actions/dotnet@main
-  with:
-    command: 'publish'
-    runtime: 'osx-arm64'
-    output: './dist/macos'
+steps:
+  - name: "Publish for ${{ matrix.runtime }}"
+    uses: Laerdal-Medical/scl-actions/dotnet@main
+    with:
+      command: "publish"
+      runtime: ${{ matrix.runtime }}
+      output: "./dist/${{ matrix.runtime }}"
 ```
 
-### NuGet Package Creation
+### Complex Arguments with YAML
 
 ```yaml
-- name: Create NuGet package
-  uses: framinosona/Github_Actions/dotnet@main
+- name: "Create NuGet package"
+  uses: Laerdal-Medical/scl-actions/dotnet@main
   with:
-    command: 'pack'
-    path: './src/MyLibrary/MyLibrary.csproj'
-    configuration: 'Release'
-    output: './packages'
+    command: "pack"
+    path: "./src/MyLibrary/MyLibrary.csproj"
+    configuration: "Release"
+    output: "./packages"
     arguments: |
-      - --include-symbols
-      - --include-source
-      - /p:PackageVersion=1.0.0
-      - /p:Authors="My Name"
-      - /p:Description="My awesome library"
+      --include-symbols
+      --include-source
+      /p:PackageVersion=1.0.0
+      /p:Authors="Laerdal Medical"
 ```
 
-### Performance Testing
+## 🔧 Command Support Matrix
 
-```yaml
-- name: Run performance tests
-  uses: framinosona/Github_Actions/dotnet@main
-  with:
-    command: 'test'
-    path: './tests/PerformanceTests'
-    configuration: 'Release'
-    arguments: |
-      - --filter
-      - TestCategory=Performance
-      - --logger
-      - console;verbosity=detailed
-```
+| Command | Verbosity | Configuration | Framework | Runtime | No-Restore | No-Build | Output |
+|---------|-----------|---------------|-----------|---------|------------|----------|--------|
+| `build` | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
+| `restore` | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| `test` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| `publish` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `pack` | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
+| `run` | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| `clean` | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
-## Requirements
-
-- GitHub Actions runner (Windows, Linux, or macOS)
-- .NET SDK installed (use `actions/setup-dotnet` first)
-- Valid .NET project or solution structure
-- Bash shell (available on all GitHub runners)
-
-## Troubleshooting
+## 🐛 Troubleshooting
 
 ### Common Issues
 
-#### Command not found
-- **Problem**: `dotnet` command not found
-- **Solution**: Ensure .NET SDK is installed using `actions/setup-dotnet` before running this action
+#### .NET SDK Not Found
 
-#### Path not found
-- **Problem**: Specified path does not exist
-- **Solution**: Verify the path is correct and the file/directory exists in the repository
+**Problem**: `dotnet` command not available
 
-#### Invalid verbosity level
-- **Problem**: Custom verbosity level not recognized
-- **Solution**: Use one of the supported levels: `quiet`, `minimal`, `normal`, `detailed`, `diagnostic`
+**Solution**: Add .NET setup before this action:
 
-#### Build failures with complex arguments
-- **Problem**: Arguments not parsed correctly
-- **Solution**: Use YAML array format for complex arguments with special characters
+```yaml
+- name: "Setup .NET"
+  uses: actions/setup-dotnet@v4
+  with:
+    dotnet-version: "8.0.x"
+```
 
-#### Permission denied errors
-- **Problem**: Cannot write to output directory
-- **Solution**: Ensure the output directory is writable or use a different path
+#### Invalid Path Error
+
+**Problem**: Specified path does not exist
+
+**Solution**: Verify file/directory exists:
+
+```yaml
+- name: "Check path exists"
+  run: ls -la ./src/MyProject.csproj
+```
+
+#### Build Failures
+
+**Problem**: Build errors with complex arguments
+
+**Solution**: Use YAML array format for complex arguments:
+
+```yaml
+arguments: |
+  --configuration Release
+  --runtime linux-x64
+  --self-contained
+```
 
 ### Debug Tips
 
-1. **Enable Debug Mode**: Set `ACTIONS_STEP_DEBUG: true` to see detailed command construction
-2. **Check Outputs**: Use the `executed-command` output to see the exact command run
-3. **Force Verbosity**: Use `force-verbosity: diagnostic` for maximum output
-4. **Validate Paths**: Ensure all file and directory paths exist before running
+1. **Enable Debug Mode**: Set `ACTIONS_STEP_DEBUG: true`
+2. **Use Diagnostic Verbosity**: Set `verbosity: "diagnostic"`
+3. **Check Executed Command**: Use the `executed-command` output
+4. **Enable Summary**: Set `show-summary: "true"`
 
-### Example Debug Workflow
+## 📝 Requirements
 
-```yaml
-- name: Debug dotnet command
-  id: debug-run
-  uses: framinosona/Github_Actions/dotnet@main
-  with:
-    command: 'build'
-    force-verbosity: 'diagnostic'
-  env:
-    ACTIONS_STEP_DEBUG: true
+- GitHub Actions runner (Windows, Linux, or macOS)
+- .NET SDK installed (use `actions/setup-dotnet`)
+- Valid .NET project or solution structure
+- Bash shell (available on all runners)
 
-- name: Show debug info
-  run: |
-    echo "Command executed: ${{ steps.debug-run.outputs.executed-command }}"
-    echo "Exit code: ${{ steps.debug-run.outputs.exit-code }}"
-```
+## 📄 License
 
-## Advanced Usage
+This action is part of the Laerdal Medical GitHub Actions collection and follows the same license terms.
 
-### Conditional Execution
+---
 
-```yaml
-- name: Build only on main branch
-  if: github.ref == 'refs/heads/main'
-  uses: framinosona/Github_Actions/dotnet@main
-  with:
-    command: 'build'
-    configuration: 'Release'
-```
-
-### Matrix Builds
-
-```yaml
-strategy:
-  matrix:
-    dotnet: ['6.0.x', '8.0.x']
-    os: [ubuntu-latest, windows-latest, macos-latest]
-
-steps:
-  - name: Setup .NET ${{ matrix.dotnet }}
-    uses: actions/setup-dotnet@v3
-    with:
-      dotnet-version: ${{ matrix.dotnet }}
-
-  - name: Test on ${{ matrix.os }}
-    uses: framinosona/Github_Actions/dotnet@main
-    with:
-      command: 'test'
-      configuration: 'Release'
-```
-
-### Artifact Publishing
-
-```yaml
-- name: Publish artifacts
-  uses: framinosona/Github_Actions/dotnet@main
-  with:
-    command: 'publish'
-    output: './artifacts'
-
-- name: Upload artifacts
-  uses: actions/upload-artifact@v3
-  with:
-    name: published-app
-    path: ./artifacts
-```
-
-## Contributing
-
-When contributing to this action, please follow the established patterns:
-
-1. **Input validation**: Always validate inputs in the first step
-2. **Error handling**: Provide clear, actionable error messages
-3. **Documentation**: Update examples and troubleshooting sections
-4. **Testing**: Test with various input combinations using `framinosona/Github_Actions/dotnet@main`
-5. **Consistency**: Follow the emoji and naming conventions
-
-## License
-
-This action is available under the same license as the repository.
+> 💡 **Tip**: For more complex .NET workflows, check out our specialized actions in the [Related Actions](#-related-actions) section.
