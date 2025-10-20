@@ -1,0 +1,83 @@
+name: "🌳 Debug Directory Tree"
+description: "Simple directory tree display for debugging"
+author: "Francois Raminosona"
+
+inputs:
+  path:
+    description: "Path to display"
+    required: false
+    default: "."
+  depth:
+    description: "Maximum depth (0 for unlimited)"
+    required: false
+    default: "5"
+  show-hidden:
+    description: "Show hidden files"
+    required: false
+    default: "true"
+
+runs:
+  using: "composite"
+  steps:
+    - name: "✅ Validate input : booleans"
+      shell: bash
+      run: |
+        for param in show-hidden; do
+          case $param in
+            show-hidden) value="${{ inputs.show-hidden }}" ;;
+          esac
+          if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
+            echo "::error::Parameter $param must be 'true' or 'false', got: $value"
+            exit 1
+          fi
+        done
+
+    - name: "✅ Validate input : depth"
+      shell: bash
+      run: |
+        if ! [[ "${{ inputs.depth }}" =~ ^[0-9]+$ ]]; then
+          echo "::error::Depth must be a non-negative integer, got: ${{ inputs.depth }}"
+          exit 1
+        fi
+
+    - name: "🌳 Show directory tree"
+      shell: bash
+      run: |
+        path="${{ inputs.path }}"
+        depth="${{ inputs.depth }}"
+        show_hidden="${{ inputs.show-hidden }}"
+
+        echo "� Directory tree for: $path"
+        echo ""
+
+        # Try tree command first
+        if command -v tree >/dev/null 2>&1; then
+          args=""
+
+          if [ "$depth" != "0" ]; then
+            args="$args -L $depth"
+          fi
+
+          if [ "$show_hidden" = "true" ]; then
+            args="$args -a"
+          fi
+
+          tree $args "$path"
+        else
+          # Fallback to find
+          find_args="$path"
+
+          if [ "$depth" != "0" ]; then
+            find_args="$find_args -maxdepth $depth"
+          fi
+
+          if [ "$show_hidden" = "false" ]; then
+            find_args="$find_args ! -path '*/.*'"
+          fi
+
+          find $find_args | sort
+        fi
+
+branding:
+  icon: "folder"
+  color: "green"
