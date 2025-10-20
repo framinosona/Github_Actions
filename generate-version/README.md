@@ -1,595 +1,560 @@
 # 🔢 Generate Version Action
 
-A GitHub Action for semantic version generation based on Git tag analysis and branch information with multiple output formats.
+Intelligent semantic version generation based on Git tags, branch analysis, and build metadata.
 
-> 🚀 **New**: Looking for a ready-to-use solution? Check out our [**Reusable Workflow**](./WORKFLOW.md) that handles checkout, version generation, and artifact management automatically!
+## Features
 
-## 📋 Quick Navigation
+- 🔍 **Git Tag Analysis** - Automatically finds and increments patch versions based on existing tags
+- 🌿 **Branch-Aware Versioning** - Different versioning strategies for main vs feature branches
+- 📦 **Multiple Output Formats** - Environment variables, action outputs, txt files, and .NET props
+- 🏷️ **Flexible Tag Patterns** - Supports custom tag prefixes and semantic versioning
+- 🔄 **Build Integration** - Incorporates build IDs and revision numbers
+- 📊 **Comprehensive Outputs** - 12+ version components for various use cases
 
-| What do you want to do? | Use this |
-|-------------------------|----------|
-| 🚀 **Get started quickly** | [**Reusable Workflow**](./WORKFLOW.md) - Complete solution |
-| 🔧 **Custom integration** | **Standalone Action** (this page) - Full control |
-| 🎯 **Compare approaches** | [Action vs Workflow](#-action-vs-reusable-workflow) |
+## Usage
 
-## ✨ Features
+### Basic Usage
 
-- 🔍 **Git Tag Analysis** - Automatic patch version increment based on existing Git tags
-- 🌿 **Branch-Aware Versioning** - Different versioning for main vs feature branches
-- 📦 **Multiple Output Formats** - Text files, .NET properties, and JSON files
-- 🏷️ **Configurable Tag Prefixes** - Custom prefixes for version tags
-- 🔄 **Build Integration** - Build ID integration for assembly versioning
-- 🛡️ **Cross-Platform** - Works on Windows, Linux, and macOS runners
-- 📋 **Input Validation** - Comprehensive validation of all input parameters
-
-## 🚀 Basic Usage
-
-Generate version for main branch releases:
+Generate version for main branch (major.minor.patch):
 
 ```yaml
-- name: "Generate version"
-  id: version
-  uses: framinosona/github_actions/generate-version@main
+- name: Generate Version
+  uses: ./generate-version
   with:
-    tag-prefix: "v"
-    major: "1"
-    minor: "0"
+    major: '1'
+    minor: '2'
 ```
 
-Or using a configuration file:
+### Feature Branch Versioning
+
+Generate version for feature branch with suffix and revision:
 
 ```yaml
-- name: "Generate version from config"
-  id: version
-  uses: framinosona/github_actions/generate-version@main
+- name: Generate Feature Version
+  uses: ./generate-version
   with:
-    config-file: "./version.json"
-    tag-prefix: "v"
-```
-
-```yaml
-- name: "Generate with build metadata"
-  id: version
-  uses: framinosona/github_actions/generate-version@main
-  with:
-    tag-prefix: "v"
-    major: "1"
-    minor: "2"
+    major: '1'
+    minor: '3'
     build-id: ${{ github.run_number }}
 ```
 
+### Complete Integration with File Outputs
+
 ```yaml
-- name: "Feature branch versioning"
-  id: version
-  uses: framinosona/github_actions/generate-version@main
+- name: Generate Version with Outputs
+  uses: ./generate-version
   with:
-    tag-prefix: "v"
-    major: "2"
-    minor: "0"
-    main-branch: "main"
+    major: '2'
+    minor: '0'
+    tag-prefix: 'v'
+    output-txt: 'version.txt'
+    output-props: 'Directory.Build.props'
+    main-branch: 'main'
 ```
 
-With a version configuration file (`version.json`):
+## Inputs
 
-```json
-{
-  "major": 2,
-  "minor": 1
-}
-```
+### Required Inputs
 
-## 🎯 Action vs Reusable Workflow
+| Input | Description | Example |
+|-------|-------------|---------|
+| `major` | Major version number | `1` |
+| `minor` | Minor version number | `2` |
 
-Choose the right approach for your needs:
+### Optional Inputs
 
-| Feature | **Standalone Action** | **[Reusable Workflow](./WORKFLOW.md)** |
-|---------|----------------------|---------------------------------------|
-| **Setup Complexity** | Manual checkout + action call | Single workflow call |
-| **Artifact Handling** | Manual upload/download | Automatic |
-| **Output Management** | Manual output mapping | Pre-configured |
-| **Customization** | Full control over each step | Opinionated defaults |
-| **Best For** | Custom integrations, Complex workflows | Standard CI/CD, Quick setup |
+| Input | Description | Default | Example |
+|-------|-------------|---------|---------|
+| `main-branch` | Name of the main branch | `main` | `master` |
+| `build-id` | Build ID for revision numbering | `${{ github.run_number }}` | `42` |
+| `tag-prefix` | Prefix for version tags | `v` | `release-` |
+| `branch-suffix-max-length` | Max length for branch name suffix | `20` | `15` |
+| `output-txt` | Path to output txt file | `''` | `version.txt` |
+| `output-props` | Path to output .NET props file | `''` | `Directory.Build.props` |
+| `fetch-depth` | Git history depth for tag analysis | `0` | `100` |
+| `show-summary` | Show action summary | `true` | `false` |
 
-### 🚀 Quick Start with Reusable Workflow
+## Outputs
+
+### Version Components
+
+| Output | Description | Example (Main) | Example (Feature) |
+|--------|-------------|----------------|-------------------|
+| `VERSION_MAJOR` | Major version number | `1` | `1` |
+| `VERSION_MINOR` | Minor version number | `2` | `2` |
+| `VERSION_PATCH` | Auto-incremented patch | `3` | `3` |
+| `VERSION_CORE` | Core semantic version | `1.2.3` | `1.2.3` |
+| `VERSION_FULL` | Full version string | `1.2.3` | `1.2.3-feature-xyz.42` |
+| `VERSION_ASSEMBLY` | .NET assembly version | `1.2.3.100` | `1.2.3.100` |
+
+### Branch-Specific Components
+
+| Output | Description | Example (Main) | Example (Feature) |
+|--------|-------------|----------------|-------------------|
+| `VERSION_SUFFIX` | Branch name suffix | `''` | `feature-xyz` |
+| `VERSION_REVISION` | Build revision | `''` | `42` |
+| `VERSION_EXTENSION` | Complete extension | `''` | `feature-xyz.42` |
+| `VERSION_BRANCHNAME` | Current branch name | `main` | `feature/xyz` |
+| `VERSION_BUILDID` | Build identifier | `100` | `100` |
+
+### File Outputs
+
+| Output | Description | Example |
+|--------|-------------|---------|
+| `VERSION_OUTPUTTXT` | Path to generated txt file | `version.txt` |
+| `VERSION_OUTPUTPROPS` | Path to generated props file | `Directory.Build.props` |
+
+## Versioning Logic
+
+### Patch Version Calculation
+
+The action analyzes existing Git tags to determine the next patch version:
+
+1. **Find Matching Tags**: Searches for tags matching `{prefix}{major}.{minor}.*` pattern
+2. **Extract Highest Patch**: Finds the highest patch number from matching tags
+3. **Increment**: Increments the patch number by 1
+4. **New Series**: If no matching tags found, starts patch at 0
+
+### Branch-Based Versioning
+
+#### Main Branch
+
+- **Core Version**: `{major}.{minor}.{patch}`
+- **Full Version**: Same as core version
+- **No Suffix/Revision**: Clean semantic version
+
+#### Feature Branches
+
+- **Core Version**: `{major}.{minor}.{patch}`
+- **Suffix**: Sanitized branch name (max length configurable)
+- **Revision**: Build ID
+- **Full Version**: `{major}.{minor}.{patch}-{suffix}.{revision}`
+
+### Version Examples
+
+| Scenario | Core | Full | Assembly |
+|----------|------|------|----------|
+| Main branch, no existing tags | `1.0.0` | `1.0.0` | `1.0.0.100` |
+| Main branch, existing v1.0.2 | `1.0.3` | `1.0.3` | `1.0.3.100` |
+| Feature branch `feature/auth` | `1.0.3` | `1.0.3-feature-auth.100` | `1.0.3.100` |
+| Branch `hotfix/fix-login-bug` | `1.1.0` | `1.1.0-hotfix-fix-login-bu.100` | `1.1.0.100` |
+
+## Examples
+
+### Complete CI/CD Pipeline
 
 ```yaml
+name: Build and Release
+
+on:
+  push:
+    branches: [ main, 'feature/*', 'hotfix/*' ]
+  pull_request:
+    branches: [ main ]
+
 jobs:
   version:
-    uses: framinosona/github_actions/generate-version/workflow.yml@main
-    with:
-      major: "1"
-      minor: "0"
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.VERSION_FULL }}
+      core: ${{ steps.version.outputs.VERSION_CORE }}
+      assembly: ${{ steps.version.outputs.VERSION_ASSEMBLY }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Required for tag analysis
+
+    - name: Generate Version
+      id: version
+      uses: ./generate-version
+      with:
+        major: '1'
+        minor: '0'
+        tag-prefix: 'v'
+        output-txt: 'version.txt'
+        output-props: 'Directory.Build.props'
+
+    - name: Upload Version Files
+      uses: actions/upload-artifact@v4
+      with:
+        name: version-files
+        path: |
+          version.txt
+          Directory.Build.props
 
   build:
     needs: version
     runs-on: ubuntu-latest
     steps:
-      - name: "Build v${{ needs.version.outputs.version-full }}"
-        run: echo "Building..."
+    - uses: actions/checkout@v4
+
+    - name: Download Version Files
+      uses: actions/download-artifact@v4
+      with:
+        name: version-files
+
+    - name: Build with Version
+      run: |
+        echo "Building version: ${{ needs.version.outputs.version }}"
+        # Your build commands here
+        dotnet build -p:Version=${{ needs.version.outputs.core }}
 ```
 
-[**📖 See full workflow documentation →**](./WORKFLOW.md)
-
-## 🔧 Advanced Usage
-
-Full configuration with all available options:
+### Release Workflow
 
 ```yaml
-- name: "Advanced version generation"
-  id: version
-  uses: framinosona/github_actions/generate-version@main
-  with:
-    config-file: "./config/version.json"  # Alternative to major/minor
-    major: "1"                            # Required if no config-file
-    minor: "0"                            # Required if no config-file
-    main-branch: "main"                   # Default branch name
-    tag-prefix: "release-"                # Custom tag prefix
-    build-id: ${{ github.run_number }}    # Build identifier
-    branch-suffix-max-length: "40"        # Max length for branch suffix
-    output-txt: "./version.txt"           # Generate text file
-    output-props: "./src/Version.props"   # Generate .NET props file
-    output-json: "./build/version.json"   # Generate JSON file
-    fetch-depth: "0"                      # Git history depth
-    show-summary: "true"                  # Show action summary
-    dry-run: "false"                      # Run without generating files
-```
-
-## 🔐 Permissions Required
-
-Basic permissions for version generation:
-
-```yaml
-permissions:
-  contents: read  # Required to checkout repository and read Git history
-```
-
-If creating and pushing tags:
-
-```yaml
-permissions:
-  contents: write  # Required to create and push Git tags
-```
-
-## 🏗️ CI/CD Example
-
-Complete workflow with version generation:
-
-```yaml
-name: "Release Workflow"
+name: Release
 
 on:
-  push:
-    branches: ["main", "release/*"]
-  pull_request:
-    branches: ["main"]
-
-permissions:
-  contents: read
+  workflow_dispatch:
+    inputs:
+      major:
+        description: 'Major version'
+        required: true
+        default: '1'
+      minor:
+        description: 'Minor version'
+        required: true
+        default: '0'
 
 jobs:
-  build-and-release:
+  release:
     runs-on: ubuntu-latest
-
     steps:
-      - name: "📥 Checkout repository"
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Required for Git tag analysis
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
-      - name: "🔢 Generate version"
-        id: version
-        uses: framinosona/github_actions/generate-version@main
-        with:
-          config-file: "./version.json"  # or use major: "1" and minor: "0"
-          tag-prefix: "v"
-          main-branch: "main"
-          build-id: ${{ github.run_number }}
-          output-txt: "./build/version.txt"
-          output-json: "./build/version.json"
-          output-props: "./src/Version.props"
-          show-summary: "true"
+    - name: Generate Release Version
+      id: version
+      uses: ./generate-version
+      with:
+        major: ${{ github.event.inputs.major }}
+        minor: ${{ github.event.inputs.minor }}
+        main-branch: 'main'
 
-      - name: "🔧 Setup .NET"
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "8.0.x"
+    - name: Create Git Tag
+      run: |
+        git tag v${{ steps.version.outputs.VERSION_CORE }}
+        git push origin v${{ steps.version.outputs.VERSION_CORE }}
 
-      - name: "🔨 Build with version"
-        uses: framinosona/github_actions/dotnet@main
-        with:
-          command: "build"
-          configuration: "Release"
-          verbosity: "minimal"
-        env:
-          VERSION_CORE: ${{ steps.version.outputs.VERSION_CORE }}
-          VERSION_ASSEMBLY: ${{ steps.version.outputs.VERSION_ASSEMBLY }}
-          VERSION_FULL: ${{ steps.version.outputs.VERSION_FULL }}
-
-      - name: "📦 Pack NuGet package"
-        if: github.ref == 'refs/heads/main'
-        uses: framinosona/github_actions/dotnet@main
-        with:
-          command: "pack"
-          configuration: "Release"
-          output: "./packages"
-        env:
-          PACKAGE_VERSION: ${{ steps.version.outputs.VERSION_FULL }}
+    - name: Create GitHub Release
+      uses: ./github-release
+      with:
+        tag: v${{ steps.version.outputs.VERSION_CORE }}
+        title: 'Release v${{ steps.version.outputs.VERSION_CORE }}'
+        generate-notes: 'true'
 ```
 
-## 📋 Inputs
-
-| Input | Description | Required | Default | Example |
-|-------|-------------|----------|---------|---------|
-| `config-file` | Path to version.json file with major/minor | ⚠️ No* | `""` | `./version.json`, `config/version.json` |
-| `major` | Major version number | ⚠️ No* | `""` | `1`, `2`, `3` |
-| `minor` | Minor version number | ⚠️ No* | `""` | `0`, `1`, `5` |
-| `main-branch` | Name of the main branch | ❌ No | Repository default | `main`, `master`, `develop` |
-| `build-id` | Build ID for revision numbering | ❌ No | `${{ github.run_number }}` | `123`, `${{ github.run_number }}` |
-| `tag-prefix` | Prefix for version tags | ❌ No | `"v"` | `v`, `release-`, `version-` |
-| `branch-suffix-max-length` | Maximum length for branch name suffix | ❌ No | `"40"` | `40`, `20`, `60` |
-| `output-txt` | Path to output txt file with key=value pairs | ❌ No | `""` | `./version.txt`, `./build/version.env` |
-| `output-props` | Path to output .NET props file | ❌ No | `""` | `./src/Version.props`, `./Directory.Build.props` |
-| `output-json` | Path to output JSON file with version information | ❌ No | `""` | `./build/version.json` |
-| `fetch-depth` | Depth of Git history to fetch for tag analysis | ❌ No | `"0"` | `0`, `50`, `100` |
-| `show-summary` | Whether to show the action summary | ❌ No | `"false"` | `true`, `false` |
-| `dry-run` | Run in dry-run mode (generate versions but don't create output files) | ❌ No | `"false"` | `true`, `false` |
-
-> **Note**: Either ***`config-file`*** OR both ***`major` and `minor`*** must be provided. If `config-file` is specified, it takes precedence over individual `major`/`minor` inputs.
-
-## 📤 Outputs
-
-| Output | Description | Type | Example |
-|--------|-------------|------|---------|
-| `VERSION_MAJOR` | Major version number | `string` | `1` |
-| `VERSION_MINOR` | Minor version number | `string` | `2` |
-| `VERSION_PATCH` | Patch version number (auto-incremented) | `string` | `3` |
-| `VERSION_SUFFIX` | Version suffix (branch name for non-main branches) | `string` | `feature-new-api` |
-| `VERSION_REVISION` | Revision number (build ID for non-main branches) | `string` | `123` |
-| `VERSION_ISPRERELEASE` | Whether this is a prerelease version | `string` | `true`, `false` |
-| `VERSION_BUILDID` | Build ID used for versioning | `string` | `123` |
-| `VERSION_CORE` | Core version (major.minor.patch) | `string` | `1.2.3` |
-| `VERSION_EXTENSION` | Version extension (suffix.revision for branches) | `string` | `feature-new-api.123` |
-| `VERSION_FULL` | Full version (core + extension) | `string` | `1.2.3-feature-new-api.123` |
-| `VERSION_ASSEMBLY` | Assembly version for .NET (major.minor.patch.buildid) | `string` | `1.2.3.123` |
-| `VERSION_FORTAG` | Version string suitable for Git tags (with prefix) | `string` | `v1.2.3` |
-| `VERSION_BRANCHNAME` | Current branch name | `string` | `feature/new-api` |
-| `VERSION_PREFIX` | Tag prefix used for version tags | `string` | `v` |
-| `VERSION_OUTPUTTXT` | Path to generated txt file (if created) | `string` | `./version.txt` |
-| `VERSION_OUTPUTPROPS` | Path to generated props file (if created) | `string` | `./src/Version.props` |
-| `VERSION_OUTPUTJSON` | Path to generated JSON file (if created) | `string` | `./build/version.json` |
-| `VERSION_TAG_EXISTS` | Whether a tag already exists for this version | `string` | `true`, `false` |
-| `VERSION_LATEST_TAG` | Latest tag found for this major.minor combination | `string` | `v1.2.2` |
-
-## 🔗 Related Actions
-
-| Action | Purpose | Repository |
-|--------|---------|------------|
-| 🏷️ **git-tag** | Create and manage Git tags | `framinosona/github_actions/git-tag` |
-| 🚀 **github-release** | Create GitHub releases | `framinosona/github_actions/github-release` |
-| 🎯 **generate-badge** | Generate version badges | `framinosona/github_actions/generate-badge` |
-| 🔧 **dotnet** | Build with version metadata | `framinosona/github_actions/dotnet` |
-
-## 📄 License
-
-This action is part of the GitHub Actions collection by Francois Raminosona.
-
----
-
-> 💡 **Tip**: Use this action with Git tag management and release actions for complete version workflows.
-
-## 💡 Examples
-
-### Configuration File Usage
+### .NET Project Integration
 
 ```yaml
-# Create version.json file
-- name: "Create version config"
+- name: Generate .NET Version
+  uses: ./generate-version
+  with:
+    major: '2'
+    minor: '1'
+    output-props: 'src/Directory.Build.props'
+
+- name: Build .NET Project
   run: |
-    echo '{"major": 1, "minor": 2}' > version.json
-
-- name: "Generate version from config"
-  id: version
-  uses: framinosona/github_actions/generate-version@main
-  with:
-    config-file: "version.json"
-    tag-prefix: "v"
-    show-summary: "true"
+    dotnet restore
+    dotnet build --configuration Release
+    dotnet pack --configuration Release
 ```
 
-### Main Branch Release Versioning
+### Multi-Environment Versioning
 
 ```yaml
-- name: "Generate release version"
-  id: version
-  uses: framinosona/github_actions/generate-version@main
+strategy:
+  matrix:
+    environment: [development, staging, production]
+    include:
+      - environment: development
+        major: '0'
+        minor: '1'
+        branch: 'develop'
+      - environment: staging
+        major: '1'
+        minor: '0'
+        branch: 'staging'
+      - environment: production
+        major: '1'
+        minor: '0'
+        branch: 'main'
+
+steps:
+- name: Generate Environment Version
+  uses: ./generate-version
   with:
-    major: "1"
-    minor: "0"
-    tag-prefix: "v"
-    main-branch: "main"
+    major: ${{ matrix.major }}
+    minor: ${{ matrix.minor }}
+    main-branch: ${{ matrix.branch }}
+    output-txt: 'version-${{ matrix.environment }}.txt'
 ```
 
-### Feature Branch Development
+## Output File Formats
 
-```yaml
-- name: "Generate feature version"
-  id: version
-  uses: framinosona/github_actions/generate-version@main
-  with:
-    major: "1"
-    minor: "1"
-    main-branch: "main"
-    build-id: ${{ github.run_number }}
+### Key=Value Text File (output-txt)
+
+```
+VERSION_MAJOR=1
+VERSION_MINOR=2
+VERSION_PATCH=3
+VERSION_SUFFIX=feature-auth
+VERSION_REVISION=42
+VERSION_BUILDID=100
+VERSION_CORE=1.2.3
+VERSION_EXTENSION=feature-auth.42
+VERSION_FULL=1.2.3-feature-auth.42
+VERSION_ASSEMBLY=1.2.3.100
+VERSION_BRANCHNAME=feature/auth
+VERSION_SCRIPTCALLED=true
 ```
 
-### Multi-Output Generation
-
-```yaml
-- name: "Generate all version outputs"
-  id: version
-  uses: framinosona/github_actions/generate-version@main
-  with:
-    major: "2"
-    minor: "0"
-    output-txt: "./build/version.txt"
-    output-json: "./build/version.json"
-    output-props: "./src/Directory.Build.props"
-    show-summary: "true"
-```
-
-### Custom Configuration
-
-```yaml
-- name: "Generate custom version"
-  id: version
-  uses: framinosona/github_actions/generate-version@main
-  with:
-    major: "1"
-    minor: "5"
-    tag-prefix: "release-"
-    branch-suffix-max-length: "20"
-    fetch-depth: "50"
-```
-
-## 🌿 Branch Behavior
-
-| Branch Type | Behavior | Version Format | Example |
-|-------------|----------|----------------|---------|
-| Main branch | Clean semantic version | `major.minor.patch` | `1.2.3` |
-| Feature branches | Adds branch suffix and revision | `major.minor.patch-suffix.revision` | `1.2.3-feature-api.123` |
-| Any other branch | Adds branch suffix and revision | `major.minor.patch-suffix.revision` | `1.2.3-develop.456` |
-
-The action automatically detects whether you're on the main branch or a feature branch:
-
-- **Main branch**: Generates clean semantic versions (e.g., `1.2.3`)
-- **Other branches**: Adds a sanitized branch name suffix and build ID (e.g., `1.2.3-feature-api.123`)
-
-## 📁 Output File Formats
-
-### JSON Version File
-
-```json
-{
-  "VERSION_MAJOR": "1",
-  "VERSION_MINOR": "2",
-  "VERSION_PATCH": "3",
-  "VERSION_PREFIX": "v",
-  "VERSION_SUFFIX": "feature-api",
-  "VERSION_REVISION": "123",
-  "VERSION_ISPRERELEASE": true,
-  "VERSION_BUILDID": "123",
-  "VERSION_CORE": "1.2.3",
-  "VERSION_EXTENSION": "feature-api.123",
-  "VERSION_FULL": "1.2.3-feature-api.123",
-  "VERSION_ASSEMBLY": "1.2.3.123",
-  "VERSION_FORTAG": "v1.2.3-feature-api.123",
-  "VERSION_BRANCHNAME": "feature/api",
-  "VERSION_SCRIPTCALLED": true
-}
-```
-
-### .NET Properties File
+### .NET Props File (output-props)
 
 ```xml
-<!-- Version.props -->
 <Project>
     <PropertyGroup>
         <Version_Major>1</Version_Major>
         <Version_Minor>2</Version_Minor>
         <Version_Patch>3</Version_Patch>
-        <Version_Prefix>v</Version_Prefix>
-        <Version_Suffix>feature-api</Version_Suffix>
-        <Version_Revision>123</Version_Revision>
-        <Version_IsPrerelease>true</Version_IsPrerelease>
-        <Version_BuildId>123</Version_BuildId>
+        <Version_Suffix>feature-auth</Version_Suffix>
+        <Version_Revision>42</Version_Revision>
+        <Version_BuildId>100</Version_BuildId>
         <Version_Core>1.2.3</Version_Core>
-        <Version_Extension>feature-api.123</Version_Extension>
-        <Version_Full>1.2.3-feature-api.123</Version_Full>
-        <Version_Assembly>1.2.3.123</Version_Assembly>
-        <Version_ForTag>v1.2.3-feature-api.123</Version_ForTag>
-        <Version_BranchName>feature/api</Version_BranchName>
+        <Version_Extension>feature-auth.42</Version_Extension>
+        <Version_Full>1.2.3-feature-auth.42</Version_Full>
+        <Version_Assembly>1.2.3.100</Version_Assembly>
+        <Version_BranchName>feature/auth</Version_BranchName>
         <Version_ScriptCalled>true</Version_ScriptCalled>
     </PropertyGroup>
 </Project>
 ```
 
-### Text File (Key=Value pairs)
+## Requirements
 
-```bash
-VERSION_MAJOR=1
-VERSION_MINOR=2
-VERSION_PATCH=3
-VERSION_PREFIX=v
-VERSION_SUFFIX=feature-api
-VERSION_REVISION=123
-VERSION_ISPRERELEASE=true
-VERSION_BUILDID=123
-VERSION_CORE=1.2.3
-VERSION_EXTENSION=feature-api.123
-VERSION_FULL=1.2.3-feature-api.123
-VERSION_ASSEMBLY=1.2.3.123
-VERSION_FORTAG=v1.2.3-feature-api.123
-VERSION_BRANCHNAME=feature/api
-VERSION_SCRIPTCALLED=true
-```
+### Prerequisites
 
-## 🐛 Troubleshooting
+- **Git Repository** - Must be a Git repository with appropriate history
+- **Git Tags** - Uses existing tags for patch version calculation
+- **Branch Information** - Requires branch context for suffix generation
 
-### Common Issues
+### Dependencies
 
-#### No Git Tags Found
+- **Git** - For tag analysis and branch detection (pre-installed on runners)
+- **Bash** - For shell script execution (available on all runners)
 
-**Problem**: Cannot determine next patch version due to missing tags
+### Supported Platforms
 
-**Solution**: The action will start with patch version 0:
+- ✅ Linux (ubuntu-latest)
+- ✅ macOS (macos-latest)
+- ✅ Windows (windows-latest)
+
+## Advanced Configuration
+
+### Tag Patterns
+
+The action supports various tag patterns:
 
 ```yaml
-- name: "Generate version with no existing tags"
-  uses: framinosona/github_actions/generate-version@main
-  with:
-    major: "1"
-    minor: "0"
-    # Will generate 1.0.0 if no tags exist
-```
+# Standard semantic versioning
+tag-prefix: 'v'          # Matches: v1.0.0, v1.0.1, v1.1.0
 
-#### Shallow Git History
+# Release prefixes
+tag-prefix: 'release-'   # Matches: release-1.0.0, release-1.0.1
 
-**Problem**: Insufficient Git history for tag analysis
+# No prefix
+tag-prefix: ''           # Matches: 1.0.0, 1.0.1, 1.1.0
 
-**Solution**: Use fetch-depth: 0 in checkout:
-
-```yaml
-- name: "Checkout with full history"
-  uses: actions/checkout@v4
-  with:
-    fetch-depth: 0  # Required for Git tag analysis
-```
-
-#### Invalid Configuration File
-
-**Problem**: Config file not found or invalid JSON format
-
-**Solution**: Ensure proper file format and location:
-
-```bash
-# Valid version.json format
-{
-  "major": 1,
-  "minor": 0
-}
-```
-
-```yaml
-- name: "Validate config file exists"
-  run: |
-    if [ ! -f "./version.json" ]; then
-      echo '{"major": 1, "minor": 0}' > version.json
-    fi
-
-- name: "Generate version"
-  uses: framinosona/github_actions/generate-version@main
-  with:
-    config-file: "./version.json"
-```
-
-#### Missing Major/Minor Version
-
-**Problem**: Neither config-file nor major/minor provided
-
-**Solution**: Provide either a config file or both major and minor:
-
-```yaml
-- name: "Generate version with explicit versions"
-  uses: framinosona/github_actions/generate-version@main
-  with:
-    major: "1"
-    minor: "0"
-```
-
-### Debug Tips
-
-1. **Enable Summary**: Set `show-summary: "true"` to see detailed output
-2. **Check Git History**: Verify tags exist with `git tag --list`
-3. **Validate Inputs**: Ensure major/minor are valid integers
-4. **Test Locally**: Run version generation locally to debug issues
-
-## 📊 How It Works
-
-### Version Generation Logic
-
-1. **Input Validation**: Validates major/minor versions and all input parameters
-2. **Git History Fetch**: Fetches Git tags and history for analysis
-3. **Tag Analysis**: Finds existing tags matching the major.minor pattern
-4. **Patch Increment**: Auto-increments patch version from the latest matching tag
-5. **Branch Detection**: Determines if on main branch or feature branch
-6. **Version Assembly**: Builds final version strings based on branch type
-7. **Output Generation**: Creates requested output files and sets action outputs
-
-### Patch Version Logic
-
-- Searches for existing Git tags with pattern: `{prefix}{major}.{minor}.{patch}`
-- Finds the highest patch number for the given major.minor combination
-- Increments the patch version by 1
-- If no matching tags exist, starts with patch version 0
-
-### Branch-Specific Behavior
-
-- **Main Branch**: Generates clean semantic versions (e.g., `1.2.3`)
-- **Feature Branches**: Adds sanitized branch name and build ID (e.g., `1.2.3-feature-api.123`)
-
-## 📝 Requirements
-
-- GitHub Actions runner (Windows, Linux, or macOS)
-- Git repository with history access
-- Either `config-file` OR both `major` and `minor` inputs
-- Optional: Existing Git tags for patch version increment
-
-## 🔧 Advanced Features
-
-### Custom Tag Prefixes
-
-```yaml
-- name: "Custom prefix versioning"
-  uses: framinosona/github_actions/generate-version@main
-  with:
-    major: "1"
-    minor: "0"
-    tag-prefix: "release-"  # Will generate release-1.0.0
+# Custom prefixes
+tag-prefix: 'app-v'      # Matches: app-v1.0.0, app-v1.0.1
 ```
 
 ### Branch Name Sanitization
 
-The action automatically sanitizes branch names for version suffixes:
+Branch names are sanitized for use as version suffixes:
 
-- Replaces non-alphanumeric characters with hyphens
-- Converts to lowercase
-- Truncates to `branch-suffix-max-length` (default: 40 characters)
-- Removes leading/trailing hyphens
+| Original Branch | Sanitized Suffix | Max Length 10 |
+|----------------|------------------|---------------|
+| `feature/user-auth` | `feature-user-auth` | `feature-us` |
+| `hotfix/Fix_Login_Bug` | `hotfix-fix-login-bug` | `hotfix-fix` |
+| `develop` | `develop` | `develop` |
+| `release/2.0` | `release-2-0` | `release-2` |
 
-### Dry Run Mode
+### Custom Build IDs
 
 ```yaml
-- name: "Test version generation"
-  uses: framinosona/github_actions/generate-version@main
+# Use timestamp as build ID
+- name: Generate with Timestamp
+  uses: ./generate-version
   with:
-    major: "1"
-    minor: "0"
-    dry-run: "true"  # Generate versions but don't create files
+    major: '1'
+    minor: '0'
+    build-id: ${{ github.run_number }}.${{ github.run_attempt }}
+
+# Use commit hash as build ID
+- name: Generate with Commit
+  uses: ./generate-version
+  with:
+    major: '1'
+    minor: '0'
+    build-id: ${{ github.sha }}
 ```
 
-## � Related Actions
+## Troubleshooting
 
-| Action | Purpose | Repository |
-|--------|---------|------------|
-| 🏷️ **git-tag** | Create and manage Git tags | `framinosona/github_actions/git-tag` |
-| 🚀 **github-release** | Create GitHub releases | `framinosona/github_actions/github-release` |
-| 🎯 **generate-badge** | Generate version badges | `framinosona/github_actions/generate-badge` |
-| 🔧 **dotnet** | Build with version metadata | `framinosona/github_actions/dotnet` |
+### Common Issues
 
-## �📄 License
+#### ❌ No Git Tags Found
 
-This action is part of the GitHub Actions collection by Francois Raminosona.
+```
+Found 0 existing tags
+```
 
----
+**Solutions:**
 
-> 💡 **Tip**: Use this action with Git tag management and release actions for complete version workflows.
+1. Ensure `fetch-depth: 0` in checkout action
+2. Create initial tags if repository is new
+3. Check tag prefix matches existing tags
+
+#### ❌ Invalid Version Numbers
+
+```
+Error: Major version must be a non-negative integer
+```
+
+**Solutions:**
+
+1. Ensure major/minor are numeric strings
+2. Use quotes around version numbers in YAML
+3. Validate input values before passing to action
+
+#### ❌ Git History Issues
+
+```
+Error: Failed to fetch Git history
+```
+
+**Solutions:**
+
+1. Use `fetch-depth: 0` for full history
+2. Ensure repository has proper Git setup
+3. Check repository permissions
+
+### Debug Mode
+
+Enable verbose output:
+
+```yaml
+- name: Debug Version Generation
+  uses: ./generate-version
+  with:
+    major: '1'
+    minor: '0'
+  env:
+    ACTIONS_STEP_DEBUG: true
+```
+
+### Manual Testing
+
+Test version generation locally:
+
+```bash
+# Set up environment
+export GITHUB_REF_NAME="feature/test"
+export GITHUB_RUN_NUMBER="123"
+
+# Run version generation logic
+major=1
+minor=0
+git tag -l "v${major}.${minor}.*" | sort -V | tail -1
+```
+
+## Integration Patterns
+
+### Docker Builds
+
+```yaml
+- name: Generate Docker Version
+  id: version
+  uses: ./generate-version
+  with:
+    major: '1'
+    minor: '0'
+
+- name: Build Docker Image
+  run: |
+    docker build \
+      --build-arg VERSION=${{ steps.version.outputs.VERSION_FULL }} \
+      --tag myapp:${{ steps.version.outputs.VERSION_CORE }} \
+      --tag myapp:latest \
+      .
+```
+
+### Artifact Naming
+
+```yaml
+- name: Upload Artifacts with Version
+  uses: actions/upload-artifact@v4
+  with:
+    name: myapp-${{ steps.version.outputs.VERSION_FULL }}
+    path: dist/
+```
+
+### Environment Deployment
+
+```yaml
+- name: Deploy to Environment
+  run: |
+    echo "Deploying version ${{ steps.version.outputs.VERSION_FULL }}"
+    kubectl set image deployment/myapp \
+      container=${{ steps.version.outputs.VERSION_CORE }}
+```
+
+## Security Considerations
+
+### File Permissions
+
+Generated files inherit default permissions. For sensitive environments:
+
+```yaml
+- name: Secure Generated Files
+  run: |
+    chmod 600 version.txt Directory.Build.props
+```
+
+### Branch Protection
+
+Ensure version consistency with branch protection:
+
+```yaml
+# Only allow version generation on protected branches
+- name: Check Branch
+  if: github.ref != 'refs/heads/main'
+  run: echo "Feature branch version: ${{ steps.version.outputs.VERSION_FULL }}"
+```
+
+## Contributing
+
+When contributing to this action:
+
+1. Follow the [Actions Guidelines](../.github/copilot-instructions.md)
+2. Test with various Git tag scenarios
+3. Ensure cross-platform compatibility
+4. Update documentation for new features
+5. Test with different branching strategies
+
+## License
+
+This action is distributed under the same license as the repository.
+
+## Support
+
+For issues related to:
+
+- **Git operations:** Check [Git Documentation](https://git-scm.com/doc)
+- **Semantic versioning:** Check [SemVer Specification](https://semver.org/)
+- **Action bugs:** Create an issue in this repository
+- **GitHub Actions:** Check [GitHub Actions Documentation](https://docs.github.com/en/actions)

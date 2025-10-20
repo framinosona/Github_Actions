@@ -28,7 +28,7 @@ concurrency:
 
 jobs:
   version:
-    uses: framinosona/github_actions/generate-version/workflow.yml@main
+    uses: framinosona/github_actions/.github/workflows/reusable-version.yml@main
     with:
       config-file: "./.config/version.json"
       output-txt: 'output/version/version.txt'
