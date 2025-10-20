@@ -251,7 +251,13 @@ runs:
           ARGUMENTS="$ARGUMENTS ${{ inputs.path }}"
         fi
 
-        ARGUMENTS="$ARGUMENTS ${{ inputs.arguments }}"
+        # Normalize multiline arguments (convert newlines to spaces, trim whitespace)
+        if [ -n "${{ inputs.arguments }}" ]; then
+          NORMALIZED_ARGS=$(echo "${{ inputs.arguments }}" | tr '\n' ' ' | sed 's/[[:space:]]\+/ /g' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+          echo "::debug::Original arguments: ${{ inputs.arguments }}"
+          echo "::debug::Normalized arguments: $NORMALIZED_ARGS"
+          ARGUMENTS="$ARGUMENTS $NORMALIZED_ARGS"
+        fi
 
         # Boolean flags
         for param in nologo no-restore no-build; do
