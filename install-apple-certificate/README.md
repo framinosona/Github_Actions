@@ -1,56 +1,158 @@
-# 🍎 Install Apple Certificate Action
+# 🍎 Apple Certificate Installation Action
 
-Install Apple certificates and provisioning profiles for iOS/macOS development in GitHub Actions workflows.
+A comprehensive GitHub Action for installing Apple certificates and provisioning profiles in macOS workflows with secure keychain management and flexible configuration options.
 
-## Features
+## ✨ Features
 
-- 🔒 **Secure Certificate Installation** - Install Apple development/distribution certificates
-- 📱 **Provisioning Profile Support** - Install and manage provisioning profiles
-- 🔑 **Keychain Management** - Create and configure temporary keychains
-- 🛡️ **Security First** - Secure handling of certificates and passwords
-- 🔧 **Flexible Input** - Support for base64 data or file paths
-- 📊 **Detailed Output** - Certificate and profile information for downstream actions
-- 🧹 **Automatic Cleanup** - Optional keychain cleanup after use
+- 🔒 **Secure Certificate Installation** - Install Apple development/distribution certificates safely
+- 📱 **Provisioning Profile Management** - Install and configure iOS/macOS provisioning profiles
+- 🔑 **Keychain Management** - Create and configure temporary keychains with proper permissions
+- 🛡️ **Security-First Design** - Secure handling of certificates, passwords, and private keys
+- 🔧 **Flexible Input Options** - Support for base64 data, file paths, and multiple certificate types
+- 📊 **Detailed Outputs** - Certificate fingerprints, profile UUIDs, and keychain information
+- 🧹 **Automatic Cleanup** - Configurable keychain cleanup with secure file deletion
+- 📋 **Comprehensive Validation** - Input validation and certificate verification
 
-## Usage
-
-### Basic Usage
+## 🚀 Basic Usage
 
 Install a certificate from base64 encoded data:
 
 ```yaml
-- name: Install Apple Certificate
-  uses: ./install-apple-certificate
+- name: "Install Apple Certificate"
+  uses: framinosona/github_actions/install-apple-certificate@main
   with:
     certificate-data: ${{ secrets.APPLE_CERTIFICATE_DATA }}
     certificate-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
 ```
 
-### Complete iOS Development Setup
-
 ```yaml
-- name: Install Apple Certificate and Provisioning Profile
-  uses: ./install-apple-certificate
+- name: "Install certificate and provisioning profile"
+  uses: framinosona/github_actions/install-apple-certificate@main
   with:
     certificate-data: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE }}
     certificate-password: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
     provisioning-profile-data: ${{ secrets.IOS_PROVISIONING_PROFILE }}
-    certificate-type: 'distribution'
-    team-id: 'ABCDEF1234'
+    certificate-type: "distribution"
 ```
-
-### Using Certificate Files
 
 ```yaml
-- name: Install Certificate from File
-  uses: ./install-apple-certificate
+- name: "Install from files"
+  uses: framinosona/github_actions/install-apple-certificate@main
   with:
-    certificate-path: 'certificates/ios_distribution.p12'
+    certificate-path: "certificates/ios_distribution.p12"
     certificate-password: ${{ secrets.CERTIFICATE_PASSWORD }}
-    provisioning-profile-path: 'profiles/app_store.mobileprovision'
+    provisioning-profile-path: "profiles/app_store.mobileprovision"
 ```
 
-## Inputs
+## 🔧 Advanced Usage
+
+Full configuration with all available options:
+
+```yaml
+- name: "Complete iOS setup"
+  uses: framinosona/github_actions/install-apple-certificate@main
+  with:
+    certificate-data: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE }}
+    certificate-password: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+    provisioning-profile-data: ${{ secrets.IOS_PROVISIONING_PROFILE }}
+    keychain-name: "ios-build.keychain"
+    keychain-password: ${{ secrets.KEYCHAIN_PASSWORD }}
+    delete-keychain: "false"
+    certificate-type: "distribution"
+    team-id: "ABCDEF1234"
+    allow-codesign-keychain-access: "true"
+    show-summary: "true"
+```
+
+## 🔐 Permissions Required
+
+This action requires standard repository permissions:
+
+```yaml
+permissions:
+  contents: read  # Required to checkout repository code
+```
+
+## 🏗️ CI/CD Example
+
+Complete workflow for iOS app building with certificate installation:
+
+```yaml
+name: "Build iOS App"
+
+on:
+  push:
+    branches: ["main"]
+    tags: ["v*"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+
+      - name: "🍎 Install Apple Certificate"
+        id: certificate
+        uses: framinosona/github_actions/install-apple-certificate@main
+        with:
+          certificate-data: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE }}
+          certificate-password: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          provisioning-profile-data: ${{ secrets.IOS_PROVISIONING_PROFILE }}
+          certificate-type: "distribution"
+          team-id: "ABCDEF1234"
+          keychain-name: "build.keychain"
+          delete-keychain: "false"
+          show-summary: "true"
+
+      - name: "🔧 Setup Xcode"
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: "📦 Install dependencies"
+        run: |
+          cd ios
+          pod install --repo-update
+
+      - name: "🔨 Build iOS app"
+        run: |
+          xcodebuild archive \
+            -workspace MyApp.xcworkspace \
+            -scheme MyApp \
+            -configuration Release \
+            -archivePath MyApp.xcarchive \
+            CODE_SIGN_IDENTITY="${{ steps.certificate.outputs.certificate-name }}" \
+            PROVISIONING_PROFILE_SPECIFIER="${{ steps.certificate.outputs.provisioning-profile-uuid }}" \
+            DEVELOPMENT_TEAM="${{ steps.certificate.outputs.team-id }}" \
+            -allowProvisioningUpdates
+
+      - name: "📦 Export IPA"
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath MyApp.xcarchive \
+            -exportPath ./build \
+            -exportOptionsPlist ExportOptions.plist
+
+      - name: "📤 Upload build artifacts"
+        uses: actions/upload-artifact@v4
+        with:
+          name: "ios-app-${{ github.sha }}"
+          path: ./build/*.ipa
+
+      - name: "🧹 Cleanup keychain"
+        if: always()
+        run: |
+          security delete-keychain "${{ steps.certificate.outputs.keychain-path }}" || true
+```
+
+## 📋 Inputs
 
 ### Required Inputs
 
@@ -85,7 +187,7 @@ Install a certificate from base64 encoded data:
 - `distribution` - Distribution certificates for App Store/Ad Hoc
 - `developer-id` - Developer ID certificates for macOS distribution
 
-## Outputs
+## 📤 Outputs
 
 | Output | Description | Example |
 |--------|-------------|---------|
@@ -96,80 +198,50 @@ Install a certificate from base64 encoded data:
 | `provisioning-profile-uuid` | UUID of installed profile | `12345678-1234-1234-1234-123456789012` |
 | `team-id` | Team ID from certificate or input | `ABCDEF1234` |
 
-## Examples
+## 🔗 Related Actions
+
+| Action | Purpose | Repository |
+|--------|---------|------------|
+| 🔢 **generate-version** | Version generation for builds | `framinosona/github_actions/generate-version` |
+| 🏷️ **git-tag** | Create build tags | `framinosona/github_actions/git-tag` |
+| 🚀 **github-release** | Create releases with binaries | `framinosona/github_actions/github-release` |
+
+## 💡 Examples
 
 ### Complete iOS App Build Pipeline
 
 ```yaml
-name: Build iOS App
-
-on:
-  push:
-    branches: [ main ]
-
-jobs:
-  build:
-    runs-on: macos-latest
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Install Apple Certificate
-      id: certificate
-      uses: ./install-apple-certificate
-      with:
-        certificate-data: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE }}
-        certificate-password: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
-        provisioning-profile-data: ${{ secrets.IOS_PROVISIONING_PROFILE }}
-        certificate-type: 'distribution'
-
-    - name: Build iOS App
-      run: |
-        xcodebuild archive \
-          -workspace MyApp.xcworkspace \
-          -scheme MyApp \
-          -configuration Release \
-          -archivePath MyApp.xcarchive \
-          CODE_SIGN_IDENTITY="${{ steps.certificate.outputs.certificate-name }}" \
-          PROVISIONING_PROFILE_SPECIFIER="${{ steps.certificate.outputs.provisioning-profile-uuid }}" \
-          DEVELOPMENT_TEAM="${{ steps.certificate.outputs.team-id }}"
-```
-
-### Multiple Certificate Installation
-
-```yaml
-- name: Install Development Certificate
-  uses: ./install-apple-certificate
+- name: "Install development certificate"
+  uses: framinosona/github_actions/install-apple-certificate@main
   with:
-    certificate-data: ${{ secrets.DEV_CERTIFICATE }}
-    certificate-password: ${{ secrets.DEV_CERT_PASSWORD }}
-    provisioning-profile-data: ${{ secrets.DEV_PROFILE }}
-    certificate-type: 'development'
-    keychain-name: 'dev.keychain'
-    delete-keychain: 'false'
+    certificate-data: ${{ secrets.IOS_DEV_CERTIFICATE }}
+    certificate-password: ${{ secrets.IOS_CERT_PASSWORD }}
+    provisioning-profile-data: ${{ secrets.IOS_DEV_PROFILE }}
+    certificate-type: "development"
+    keychain-name: "dev.keychain"
 
-- name: Install Distribution Certificate
-  uses: ./install-apple-certificate
+- name: "Install distribution certificate"
+  uses: framinosona/github_actions/install-apple-certificate@main
   with:
-    certificate-data: ${{ secrets.DIST_CERTIFICATE }}
-    certificate-password: ${{ secrets.DIST_CERT_PASSWORD }}
-    provisioning-profile-data: ${{ secrets.DIST_PROFILE }}
-    certificate-type: 'distribution'
-    keychain-name: 'dist.keychain'
-    delete-keychain: 'false'
+    certificate-data: ${{ secrets.IOS_DIST_CERTIFICATE }}
+    certificate-password: ${{ secrets.IOS_CERT_PASSWORD }}
+    provisioning-profile-data: ${{ secrets.IOS_DIST_PROFILE }}
+    certificate-type: "distribution"
+    keychain-name: "dist.keychain"
 ```
 
 ### macOS App Development
 
 ```yaml
-- name: Install macOS Developer Certificate
-  uses: ./install-apple-certificate
+- name: "Install macOS developer certificate"
+  uses: framinosona/github_actions/install-apple-certificate@main
   with:
     certificate-data: ${{ secrets.MACOS_DEVELOPER_CERTIFICATE }}
     certificate-password: ${{ secrets.MACOS_CERT_PASSWORD }}
-    certificate-type: 'developer-id'
-    team-id: 'ABCDEF1234'
+    certificate-type: "developer-id"
+    team-id: "ABCDEF1234"
 
-- name: Build and Sign macOS App
+- name: "Build and sign macOS app"
   run: |
     xcodebuild archive \
       -project MyMacApp.xcodeproj \
@@ -182,27 +254,65 @@ jobs:
 ### Persistent Keychain Setup
 
 ```yaml
-- name: Setup Persistent Keychain
+- name: "Setup persistent keychain"
   id: keychain
-  uses: ./install-apple-certificate
+  uses: framinosona/github_actions/install-apple-certificate@main
   with:
     certificate-data: ${{ secrets.CERTIFICATE_DATA }}
     certificate-password: ${{ secrets.CERTIFICATE_PASSWORD }}
-    keychain-name: 'persistent-build.keychain'
-    delete-keychain: 'false'  # Keep keychain for subsequent steps
+    keychain-name: "persistent-build.keychain"
+    delete-keychain: "false"
 
-- name: Build App
+- name: "Build app with persistent keychain"
   run: |
     # Your build commands here
-    xcodebuild ...
+    xcodebuild -workspace MyApp.xcworkspace \
+      -scheme MyApp \
+      -configuration Release
 
-- name: Cleanup Keychain
+- name: "Manual keychain cleanup"
   if: always()
   run: |
     security delete-keychain "${{ steps.keychain.outputs.keychain-path }}" || true
 ```
 
-## Requirements
+### Multi-Certificate Installation
+
+```yaml
+- name: "Install development certificate"
+  uses: framinosona/github_actions/install-apple-certificate@main
+  with:
+    certificate-data: ${{ secrets.DEV_CERTIFICATE }}
+    certificate-password: ${{ secrets.DEV_CERT_PASSWORD }}
+    provisioning-profile-data: ${{ secrets.DEV_PROFILE }}
+    certificate-type: "development"
+    keychain-name: "dev.keychain"
+    delete-keychain: "false"
+
+- name: "Install distribution certificate"
+  uses: framinosona/github_actions/install-apple-certificate@main
+  with:
+    certificate-data: ${{ secrets.DIST_CERTIFICATE }}
+    certificate-password: ${{ secrets.DIST_CERT_PASSWORD }}
+    provisioning-profile-data: ${{ secrets.DIST_PROFILE }}
+    certificate-type: "distribution"
+    keychain-name: "dist.keychain"
+    delete-keychain: "false"
+```
+
+### Environment-Specific Certificates
+
+```yaml
+- name: "Install certificate for environment"
+  uses: framinosona/github_actions/install-apple-certificate@main
+  with:
+    certificate-data: ${{ github.ref == 'refs/heads/main' && secrets.PRODUCTION_CERT || secrets.DEVELOPMENT_CERT }}
+    certificate-password: ${{ secrets.CERTIFICATE_PASSWORD }}
+    provisioning-profile-data: ${{ github.ref == 'refs/heads/main' && secrets.PRODUCTION_PROFILE || secrets.DEVELOPMENT_PROFILE }}
+    certificate-type: ${{ github.ref == 'refs/heads/main' && 'distribution' || 'development' }}
+```
+
+## 📱 Requirements
 
 ### Prerequisites
 
@@ -221,7 +331,7 @@ jobs:
 - ❌ Linux (not supported)
 - ❌ Windows (not supported)
 
-## Security Best Practices
+## 🔐 Security Best Practices
 
 ### Storing Certificates and Passwords
 
@@ -233,18 +343,16 @@ certificate-data: ${{ secrets.APPLE_CERTIFICATE_DATA }}
 certificate-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
 
 # ❌ Insecure - never do this
-certificate-data: 'MIIKzAIBAzCCCogGCSqGSIb3DQ...'
-certificate-password: 'my-secret-password'
+certificate-data: "MIIKzAIBAzCCCogGCSqGSIb3DQ..."
+certificate-password: "my-secret-password"
 ```
 
 ### Preparing Certificates for GitHub Secrets
 
-1. **Export certificate from Keychain Access:**
-   ```bash
-   # Export as .p12 file with password protection
-   ```
+1. **Export certificate from Keychain Access as .p12 with password protection**
 
 2. **Convert to base64:**
+
    ```bash
    base64 -i certificate.p12 | pbcopy
    ```
@@ -256,78 +364,112 @@ certificate-password: 'my-secret-password'
 ### Provisioning Profile Setup
 
 1. **Download from Apple Developer Portal**
+
 2. **Convert to base64:**
+
    ```bash
    base64 -i profile.mobileprovision | pbcopy
    ```
+
 3. **Store in GitHub Secrets**
 
-### Keychain Security
+### Keychain Security Features
 
 The action automatically:
+
 - Creates temporary keychains with secure passwords
-- Configures appropriate keychain settings
+- Configures appropriate keychain settings for codesign access
 - Enables codesign access when needed
 - Cleans up keychains after use (if enabled)
+- Sets restrictive file permissions (600) on temporary files
 
-## Troubleshooting
+## 🐛 Troubleshooting
 
 ### Common Issues
 
-#### ❌ "This action only works on macOS runners"
+#### Action Only Works on macOS
 
-```
-Error: This action only works on macOS runners
-```
+**Problem**: This action only works on macOS runners
 
-**Solution:** Use a macOS runner:
+**Solution**: Use a macOS runner:
+
 ```yaml
 runs-on: macos-latest  # or macos-13, macos-12
 ```
 
-#### ❌ Certificate Import Failures
+#### Certificate Import Failures
 
-```
-Error: security: SecKeychainItemImport: MAC verification failed during PKCS12 import
-```
+**Problem**: security: SecKeychainItemImport: MAC verification failed during PKCS12 import
 
 **Solutions:**
+
 1. Verify certificate password is correct
 2. Ensure certificate is not corrupted
 3. Check base64 encoding is valid
 
-#### ❌ Provisioning Profile Issues
+```yaml
+- name: "Validate certificate format"
+  run: |
+    echo "${{ secrets.CERTIFICATE_DATA }}" | base64 -d > temp-cert.p12
+    if ! openssl pkcs12 -in temp-cert.p12 -noout -passin pass:"${{ secrets.CERTIFICATE_PASSWORD }}"; then
+      echo "❌ Invalid certificate or password"
+      exit 1
+    fi
+    rm temp-cert.p12
+    echo "✅ Certificate validation passed"
+```
 
-```
-Error: Provisioning profile file not found
-```
+#### Provisioning Profile Issues
+
+**Problem**: Provisioning profile file not found
 
 **Solutions:**
+
 1. Verify base64 encoding of profile
 2. Check profile file exists at specified path
 3. Ensure profile is valid and not expired
 
-#### ❌ Codesign Access Issues
+```yaml
+- name: "Validate provisioning profile"
+  run: |
+    echo "${{ secrets.PROVISIONING_PROFILE_DATA }}" | base64 -d > temp-profile.mobileprovision
+    if ! plutil -lint temp-profile.mobileprovision; then
+      echo "❌ Invalid provisioning profile"
+      exit 1
+    fi
+    rm temp-profile.mobileprovision
+    echo "✅ Provisioning profile validation passed"
+```
 
-```
-Error: User interaction is not allowed
-```
+#### Codesign Access Issues
+
+**Problem**: User interaction is not allowed
 
 **Solutions:**
+
 1. Ensure `allow-codesign-keychain-access` is set to `true`
 2. Check keychain password is correct
 3. Verify keychain is unlocked
+
+```yaml
+- name: "Debug keychain access"
+  run: |
+    security list-keychains -d user
+    security find-identity -v -p codesigning
+    security unlock-keychain -p "${{ secrets.KEYCHAIN_PASSWORD }}" "${{ steps.certificate.outputs.keychain-path }}"
+```
 
 ### Debug Mode
 
 Enable verbose output for troubleshooting:
 
 ```yaml
-- name: Debug Certificate Installation
-  uses: ./install-apple-certificate
+- name: "Debug certificate installation"
+  uses: framinosona/github_actions/install-apple-certificate@main
   with:
     certificate-data: ${{ secrets.CERTIFICATE_DATA }}
     certificate-password: ${{ secrets.CERTIFICATE_PASSWORD }}
+    show-summary: "true"
   env:
     ACTIONS_STEP_DEBUG: true
 ```
@@ -337,27 +479,27 @@ Enable verbose output for troubleshooting:
 Verify installation manually:
 
 ```yaml
-- name: Verify Certificate Installation
+- name: "Verify certificate installation"
   run: |
     security find-identity -v -p codesigning
     security list-keychains -d user
     ls -la "$HOME/Library/MobileDevice/Provisioning Profiles/"
 ```
 
-## Advanced Usage
+## 🔧 Advanced Configuration
 
 ### Custom Keychain Configuration
 
 ```yaml
-- name: Install with Custom Keychain
-  uses: ./install-apple-certificate
+- name: "Install with custom keychain"
+  uses: framinosona/github_actions/install-apple-certificate@main
   with:
     certificate-data: ${{ secrets.CERTIFICATE_DATA }}
     certificate-password: ${{ secrets.CERTIFICATE_PASSWORD }}
-    keychain-name: 'custom-build.keychain'
+    keychain-name: "custom-build.keychain"
     keychain-password: ${{ secrets.KEYCHAIN_PASSWORD }}
-    delete-keychain: 'false'
-    allow-codesign-keychain-access: 'true'
+    delete-keychain: "false"
+    allow-codesign-keychain-access: "true"
 ```
 
 ### Multiple Team Support
@@ -366,49 +508,23 @@ Verify installation manually:
 strategy:
   matrix:
     team:
-      - { id: 'TEAM1234', cert: 'TEAM1_CERT', profile: 'TEAM1_PROFILE' }
-      - { id: 'TEAM5678', cert: 'TEAM2_CERT', profile: 'TEAM2_PROFILE' }
+      - { id: "TEAM1234", cert: "TEAM1_CERT", profile: "TEAM1_PROFILE" }
+      - { id: "TEAM5678", cert: "TEAM2_CERT", profile: "TEAM2_PROFILE" }
 
 steps:
-- name: Install Certificate for ${{ matrix.team.id }}
-  uses: ./install-apple-certificate
-  with:
-    certificate-data: ${{ secrets[matrix.team.cert] }}
-    certificate-password: ${{ secrets.CERTIFICATE_PASSWORD }}
-    provisioning-profile-data: ${{ secrets[matrix.team.profile] }}
-    team-id: ${{ matrix.team.id }}
+  - name: "Install certificate for ${{ matrix.team.id }}"
+    uses: framinosona/github_actions/install-apple-certificate@main
+    with:
+      certificate-data: ${{ secrets[matrix.team.cert] }}
+      certificate-password: ${{ secrets.CERTIFICATE_PASSWORD }}
+      provisioning-profile-data: ${{ secrets[matrix.team.profile] }}
+      team-id: ${{ matrix.team.id }}
 ```
 
-### Environment-Specific Certificates
+## 📄 License
 
-```yaml
-- name: Install Certificate
-  uses: ./install-apple-certificate
-  with:
-    certificate-data: ${{ github.ref == 'refs/heads/main' && secrets.PRODUCTION_CERT || secrets.DEVELOPMENT_CERT }}
-    certificate-password: ${{ secrets.CERTIFICATE_PASSWORD }}
-    provisioning-profile-data: ${{ github.ref == 'refs/heads/main' && secrets.PRODUCTION_PROFILE || secrets.DEVELOPMENT_PROFILE }}
-    certificate-type: ${{ github.ref == 'refs/heads/main' && 'distribution' || 'development' }}
-```
+This action is part of the GitHub Actions collection by Francois Raminosona.
 
-## Contributing
+---
 
-When contributing to this action:
-
-1. Follow the [Actions Guidelines](../.github/copilot-instructions.md)
-2. Test with various certificate types and configurations
-3. Ensure security best practices are maintained
-4. Update documentation for new features
-5. Test on different macOS runner versions
-
-## License
-
-This action is distributed under the same license as the repository.
-
-## Support
-
-For issues related to:
-- **Apple certificates:** Check [Apple Developer Documentation](https://developer.apple.com/documentation/)
-- **macOS keychain:** Check [macOS Security Framework](https://developer.apple.com/documentation/security)
-- **Action bugs:** Create an issue in this repository
-- **GitHub Actions:** Check [GitHub Actions Documentation](https://docs.github.com/en/actions)
+> 💡 **Tip**: Store your certificates and provisioning profiles as GitHub Secrets and use environment protection rules for production releases.
