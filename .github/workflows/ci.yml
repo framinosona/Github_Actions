@@ -41,7 +41,6 @@ jobs:
     needs: [version]
     runs-on: ubuntu-latest
     outputs:
-      docfx-path: ${{ steps.docfx.outputs.output-path }}
       should-deploy-docs: ${{ env.IS_MAIN_BRANCH == 'true' || env.FORCE_RELEASE == 'true' }}
 
     steps:
@@ -55,13 +54,14 @@ jobs:
         id: docfx
         uses: ./dotnet-docfx-build
         with:
+          config: 'docfx.json'
           output: 'output/docs/site'
           show-summary: 'true'
 
       - name: '📤 Upload GitHub Pages Artifact'
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ${{ steps.docfx.outputs.output-path }}
+          path: 'output/docs/site'
 
   deploy-pages:
     name: '🌐 Deploy to GitHub Pages'
