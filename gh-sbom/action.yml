@@ -1,102 +1,186 @@
-name: '📦 SBOM > Generate with gh-sbom'
-description: 'Generate Software Bill of Materials (SBOM) for GitHub repositories using the gh-sbom CLI extension'
-author: 'Francois Raminosona'
+name: "📦 Generate SBOM with gh-sbom"
+description: "Generate Software Bill of Materials (SBOM) for GitHub repositories using the gh-sbom CLI extension"
+author: "Francois Raminosona"
 
 inputs:
   repository:
-    description: 'Repository to generate SBOM for (format: owner/repo). Uses current repository if not specified'
+    description: "Repository to generate SBOM for (format: owner/repo). Uses current repository if not specified"
     required: false
-    default: ''
+    default: ""
   format:
-    description: 'SBOM format to generate'
+    description: "SBOM format to generate"
     required: false
-    default: 'spdx'
+    default: "spdx"
   include-license:
-    description: 'Include license information from clearlydefined.io for CycloneDX format (SPDX always includes license information)'
+    description: "Include license information from clearlydefined.io for CycloneDX format (SPDX always includes license information)"
     required: false
-    default: 'false'
+    default: "false"
   output-file:
-    description: 'Path to save the generated SBOM file. Outputs to stdout if not specified'
+    description: "Path to save the generated SBOM file. Outputs to stdout if not specified"
     required: false
-    default: ''
+    default: ""
   github-token:
-    description: 'GitHub token for authentication. Uses GITHUB_TOKEN by default'
+    description: "GitHub token for authentication. Uses GITHUB_TOKEN by default"
     required: false
-    default: '${{ github.token }}'
+    default: "${{ github.token }}"
   show-summary:
-    description: 'Whether to show the action summary'
+    description: "Whether to show the action summary"
     required: false
-    default: 'false'
+    default: "false"
 
 outputs:
   sbom-format:
-    description: 'The format of the generated SBOM (spdx or cyclonedx)'
+    description: "The format of the generated SBOM (spdx or cyclonedx)"
     value: ${{ steps.generate-sbom.outputs.sbom-format }}
   output-file:
-    description: 'Path to the generated SBOM file (if saved to file)'
+    description: "Path to the generated SBOM file (if saved to file)"
     value: ${{ steps.generate-sbom.outputs.output-file }}
   component-count:
-    description: 'Number of components found in the SBOM'
+    description: "Number of components found in the SBOM"
     value: ${{ steps.generate-sbom.outputs.component-count }}
   exit-code:
-    description: 'Exit code of the gh-sbom command'
+    description: "Exit code of the gh-sbom command"
     value: ${{ steps.generate-sbom.outputs.exit-code }}
 
 runs:
   using: "composite"
   steps:
-    - name: "✅ Validate inputs"
+    - name: "🔒 Mask sensitive data"
       shell: bash
       run: |
-        echo "::group::🔍 Input Validation"
-        echo "::debug::Validating inputs for gh-sbom action"
-
         # Mask sensitive data FIRST
         if [ -n "${{ inputs.github-token }}" ]; then
           echo "::add-mask::${{ inputs.github-token }}"
         fi
 
-        # Validate format parameter
+        echo "::debug::Masked sensitive inputs"
+
+    - name: "✅ Validate input : booleans"
+      shell: bash
+      run: |
+        echo "::debug::Validating boolean inputs..."
+        for param in include-license show-summary; do
+          case $param in
+            include-license) value="${{ inputs.include-license }}" ;;
+            show-summary) value="${{ inputs.show-summary }}" ;;
+          esac
+          if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
+            echo "::error::Parameter $param must be 'true' or 'false', got: $value"
+            exit 1
+          fi
+        done
+
+        echo "✅ Boolean inputs validation completed successfully"
+
+    - name: "✅ Validate input : format"
+      shell: bash
+      run: |
+        echo "::debug::Validating format input: ${{ inputs.format }}"
+
         case "${{ inputs.format }}" in
           spdx|cyclonedx) ;;
           *) echo "::error::Invalid format '${{ inputs.format }}'. Must be 'spdx' or 'cyclonedx'"; exit 1 ;;
         esac
 
-        # Validate boolean parameters
-        case "${{ inputs.include-license }}" in
-          true|false) ;;
-          *) echo "::error::Invalid include-license value '${{ inputs.include-license }}'. Must be 'true' or 'false'"; exit 1 ;;
+        echo "✅ Format validation completed successfully"
+
+    - name: "✅ Validate input : repository"
+      if: ${{ inputs.repository != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating repository input: ${{ inputs.repository }}"
+
+        if [[ ! "${{ inputs.repository }}" =~ ^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$ ]]; then
+          echo "::error::Invalid repository format '${{ inputs.repository }}'. Must be 'owner/repo'"
+          exit 1
+        fi
+
+        echo "✅ Repository format validation completed successfully"
+
+    - name: "✅ Validate input : output-file"
+      if: ${{ inputs.output-file != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating output-file input: ${{ inputs.output-file }}"
+
+        # Validate output directory exists
+        output_dir=$(dirname "${{ inputs.output-file }}")
+        if [ "$output_dir" != "." ] && [ ! -d "$output_dir" ]; then
+          echo "::error file=${{ inputs.output-file }}::Output directory does not exist: $output_dir"
+          exit 1
+        fi
+
+        # Validate file extension matches format
+        case "${{ inputs.format }}" in
+          spdx)
+            if [[ ! "${{ inputs.output-file }}" =~ \.(json|spdx)$ ]]; then
+              echo "::warning::SPDX format typically uses .json or .spdx extension"
+            fi
+            ;;
+          cyclonedx)
+            if [[ ! "${{ inputs.output-file }}" =~ \.(json|xml)$ ]]; then
+              echo "::warning::CycloneDX format typically uses .json or .xml extension"
+            fi
+            ;;
         esac
 
-        case "${{ inputs.show-summary }}" in
-          true|false) ;;
-          *) echo "::error::Invalid show-summary value '${{ inputs.show-summary }}'. Must be 'true' or 'false'"; exit 1 ;;
-        esac
+        echo "✅ Output file validation completed successfully"
 
-        # Validate repository format if provided
+    - name: "✅ Validate input : github-token"
+      shell: bash
+      run: |
+        echo "::debug::Validating GitHub token..."
+
+        if [ -z "${{ inputs.github-token }}" ]; then
+          echo "::error::GitHub token is required for authentication"
+          exit 1
+        fi
+
+        echo "✅ GitHub token validation completed successfully"
+
+    - name: "🏗️ Build argument list"
+      id: build-args
+      shell: bash
+      run: |
+        echo "::debug::Building argument list for gh-sbom..."
+
+        # Start with base arguments
+        ARGUMENTS=""
+
+        # Repository argument
         if [ -n "${{ inputs.repository }}" ]; then
-          if [[ ! "${{ inputs.repository }}" =~ ^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$ ]]; then
-            echo "::error::Invalid repository format '${{ inputs.repository }}'. Must be 'owner/repo'"
-            exit 1
-          fi
+          ARGUMENTS="$ARGUMENTS -r '${{ inputs.repository }}'"
+          echo "::debug::Using repository: ${{ inputs.repository }}"
+        else
+          echo "::debug::Using current repository"
         fi
 
-        # Validate output file directory exists if specified
-        if [ -n "${{ inputs.output-file }}" ]; then
-          output_dir=$(dirname "${{ inputs.output-file }}")
-          if [ "$output_dir" != "." ] && [ ! -d "$output_dir" ]; then
-            echo "::error file=${{ inputs.output-file }}::Output directory does not exist: $output_dir"
-            exit 1
-          fi
+        # Format argument
+        if [ "${{ inputs.format }}" = "cyclonedx" ]; then
+          ARGUMENTS="$ARGUMENTS -c"
+          echo "::debug::Using CycloneDX format"
+        else
+          echo "::debug::Using SPDX format (default)"
         fi
 
-        echo "::notice::Input validation completed successfully"
-        echo "::endgroup::"
+        # License argument (only for CycloneDX)
+        if [ "${{ inputs.include-license }}" = "true" ] && [ "${{ inputs.format }}" = "cyclonedx" ]; then
+          ARGUMENTS="$ARGUMENTS -l"
+          echo "::debug::Including license information"
+        elif [ "${{ inputs.include-license }}" = "true" ] && [ "${{ inputs.format }}" = "spdx" ]; then
+          echo "::debug::License information automatically included for SPDX format"
+        fi
+
+        # Trim leading space
+        ARGUMENTS="${ARGUMENTS# }"
+
+        echo "arguments=$ARGUMENTS" >> $GITHUB_OUTPUT
+        echo "✅ Argument list built successfully: $ARGUMENTS"
 
     - name: "🔧 Setup gh-sbom extension"
       shell: bash
       run: |
-        echo "::group::📦 Setting up gh-sbom extension"
+        echo "::debug::Setting up GitHub CLI and gh-sbom extension..."
         echo "::debug::GitHub CLI version: $(gh --version)"
 
         # Set GitHub token for authentication
@@ -112,38 +196,22 @@ runs:
           gh extension upgrade advanced-security/gh-sbom || echo "::warning::Failed to upgrade gh-sbom extension"
         fi
 
-        echo "::notice::gh-sbom extension setup completed successfully"
-        echo "::endgroup::"
+        echo "✅ gh-sbom extension setup completed successfully"
 
     - name: "📦 Generate SBOM"
       id: generate-sbom
       shell: bash
       run: |
-        echo "::group::🚀 Generating SBOM"
         echo "::debug::Executing SBOM generation with gh-sbom"
 
-        # Build command arguments
-        ARGS=()
+        # Get arguments from build step
+        ARGS_STRING="${{ steps.build-args.outputs.arguments }}"
 
-        if [ -n "${{ inputs.repository }}" ]; then
-          ARGS+=("-r" "${{ inputs.repository }}")
-          echo "::debug::Using repository: ${{ inputs.repository }}"
+        # Convert arguments string to array
+        if [ -n "$ARGS_STRING" ]; then
+          eval "ARGS=($ARGS_STRING)"
         else
-          echo "::debug::Using current repository"
-        fi
-
-        if [ "${{ inputs.format }}" = "cyclonedx" ]; then
-          ARGS+=("-c")
-          echo "::debug::Using CycloneDX format"
-        else
-          echo "::debug::Using SPDX format (default)"
-        fi
-
-        if [ "${{ inputs.include-license }}" = "true" ] && [ "${{ inputs.format }}" = "cyclonedx" ]; then
-          ARGS+=("-l")
-          echo "::debug::Including license information"
-        elif [ "${{ inputs.include-license }}" = "true" ] && [ "${{ inputs.format }}" = "spdx" ]; then
-          echo "::debug::License information automatically included for SPDX format"
+          ARGS=()
         fi
 
         echo "::debug::Command arguments: ${ARGS[*]}"
@@ -186,20 +254,19 @@ runs:
         fi
 
         if [ $exit_code -eq 0 ]; then
-          echo "::notice::SBOM generated successfully"
+          echo "✅ SBOM generated successfully"
         else
           echo "::error::SBOM generation failed with exit code $exit_code"
           exit $exit_code
         fi
 
-        echo "::endgroup::"
 
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash
       run: |
         cat >> $GITHUB_STEP_SUMMARY << 'EOF'
-        <details><summary>Expand for details - 📊 Generate SBOM Summary</summary>
+        <details><summary>🔗 Github SBOM</summary>
 
         ## 🔧 Input Parameters
         | Parameter | Value |
@@ -222,12 +289,19 @@ runs:
         | Step | Status |
         |------|--------|
         | ✅ Input Validation | `✅ Completed` |
-        | � Setup Extension | `✅ Completed` |
+        | 🏗️ Argument Building | `${{ steps.build-args.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | 🔧 Extension Setup | `✅ Completed` |
         | 📦 Generate SBOM | `${{ steps.generate-sbom.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
 
         </details>
         EOF
 
 branding:
-  icon: 'package'
-  color: 'blue'
+  icon: "package"
+  color: "blue"
+
+# gh sbom --help
+# Usage of /Users/framinosona/.local/share/gh/extensions/gh-sbom/gh-sbom:
+#   --cyclonedx           Use CycloneDX SBOM format. Default is to use SPDX.
+#   --license             Include license information from clearlydefined.io for CycloneDX format (SPDX always includes license information).
+#   --repository string   Repository to query. Current directory used by default.

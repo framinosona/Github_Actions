@@ -1,287 +1,507 @@
-# 📦 Generate SBOM with gh-sbom Action
+# 📦 GitHub SBOM Generation Action
 
-Generate Software Bill of Materials (SBOM) for GitHub repositories using the advanced-security/gh-sbom CLI extension.
+A comprehensive GitHub Action for generating Software Bill of Materials (SBOM) using the advanced-security/gh-sbom CLI extension with support for multiple formats, licensing information, and enterprise integration.
 
-## Features
+## ✨ Features
 
-- 📋 Generate SBOMs in SPDX or CycloneDX format
-- 🔍 Support for any GitHub repository (current or specified)
-- 📄 Optional license information inclusion for CycloneDX format
-- 💾 Output to file or stdout
-- 🛡️ Secure token handling with automatic masking
-- 📊 Detailed component counting and reporting
-- 🚀 Cross-platform support (Linux, macOS, Windows)
-- ✅ Comprehensive input validation
+- 📋 **Multiple SBOM Formats** - Generate SPDX or CycloneDX format SBOMs
+- 🔍 **Repository Flexibility** - Support for any GitHub repository (current or specified)
+- 📄 **License Information** - Optional license details from ClearlyDefined.io for CycloneDX
+- 💾 **Flexible Output** - Output to file or stdout with multiple format options
+- 🛡️ **Secure Token Handling** - Automatic token masking and secure authentication
+- 📊 **Detailed Component Analysis** - Component counting and comprehensive reporting
+- 🚀 **Cross-Platform Support** - Works on Linux, macOS, and Windows runners
+- ✅ **Enterprise Ready** - Support for GitHub Enterprise Server and private repositories
 
-## Usage
-
-### Basic Usage (SPDX format)
+## 🚀 Basic Usage
 
 Generate an SPDX SBOM for the current repository:
 
 ```yaml
-- name: Generate SBOM
-  uses: ./gh-sbom
+- name: "Generate SBOM"
+  uses: framinosona/github_actions/gh-sbom@main
 ```
 
-### Generate CycloneDX SBOM with License Information
-
 ```yaml
-- name: Generate CycloneDX SBOM
-  uses: ./gh-sbom
+- name: "Generate CycloneDX SBOM with licenses"
+  uses: framinosona/github_actions/gh-sbom@main
   with:
-    format: 'cyclonedx'
-    include-license: 'true'
-    output-file: 'sbom.json'
+    format: "cyclonedx"
+    include-license: "true"
+    output-file: "sbom.json"
 ```
 
-### Generate SBOM for Different Repository
-
 ```yaml
-- name: Generate SBOM for specific repository
-  uses: ./gh-sbom
+- name: "Generate SBOM for specific repository"
+  uses: framinosona/github_actions/gh-sbom@main
   with:
-    repository: 'owner/repo-name'
-    format: 'spdx'
-    output-file: 'dependency-sbom.json'
-    show-summary: 'true'
+    repository: "owner/repo-name"
+    format: "spdx"
+    output-file: "dependency-sbom.json"
+    show-summary: "true"
 ```
 
-### Advanced Usage with Custom Token
+## 🔧 Advanced Usage
+
+Full configuration with all available options:
 
 ```yaml
-- name: Generate SBOM with custom token
-  uses: ./gh-sbom
+- name: "Advanced SBOM generation"
+  uses: framinosona/github_actions/gh-sbom@main
   with:
-    repository: 'advanced-security/gh-sbom'
-    format: 'cyclonedx'
-    include-license: 'true'
-    output-file: 'reports/sbom-cyclonedx.json'
+    repository: "advanced-security/gh-sbom"
+    format: "cyclonedx"
+    include-license: "true"
+    output-file: "reports/sbom-cyclonedx.json"
     github-token: ${{ secrets.CUSTOM_GITHUB_TOKEN }}
-    show-summary: 'true'
+    show-summary: "true"
 ```
 
-## Inputs
+## 🔐 Permissions Required
 
-| Input | Description | Required | Default | Valid Values |
-|-------|-------------|----------|---------|--------------|
-| `repository` | Repository to generate SBOM for (format: owner/repo). Uses current repository if not specified | `false` | `''` | Any valid GitHub repository |
-| `format` | SBOM format to generate | `false` | `'spdx'` | `'spdx'`, `'cyclonedx'` |
-| `include-license` | Include license information from clearlydefined.io for CycloneDX format (SPDX always includes license information) | `false` | `'false'` | `'true'`, `'false'` |
-| `output-file` | Path to save the generated SBOM file. Outputs to stdout if not specified | `false` | `''` | Any valid file path |
-| `github-token` | GitHub token for authentication. Uses GITHUB_TOKEN by default | `false` | `${{ github.token }}` | Valid GitHub token |
-| `show-summary` | Whether to show the action summary | `false` | `'false'` | `'true'`, `'false'` |
-
-## Outputs
-
-| Output | Description | Example Value |
-|--------|-------------|---------------|
-| `sbom-format` | The format of the generated SBOM (spdx or cyclonedx) | `'spdx'` |
-| `output-file` | Path to the generated SBOM file (if saved to file) | `'sbom.json'` |
-| `component-count` | Number of components found in the SBOM | `42` |
-| `exit-code` | Exit code of the gh-sbom command | `0` |
-
-## Examples
-
-### Workflow for Security Scanning
+This action requires standard repository permissions:
 
 ```yaml
-name: Security - Generate SBOM
+permissions:
+  contents: read    # Required to access repository and dependency graph
+  security-events: read  # Required for dependency graph access
+```
+
+For private repositories or cross-repo access:
+
+```yaml
+permissions:
+  contents: read
+  security-events: read
+  metadata: read
+```
+
+## 🏗️ CI/CD Example
+
+Complete workflow for SBOM generation and security scanning:
+
+```yaml
+name: "Security - SBOM Generation"
 
 on:
   push:
-    branches: [ main ]
+    branches: ["main"]
   pull_request:
-    branches: [ main ]
+    branches: ["main"]
+  schedule:
+    - cron: "0 6 * * 1"  # Weekly on Mondays
+
+permissions:
+  contents: read
+  security-events: read
 
 jobs:
   generate-sbom:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
 
-    - name: Generate SPDX SBOM
-      uses: ./gh-sbom
-      with:
-        format: 'spdx'
-        output-file: 'sbom-spdx.json'
-        show-summary: 'true'
+      - name: "📋 Generate SPDX SBOM"
+        id: spdx-sbom
+        uses: framinosona/github_actions/gh-sbom@main
+        with:
+          format: "spdx"
+          output-file: "sbom-spdx.json"
+          show-summary: "true"
 
-    - name: Generate CycloneDX SBOM with Licenses
-      uses: ./gh-sbom
-      with:
-        format: 'cyclonedx'
-        include-license: 'true'
-        output-file: 'sbom-cyclonedx.json'
-        show-summary: 'true'
+      - name: "📋 Generate CycloneDX SBOM with licenses"
+        id: cyclonedx-sbom
+        uses: framinosona/github_actions/gh-sbom@main
+        with:
+          format: "cyclonedx"
+          include-license: "true"
+          output-file: "sbom-cyclonedx.json"
+          show-summary: "true"
 
-    - name: Upload SBOM artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: sbom-reports
-        path: |
-          sbom-spdx.json
-          sbom-cyclonedx.json
+      - name: "📊 Report SBOM statistics"
+        run: |
+          echo "SPDX SBOM components: ${{ steps.spdx-sbom.outputs.component-count }}"
+          echo "CycloneDX SBOM components: ${{ steps.cyclonedx-sbom.outputs.component-count }}"
+
+      - name: "📁 Upload SBOM artifacts"
+        uses: actions/upload-artifact@v4
+        with:
+          name: "sbom-reports-${{ github.sha }}"
+          path: |
+            sbom-spdx.json
+            sbom-cyclonedx.json
+            signed-sbom-spdx.json
+          retention-days: 90
 ```
 
-### Matrix Strategy for Multiple Formats
+## 📋 Inputs
+
+| Input | Description | Required | Default | Example |
+|-------|-------------|----------|---------|---------|
+| `repository` | Repository to generate SBOM for (format: owner/repo) | ❌ No | `''` | `owner/repo-name`, `microsoft/vscode` |
+| `format` | SBOM format to generate | ❌ No | `'spdx'` | `spdx`, `cyclonedx` |
+| `include-license` | Include license information for CycloneDX format | ❌ No | `'false'` | `true`, `false` |
+| `output-file` | Path to save the generated SBOM file | ❌ No | `''` | `sbom.json`, `./reports/sbom.spdx` |
+| `github-token` | GitHub token for authentication | ❌ No | `${{ github.token }}` | `${{ secrets.GITHUB_TOKEN }}` |
+| `show-summary` | Whether to show the action summary | ❌ No | `'false'` | `true`, `false` |
+
+## 📤 Outputs
+
+| Output | Description | Type | Example |
+|--------|-------------|------|---------|
+| `sbom-format` | Format of the generated SBOM | `string` | `spdx`, `cyclonedx` |
+| `output-file` | Path to the generated SBOM file | `string` | `sbom.json` |
+| `component-count` | Number of components found in the SBOM | `string` | `42` |
+| `exit-code` | Exit code of the gh-sbom command | `string` | `0` |
+| `file-size` | Size of generated SBOM file in bytes | `string` | `15728` |
+
+## 🔗 Related Actions
+
+| Action | Purpose | Repository |
+|--------|---------|------------|
+| 📋 **dotnet-cyclonedx** | Generate .NET SBOMs | `framinosona/github_actions/dotnet-cyclonedx` |
+| 🛡️ **Security Actions** | GitHub security tooling | Various security actions |
+
+## 💡 Examples
+
+### Basic SBOM Generation
 
 ```yaml
-name: Generate SBOMs
-
-on:
-  workflow_dispatch:
-    inputs:
-      repository:
-        description: 'Repository to scan'
-        required: true
-        default: 'advanced-security/gh-sbom'
-
-jobs:
-  generate-sbom:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        format: ['spdx', 'cyclonedx']
-
-    steps:
-    - name: Generate SBOM - ${{ matrix.format }}
-      uses: ./gh-sbom
-      with:
-        repository: ${{ github.event.inputs.repository }}
-        format: ${{ matrix.format }}
-        include-license: ${{ matrix.format == 'cyclonedx' && 'true' || 'false' }}
-        output-file: 'sbom-${{ matrix.format }}.json'
-        show-summary: 'true'
+- name: "Generate SPDX SBOM for current repo"
+  uses: framinosona/github_actions/gh-sbom@main
+  with:
+    format: "spdx"
+    output-file: "sbom.spdx.json"
 ```
 
-## Requirements
+### Multi-Format Generation
+
+```yaml
+- name: "Generate both SBOM formats"
+  strategy:
+    matrix:
+      format: ['spdx', 'cyclonedx']
+
+  steps:
+    - name: "Generate ${{ matrix.format }} SBOM"
+      uses: framinosona/github_actions/gh-sbom@main
+      with:
+        format: ${{ matrix.format }}
+        include-license: ${{ matrix.format == 'cyclonedx' && 'true' || 'false' }}
+        output-file: "sbom-${{ matrix.format }}.json"
+        show-summary: "true"
+```
+
+### Cross-Repository Analysis
+
+```yaml
+- name: "Analyze multiple repositories"
+  strategy:
+    matrix:
+      repo:
+        - "owner/repo1"
+        - "owner/repo2"
+        - "owner/repo3"
+
+  steps:
+    - name: "Generate SBOM for ${{ matrix.repo }}"
+      uses: framinosona/github_actions/gh-sbom@main
+      with:
+        repository: ${{ matrix.repo }}
+        format: "spdx"
+        output-file: "sbom-${{ matrix.repo | replace('/', '-') }}.json"
+        github-token: ${{ secrets.CROSS_REPO_TOKEN }}
+```
+
+### Enterprise Workflow
+
+```yaml
+- name: "Enterprise SBOM workflow"
+  uses: framinosona/github_actions/gh-sbom@main
+  with:
+    repository: ${{ github.repository }}
+    format: "cyclonedx"
+    include-license: "true"
+    output-file: "./compliance/sbom-cyclonedx.json"
+    github-token: ${{ secrets.ENTERPRISE_GITHUB_TOKEN }}
+    show-summary: "true"
+
+- name: "Validate SBOM compliance"
+  run: |
+    # Custom validation logic for enterprise compliance
+    jq '.components | length' ./compliance/sbom-cyclonedx.json
+
+- name: "Archive for compliance"
+  uses: actions/upload-artifact@v4
+  with:
+    name: "compliance-sbom-${{ github.run_id }}"
+    path: ./compliance/sbom-cyclonedx.json
+    retention-days: 2555  # 7 years for compliance
+```
+
+### Conditional SBOM Generation
+
+```yaml
+- name: "Check if SBOM generation needed"
+  id: check-changes
+  run: |
+    if git diff --name-only HEAD~1 | grep -E '\.(csproj|sln|packages\.config|package\.json|requirements\.txt|go\.mod|Cargo\.toml)$'; then
+      echo "needs-sbom=true" >> $GITHUB_OUTPUT
+    else
+      echo "needs-sbom=false" >> $GITHUB_OUTPUT
+    fi
+
+- name: "Generate SBOM on dependency changes"
+  if: steps.check-changes.outputs.needs-sbom == 'true'
+  uses: framinosona/github_actions/gh-sbom@main
+  with:
+    format: "spdx"
+    output-file: "updated-sbom.json"
+    show-summary: "true"
+```
+
+## 📊 Format Specifications
+
+### SPDX Format
+
+- **API Source**: [Dependency Graph SBOM API](https://docs.github.com/en/rest/dependency-graph/sboms)
+- **Generation**: Server-side (faster performance)
+- **License Information**: Always included
+- **Repository Size**: Works with large repositories
+- **Format Version**: SPDX 2.3 compliant JSON
+- **Best For**: Production workflows, large repositories, enterprise use
+
+### CycloneDX Format
+
+- **API Source**: Dependency Graph GraphQL API
+- **Generation**: Client-side assembly
+- **License Information**: Optional from [ClearlyDefined](https://clearlydefined.io/)
+- **Repository Size**: May have limitations with very large repositories
+- **Format Version**: CycloneDX 1.4 compliant JSON
+- **Best For**: Detailed license analysis, smaller repositories, development workflows
+
+## 📋 Requirements
+
+### GitHub CLI and Extension
 
 - **GitHub CLI (gh)**: Pre-installed on all GitHub-hosted runners
 - **gh-sbom extension**: Automatically installed by the action
-- **GitHub token**: Required for authentication (uses `GITHUB_TOKEN` by default)
-- **Dependency Graph**: Must be enabled on the target repository
-- **GitHub Enterprise Server**: Requires GHES 3.9 or higher (if using GHES)
+- **Version Compatibility**: Latest stable versions
 
 ### Repository Requirements
 
-1. **Dependency Graph Enabled**: The target repository must have Dependency Graph enabled
+1. **Dependency Graph Enabled**: Target repository must have Dependency Graph enabled
    - Navigate to: `Settings → Security & analysis → Dependency graph`
    - Enable if not already active
 
-2. **Supported Package Managers**: The repository should use supported package managers:
+2. **Supported Package Managers**:
    - npm (JavaScript/Node.js)
    - pip (Python)
    - Maven (Java)
    - Go modules
    - RubyGems (Ruby)
    - GitHub Actions
+   - .NET NuGet packages
 
-## Format Specifications
+### Authentication Requirements
 
-### SPDX Format
-- Uses the [Dependency Graph SBOM API](https://docs.github.com/en/rest/dependency-graph/sboms)
-- Server-side generation (faster)
-- Always includes license information
-- Works with large repositories
-- JSON format compliant with SPDX 2.3
+- **GitHub Token**: Required for authentication (uses `GITHUB_TOKEN` by default)
+- **Private Repositories**: Token needs `repo` scope
+- **Cross-Repository**: Token needs access to target repositories
+- **Enterprise**: Compatible with GitHub Enterprise Server 3.9+
 
-### CycloneDX Format
-- Assembled from Dependency Graph GraphQL API
-- Client-side generation
-- Optional license information from [ClearlyDefined](https://clearlydefined.io/)
-- May not work with very large repositories
-- JSON format compliant with CycloneDX 1.4
-
-## Troubleshooting
+## 🐛 Troubleshooting
 
 ### Common Issues
 
-#### "No dependencies found" Error
-```
+#### Dependency Graph Not Enabled
+
+**Problem**: No dependencies found error
+
+```text
 If you own this repository, check if Dependency Graph is enabled:
 https://github.com/owner/repo/settings/security_analysis
 ```
 
-**Solution**: Enable Dependency Graph in repository settings.
+**Solution**: Enable Dependency Graph in repository settings:
 
-#### Permission Errors
-**Problem**: Action fails with authentication errors.
-
-**Solutions**:
-1. Ensure `GITHUB_TOKEN` has required permissions
-2. For private repositories, use a token with `repo` scope
-3. For organization repositories, ensure token has appropriate access
-
-#### Large Repository Timeout
-**Problem**: CycloneDX generation times out on large repositories.
-
-**Solutions**:
-1. Use SPDX format instead (server-side generation)
-2. Consider running on a more powerful runner
-3. Break down analysis by focusing on specific manifests
-
-#### Installation Failures
-**Problem**: GitHub CLI or extension installation fails.
-
-**Solutions**:
-1. Check runner OS compatibility
-2. Verify network connectivity
-3. Use a different runner image
-4. Pre-install dependencies in your workflow
-
-### Debug Information
-
-Enable debug logging by setting:
 ```yaml
-env:
-  ACTIONS_STEP_DEBUG: true
+- name: "Check dependency graph status"
+  run: |
+    echo "Verify Dependency Graph is enabled at:"
+    echo "https://github.com/${{ github.repository }}/settings/security_analysis"
 ```
 
-This will provide detailed information about:
-- Input validation steps
-- Dependency installation progress
-- Command construction and execution
-- Component counting logic
+#### Permission Errors
+
+**Problem**: Action fails with authentication errors
+
+**Solutions**:
+
+1. Ensure `GITHUB_TOKEN` has required permissions:
+
+```yaml
+permissions:
+  contents: read
+  security-events: read
+  metadata: read
+```
+
+1. For private repositories, use a token with `repo` scope:
+
+```yaml
+- name: "Generate SBOM for private repo"
+  uses: framinosona/github_actions/gh-sbom@main
+  with:
+    repository: "private-org/private-repo"
+    github-token: ${{ secrets.PRIVATE_REPO_TOKEN }}
+```
+
+#### Large Repository Timeouts
+
+**Problem**: CycloneDX generation times out on large repositories
+
+**Solutions**:
+
+1. Use SPDX format instead:
+
+```yaml
+- name: "Generate SBOM for large repo"
+  uses: framinosona/github_actions/gh-sbom@main
+  with:
+    format: "spdx"  # Server-side generation
+    output-file: "large-repo-sbom.json"
+```
+
+1. Consider running on more powerful runners:
+
+```yaml
+runs-on: ubuntu-latest-8-cores  # Use larger runner
+```
+
+#### Extension Installation Failures
+
+**Problem**: GitHub CLI or extension installation fails
+
+**Solutions**:
+
+1. Check runner OS compatibility and network connectivity
+
+2. Pre-install dependencies:
+
+```yaml
+- name: "Pre-install gh-sbom extension"
+  run: |
+    gh extension install advanced-security/gh-sbom
+    gh sbom --version
+```
+
+#### No Components Found
+
+**Problem**: SBOM generated but shows zero components
+
+**Solutions**:
+
+1. Verify supported package managers are in use
+2. Check repository has manifest files (package.json, requirements.txt, etc.)
+3. Ensure dependencies are committed to repository
+
+```yaml
+- name: "List package manifests"
+  run: |
+    find . -name "package.json" -o -name "requirements.txt" -o -name "*.csproj" -o -name "go.mod" | head -10
+```
+
+### Debug Mode
+
+Enable comprehensive debugging:
+
+```yaml
+- name: "Debug SBOM generation"
+  uses: framinosona/github_actions/gh-sbom@main
+  with:
+    format: "spdx"
+    output-file: "debug-sbom.json"
+    show-summary: "true"
+  env:
+    ACTIONS_STEP_DEBUG: true
+    GH_DEBUG: true
+```
 
 ### Error Codes
 
-| Exit Code | Description |
-|-----------|-------------|
-| `0` | Success |
-| `1` | General error (validation, authentication, etc.) |
-| `2` | Network/API error |
-| `3` | File system error |
+| Exit Code | Description | Action |
+|-----------|-------------|--------|
+| `0` | Success | Continue workflow |
+| `1` | General error | Check inputs and permissions |
+| `2` | Network/API error | Retry or check connectivity |
+| `3` | File system error | Check file paths and permissions |
 
-## Comparison with Other SBOM Tools
+## 🔧 Advanced Configuration
+
+### Enterprise GitHub Setup
+
+```yaml
+- name: "Generate SBOM on GitHub Enterprise"
+  uses: framinosona/github_actions/gh-sbom@main
+  with:
+    repository: "enterprise-org/enterprise-repo"
+    format: "spdx"
+    output-file: "enterprise-sbom.json"
+    github-token: ${{ secrets.GHES_TOKEN }}
+  env:
+    GH_HOST: "github.enterprise.com"
+```
+
+### Batch SBOM Generation
+
+```yaml
+- name: "Generate SBOMs for organization"
+  run: |
+    for repo in $(gh repo list myorg --json name --jq '.[].name'); do
+      echo "Generating SBOM for myorg/$repo"
+
+      gh sbom repo "myorg/$repo" --format spdx > "sbom-$repo.json" || echo "Failed for $repo"
+    done
+  env:
+    GH_TOKEN: ${{ secrets.ORG_ACCESS_TOKEN }}
+```
+
+### Comparison Workflow
+
+```yaml
+- name: "Compare SBOM formats"
+  run: |
+    # Generate both formats
+    gh sbom repo ${{ github.repository }} --format spdx > sbom-spdx.json
+    gh sbom repo ${{ github.repository }} --format cyclonedx --include-license > sbom-cyclonedx.json
+
+    # Compare component counts
+    spdx_count=$(jq '.packages | length' sbom-spdx.json)
+    cyclonedx_count=$(jq '.components | length' sbom-cyclonedx.json)
+
+    echo "SPDX components: $spdx_count"
+    echo "CycloneDX components: $cyclonedx_count"
+```
+
+## 📊 Comparison with Other SBOM Tools
 
 | Feature | gh-sbom Action | Other Tools |
-|---------|---------------|-------------|
-| GitHub Integration | ✅ Native | ⚠️ Requires setup |
-| Server-side Generation | ✅ SPDX format | ❌ Usually client-side |
-| License Information | ✅ Built-in | ⚠️ Varies |
-| Large Repositories | ✅ SPDX supports | ❌ Often limited |
-| Multiple Formats | ✅ SPDX & CycloneDX | ⚠️ Usually single format |
-| Zero Configuration | ✅ Works out-of-box | ❌ Requires configuration |
+|---------|----------------|-------------|
+| **GitHub Integration** | ✅ Native integration | ⚠️ Requires complex setup |
+| **Server-side Generation** | ✅ SPDX format | ❌ Usually client-side only |
+| **License Information** | ✅ Built-in support | ⚠️ Varies by tool |
+| **Large Repositories** | ✅ SPDX supports any size | ❌ Often limited |
+| **Multiple Formats** | ✅ SPDX & CycloneDX | ⚠️ Usually single format |
+| **Zero Configuration** | ✅ Works out-of-box | ❌ Requires extensive setup |
+| **Enterprise Support** | ✅ GitHub Enterprise ready | ⚠️ Limited enterprise features |
 
-## Contributing
+## 📄 License
 
-Issues and feature requests are welcome! Please check the [GitHub Issues](https://github.com/advanced-security/gh-sbom/issues) for the underlying tool.
+This action is part of the GitHub Actions collection by Francois Raminosona.
 
-## Related Actions
+---
 
-- [GitHub Security Actions](https://github.com/security)
-- [Dependency Review Action](https://github.com/actions/dependency-review-action)
-- [CodeQL Analysis](https://github.com/github/codeql-action)
-
-## License
-
-This action is provided under the same license terms as the repository.
-
-## Support
-
-- **Tool Issues**: [advanced-security/gh-sbom Issues](https://github.com/advanced-security/gh-sbom/issues)
-- **Tool Discussions**: [advanced-security/gh-sbom Discussions](https://github.com/advanced-security/gh-sbom/discussions)
-- **Action Issues**: Please file issues in this repository
+> 💡 **Tip**: Combine this action with our SBOM signing and publishing actions for complete supply chain security workflows.
