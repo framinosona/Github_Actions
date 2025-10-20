@@ -46,9 +46,6 @@ jobs:
     steps:
       - name: '📥 Checkout Repository'
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: '📚 Build Documentation'
         id: docfx
@@ -83,7 +80,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: '🏷️ Create Git Tag'
         uses: framinosona/github_actions/git-tag@main
@@ -100,6 +96,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: '📥 Checkout Repository'
+        uses: actions/checkout@v4
+
       - name: '🚀 Create GitHub Release'
         uses: framinosona/github_actions/github-release@main
         with:
