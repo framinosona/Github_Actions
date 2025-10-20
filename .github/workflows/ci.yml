@@ -78,7 +78,6 @@ jobs:
     name: '🏷️ Tag Repository'
     needs: [version]
     runs-on: ubuntu-latest
-
     steps:
       - name: '📥 Checkout Repository'
         uses: actions/checkout@v4
@@ -89,7 +88,7 @@ jobs:
       - name: '🏷️ Create Git Tag'
         uses: ./git-tag
         with:
-          tag: ${{ needs.version.outputs.version-full }}
+          tag: ${{ needs.version.outputs.version-fortag }}
           message: 'Release ${{ needs.version.outputs.version-full }}'
           prefix: 'v'
           fail-if-exists: 'true'
@@ -97,14 +96,14 @@ jobs:
 
   github-release:
     name: '🚀 Create GitHub Release'
-    needs: [tag, version, build-documentation]
+    needs: [tag, version, deploy-pages]
     runs-on: ubuntu-latest
 
     steps:
       - name: '🚀 Create GitHub Release'
         uses: ./github-release
         with:
-          tag: ${{ needs.tag.outputs.tag-name }}
+          tag: ${{ needs.version.outputs.version-fortag }}
           title: 'Release ${{ needs.version.outputs.version-full }}'
           generate-notes: 'true'
           prerelease: ${{ needs.version.outputs.version-isprerelease }}
