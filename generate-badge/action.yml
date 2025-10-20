@@ -1,81 +1,80 @@
-name: '🏷️ Shields.io > Generate Badge'
-description: 'Generate static badges using shields.io with customizable styling and output options'
-author: 'Francois Raminosona'
+name: "🏷️ Generate Badge"
+description: "Generate static badges using shields.io with customizable styling and output options"
+author: "Francois Raminosona"
 
 inputs:
   label:
-    description: 'Left-hand side text of the badge (optional if using badge-content format)'
+    description: "Left-hand side text of the badge (optional if using badge-content format)"
     required: false
-    default: ''
+    default: ""
   message:
-    description: 'Right-hand side text/message of the badge'
+    description: "Right-hand side text/message of the badge"
     required: true
   color:
-    description: 'Background color of the right part (hex, rgb, rgba, hsl, hsla and css named colors supported)'
+    description: "Background color of the right part (hex, rgb, rgba, hsl, hsla and css named colors supported)"
     required: false
-    default: 'blue'
+    default: "blue"
   label-color:
-    description: 'Background color of the left part (hex, rgb, rgba, hsl, hsla and css named colors supported)'
+    description: "Background color of the left part (hex, rgb, rgba, hsl, hsla and css named colors supported)"
     required: false
-    default: ''
+    default: ""
   style:
-    description: 'Badge style - flat, flat-square, plastic, for-the-badge, social'
+    description: "Badge style - flat, flat-square, plastic, for-the-badge, social"
     required: false
-    default: 'flat'
+    default: "flat"
   logo:
-    description: 'Icon slug from simple-icons (e.g., github, docker, node-dot-js)'
+    description: "Icon slug from simple-icons (e.g., github, docker, node-dot-js)"
     required: false
-    default: ''
+    default: ""
   logo-color:
-    description: 'Color of the logo (hex, rgb, rgba, hsl, hsla and css named colors supported)'
+    description: "Color of the logo (hex, rgb, rgba, hsl, hsla and css named colors supported)"
     required: false
-    default: ''
+    default: ""
   logo-size:
-    description: 'Logo size - set to "auto" for adaptive resizing'
+    description: "Logo size - set to 'auto' for adaptive resizing"
     required: false
-    default: ''
+    default: ""
   output-file:
-    description: 'File path to save the badge URL (optional)'
+    description: "File path to save the badge URL (optional)"
     required: false
-    default: ''
+    default: ""
   output-format:
-    description: 'Output format - url, markdown, html, svg'
+    description: "Output format - url, markdown, html, svg"
     required: false
-    default: 'svg'
+    default: "svg"
   cache-seconds:
-    description: 'HTTP cache lifetime in seconds'
+    description: "HTTP cache lifetime in seconds"
     required: false
-    default: ''
+    default: ""
   show-summary:
-    description: 'Whether to show the action summary'
+    description: "Whether to show the action summary"
     required: false
-    default: 'false'
+    default: "false"
 
 outputs:
   badge-url:
-    description: 'The generated shields.io badge URL'
+    description: "The generated shields.io badge URL"
     value: ${{ steps.generate.outputs.badge-url }}
   badge-markdown:
-    description: 'Badge in Markdown format'
+    description: "Badge in Markdown format"
     value: ${{ steps.generate.outputs.badge-markdown }}
   badge-html:
-    description: 'Badge in HTML format'
+    description: "Badge in HTML format"
     value: ${{ steps.generate.outputs.badge-html }}
   output-file-path:
-    description: 'Path to the output file if created'
+    description: "Path to the output file if created"
     value: ${{ steps.generate.outputs.output-file-path }}
   svg-content:
-    description: 'The SVG content of the badge (when format is svg)'
+    description: "The SVG content of the badge (when format is svg)"
     value: ${{ steps.generate.outputs.svg-content }}
 
 runs:
   using: "composite"
   steps:
-    - name: "✅ Validate inputs"
+    - name: "✅ Validate input : required parameters"
       shell: bash
       run: |
-        echo "::group::🔍 Badge Generation Input Validation"
-        echo "::debug::Validating inputs for shields.io badge generation"
+        echo "::debug::Validating required parameters..."
 
         # Validate required message parameter
         if [ -z "${{ inputs.message }}" ]; then
@@ -83,49 +82,162 @@ runs:
           exit 1
         fi
 
-        # Validate style parameter
-        if [ -n "${{ inputs.style }}" ]; then
-          case "${{ inputs.style }}" in
-            flat|flat-square|plastic|for-the-badge|social) ;;
-            *) echo "::error::Invalid style. Must be one of: flat, flat-square, plastic, for-the-badge, social"; exit 1 ;;
-          esac
-        fi
+        echo "✅ Required parameters validation completed successfully"
 
-        # Validate output format
-        if [ -n "${{ inputs.output-format }}" ]; then
-          case "${{ inputs.output-format }}" in
-            url|markdown|html|svg) ;;
-            *) echo "::error::Invalid output format. Must be one of: url, markdown, html, svg"; exit 1 ;;
-          esac
-        fi
-
-        # Validate output file directory exists if specified
-        if [ -n "${{ inputs.output-file }}" ]; then
-          output_dir=$(dirname "${{ inputs.output-file }}")
-          if [ ! -d "$output_dir" ]; then
-            echo "📁 Creating output directory: $output_dir"
-            mkdir -p "$output_dir"
-          fi
-        fi
-
-                # Validate cache-seconds is numeric if specified
-        if [ -n "${{ inputs.cache-seconds }}" ]; then
-          if ! [[ "${{ inputs.cache-seconds }}" =~ ^[0-9]+$ ]]; then
-            echo "::error::Cache seconds must be a non-negative integer, got: ${{ inputs.cache-seconds }}"
-            exit 1
-          fi
-        fi
-
-        echo "::notice::Input validation completed successfully"
-        echo "::endgroup::"
-
-    - name: "🏷️ Generate Badge"
-      id: generate
+    - name: "✅ Validate input : booleans"
       shell: bash
       run: |
-        echo "🚀 Generating shields.io badge..."
+        echo "::debug::Validating boolean inputs..."
+        for param in show-summary; do
+          case $param in
+            show-summary) value="${{ inputs.show-summary }}" ;;
+          esac
+          if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
+            echo "::error::Parameter $param must be 'true' or 'false', got: $value"
+            exit 1
+          fi
+        done
 
-        # URL encode function
+        echo "✅ Boolean inputs validation completed successfully"
+
+    - name: "✅ Validate input : style"
+      shell: bash
+      run: |
+        echo "::debug::Validating style input: ${{ inputs.style }}"
+
+        case "${{ inputs.style }}" in
+          flat|flat-square|plastic|for-the-badge|social) ;;
+          *) echo "::error::Invalid style. Must be one of: flat, flat-square, plastic, for-the-badge, social"; exit 1 ;;
+        esac
+
+        echo "✅ Style validation completed successfully"
+
+    - name: "✅ Validate input : output-format"
+      shell: bash
+      run: |
+        echo "::debug::Validating output-format input: ${{ inputs.output-format }}"
+
+        case "${{ inputs.output-format }}" in
+          url|markdown|html|svg) ;;
+          *) echo "::error::Invalid output format. Must be one of: url, markdown, html, svg"; exit 1 ;;
+        esac
+
+        echo "✅ Output format validation completed successfully"
+
+    - name: "✅ Validate input : colors"
+      if: ${{ inputs.color != '' || inputs.label-color != '' || inputs.logo-color != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating color inputs..."
+
+        # Validate color formats (hex, rgb, rgba, hsl, hsla, css named colors)
+        validate_color() {
+          local color="$1"
+          local param_name="$2"
+
+          if [ -n "$color" ]; then
+            # Check for hex colors (with or without #)
+            if [[ "$color" =~ ^#?[0-9a-fA-F]{3}$ ]] || [[ "$color" =~ ^#?[0-9a-fA-F]{6}$ ]]; then
+              return 0
+            # Check for rgb/rgba format - parentheses must be escaped in regex
+            elif [[ "$color" =~ ^rgba?\\([0-9\ ,./]+\\)$ ]]; then
+              return 0
+            # Check for hsl/hsla format - parentheses must be escaped in regex
+            elif [[ "$color" =~ ^hsla?\\([0-9\ ,./%]+\\)$ ]]; then
+              return 0
+            # Check for CSS named colors (basic validation)
+            elif [[ "$color" =~ ^[a-zA-Z]+$ ]]; then
+              return 0
+            else
+              echo "::error::Invalid $param_name color format: $color. Use hex, rgb, rgba, hsl, hsla, or CSS named colors"
+              exit 1
+            fi
+          fi
+        }
+
+        validate_color "${{ inputs.color }}" "color"
+        validate_color "${{ inputs.label-color }}" "label-color"
+        validate_color "${{ inputs.logo-color }}" "logo-color"
+
+        echo "✅ Colors validation completed successfully"
+
+    - name: "✅ Validate input : logo"
+      if: ${{ inputs.logo != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating logo input: ${{ inputs.logo }}"
+
+        # Logo should be a valid simple-icons slug (lowercase, hyphens allowed)
+        if [[ ! "${{ inputs.logo }}" =~ ^[a-z0-9-]+$ ]]; then
+          echo "::error::Invalid logo format. Use simple-icons slug format (lowercase, hyphens allowed): ${{ inputs.logo }}"
+          exit 1
+        fi
+
+        echo "✅ Logo validation completed successfully"
+
+    - name: "✅ Validate input : cache-seconds"
+      if: ${{ inputs.cache-seconds != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating cache-seconds input: ${{ inputs.cache-seconds }}"
+
+        if ! [[ "${{ inputs.cache-seconds }}" =~ ^[0-9]+$ ]]; then
+          echo "::error::cache-seconds must be a numeric value, got: ${{ inputs.cache-seconds }}"
+          exit 1
+        fi
+
+        # Validate reasonable range (0 to 1 year in seconds)
+        if [ "${{ inputs.cache-seconds }}" -gt 31536000 ]; then
+          echo "::warning::cache-seconds value is very high (>1 year): ${{ inputs.cache-seconds }}"
+        fi
+
+        echo "✅ Cache seconds validation completed successfully"
+
+    - name: "✅ Validate input : output-file"
+      if: ${{ inputs.output-file != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating output-file input: ${{ inputs.output-file }}"
+
+        # Validate file extension matches output format
+        case "${{ inputs.output-format }}" in
+          url)
+            if [[ ! "${{ inputs.output-file }}" =~ \.(txt|url)$ ]]; then
+              echo "::warning::URL format typically uses .txt or .url extension"
+            fi
+            ;;
+          markdown)
+            if [[ ! "${{ inputs.output-file }}" =~ \.(md|markdown)$ ]]; then
+              echo "::warning::Markdown format typically uses .md or .markdown extension"
+            fi
+            ;;
+          html)
+            if [[ ! "${{ inputs.output-file }}" =~ \.html?$ ]]; then
+              echo "::warning::HTML format typically uses .html or .htm extension"
+            fi
+            ;;
+          svg)
+            if [[ ! "${{ inputs.output-file }}" =~ \.svg$ ]]; then
+              echo "::warning::SVG format should use .svg extension"
+            fi
+            ;;
+        esac
+
+        # Validate output directory exists or can be created
+        output_dir=$(dirname "${{ inputs.output-file }}")
+        if [ "$output_dir" != "." ] && [ ! -d "$output_dir" ]; then
+          echo "::debug::Output directory will be created: $output_dir"
+        fi
+
+        echo "✅ Output file validation completed successfully"
+
+    - name: "🛠️ Build badge URL"
+      id: build-url
+      shell: bash
+      run: |
+        echo "::debug::Building shields.io badge URL..."
+
+        # URL encode function for shields.io format
         url_encode() {
           echo "$1" | sed 's/ /%20/g' | sed 's/_/__/g' | sed 's/-/--/g'
         }
@@ -136,10 +248,12 @@ runs:
           label_encoded=$(url_encode "${{ inputs.label }}")
           message_encoded=$(url_encode "${{ inputs.message }}")
           badge_content="${label_encoded}-${message_encoded}-${{ inputs.color }}"
+          echo "::debug::Using label-message format: $badge_content"
         else
           # Message-Color format
           message_encoded=$(url_encode "${{ inputs.message }}")
           badge_content="${message_encoded}-${{ inputs.color }}"
+          echo "::debug::Using message-only format: $badge_content"
         fi
 
         # Build base URL
@@ -148,32 +262,42 @@ runs:
         # Build query parameters
         params=""
 
-        # Add style parameter
+        # Add style parameter (only if not default)
         if [ -n "${{ inputs.style }}" ] && [ "${{ inputs.style }}" != "flat" ]; then
           params="${params}&style=${{ inputs.style }}"
+          echo "::debug::Adding style parameter: ${{ inputs.style }}"
         fi
 
         # Add logo parameters
         if [ -n "${{ inputs.logo }}" ]; then
           params="${params}&logo=${{ inputs.logo }}"
+          echo "::debug::Adding logo parameter: ${{ inputs.logo }}"
         fi
 
         if [ -n "${{ inputs.logo-color }}" ]; then
-          params="${params}&logoColor=${{ inputs.logo-color }}"
+          # URL encode logo color for special characters
+          logo_color_encoded=$(echo "${{ inputs.logo-color }}" | sed 's/#/%23/g')
+          params="${params}&logoColor=${logo_color_encoded}"
+          echo "::debug::Adding logo color parameter: ${{ inputs.logo-color }}"
         fi
 
         if [ -n "${{ inputs.logo-size }}" ]; then
           params="${params}&logoSize=${{ inputs.logo-size }}"
+          echo "::debug::Adding logo size parameter: ${{ inputs.logo-size }}"
         fi
 
         # Add label color
         if [ -n "${{ inputs.label-color }}" ]; then
-          params="${params}&labelColor=${{ inputs.label-color }}"
+          # URL encode label color for special characters
+          label_color_encoded=$(echo "${{ inputs.label-color }}" | sed 's/#/%23/g')
+          params="${params}&labelColor=${label_color_encoded}"
+          echo "::debug::Adding label color parameter: ${{ inputs.label-color }}"
         fi
 
         # Add cache seconds
         if [ -n "${{ inputs.cache-seconds }}" ]; then
           params="${params}&cacheSeconds=${{ inputs.cache-seconds }}"
+          echo "::debug::Adding cache seconds parameter: ${{ inputs.cache-seconds }}"
         fi
 
         # Remove leading & if params exist
@@ -184,76 +308,82 @@ runs:
         # Complete URL
         badge_url="${base_url}${params}"
 
-        echo "🎯 Generated badge URL: $badge_url"
+        echo "badge-url=$badge_url" >> $GITHUB_OUTPUT
+        echo "✅ Badge URL built successfully: $badge_url"
 
-        # Generate different formats
+    - name: "🏷️ Generate badge formats"
+      id: generate
+      shell: bash
+      run: |
+        echo "::debug::Generating badge in multiple formats..."
+
+        # Get URL from build step
+        badge_url="${{ steps.build-url.outputs.badge-url }}"
+        echo "::debug::Using badge URL: $badge_url"
+
+        # Generate alt text for accessibility
         if [ -n "${{ inputs.label }}" ]; then
           alt_text="${{ inputs.label }}: ${{ inputs.message }}"
         else
           alt_text="${{ inputs.message }}"
         fi
 
+        # Generate different formats
         badge_markdown="![${alt_text}](${badge_url})"
         badge_html="<img src=\"${badge_url}\" alt=\"${alt_text}\" />"
 
-        # Set outputs
+        # Set basic outputs
         echo "badge-url=${badge_url}" >> $GITHUB_OUTPUT
         echo "badge-markdown=${badge_markdown}" >> $GITHUB_OUTPUT
         echo "badge-html=${badge_html}" >> $GITHUB_OUTPUT
 
-        # Download SVG content if needed
+        echo "✅ Badge formats generated successfully"
+
+    - name: "📥 Download SVG content"
+      id: download-svg-to-file
+      if: ${{ inputs.output-format == 'svg' && inputs.output-file != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Downloading SVG content from shields.io to file: ${{ inputs.output-file }}"
+
+        badge_url="${{ steps.build-url.outputs.badge-url }}"
         svg_content=""
-        if [ "${{ inputs.output-format }}" = "svg" ] || [ -n "${{ inputs.output-file }}" ]; then
-          echo "📥 Downloading SVG content from shields.io..."
-          if command -v curl >/dev/null 2>&1; then
-            svg_content=$(curl -s "${badge_url}")
-          elif command -v wget >/dev/null 2>&1; then
-            svg_content=$(wget -qO- "${badge_url}")
-          else
-            echo "::error::Neither curl nor wget is available for downloading SVG content"
-            exit 1
-          fi
 
-          if [ -n "$svg_content" ] && [[ "$svg_content" =~ \<svg ]]; then
-            echo "✅ SVG content downloaded successfully"
-            echo "svg-content=${svg_content}" >> $GITHUB_OUTPUT
-          else
-            echo "::error::Failed to download valid SVG content"
-            exit 1
-          fi
+        # Create output directory if needed
+        output_dir=$(dirname "${{ inputs.output-file }}")
+        if [ "$output_dir" != "." ] && [ ! -d "$output_dir" ]; then
+          echo "::debug::Creating output directory: $output_dir"
+          mkdir -p "$output_dir"
         fi
 
-        # Save to file if requested
-        if [ -n "${{ inputs.output-file }}" ]; then
-          case "${{ inputs.output-format }}" in
-            url)
-              echo "${badge_url}" > "${{ inputs.output-file }}"
-              ;;
-            markdown)
-              echo "${badge_markdown}" > "${{ inputs.output-file }}"
-              ;;
-            html)
-              echo "${badge_html}" > "${{ inputs.output-file }}"
-              ;;
-            svg)
-              if [ -n "$svg_content" ]; then
-                echo "${svg_content}" > "${{ inputs.output-file }}"
-                echo "📁 SVG file saved to: ${{ inputs.output-file }}"
-              else
-                echo "::error::No SVG content available to save"
-                exit 1
-              fi
-              ;;
-          esac
-
-          output_file_full_path=$(realpath "${{ inputs.output-file }}")
-          echo "output-file-path=${output_file_full_path}" >> $GITHUB_OUTPUT
-          echo "📁 Badge saved to: ${output_file_full_path}"
+        # Try curl first, then wget as fallback
+        if command -v curl >/dev/null 2>&1; then
+          echo "::debug::Using curl to download SVG"
+          svg_content=$(curl -s -f "${badge_url}" 2>/dev/null)
+          curl_exit_code=$?
+        elif command -v wget >/dev/null 2>&1; then
+          echo "::debug::Using wget to download SVG"
+          svg_content=$(wget -qO- "${badge_url}" 2>/dev/null)
+          curl_exit_code=$?
         else
-          echo "output-file-path=" >> $GITHUB_OUTPUT
+          echo "::error::Neither curl nor wget is available for downloading SVG content"
+          exit 1
         fi
 
-        echo "✅ Badge generation completed successfully"
+        # Validate SVG content
+        if [ $curl_exit_code -eq 0 ] && [ -n "$svg_content" ] && [[ "$svg_content" =~ \<svg ]]; then
+          echo "✅ SVG content downloaded successfully"
+          echo "${svg_content}" > "${{ inputs.output-file }}"
+        else
+          echo "::error::Failed to download valid SVG content from shields.io"
+          echo "::debug::Response: ${svg_content:0:200}..."
+          exit 1
+        fi
+
+        # Get absolute path and set output
+        output_file_full_path=$(realpath "${{ inputs.output-file }}")
+        echo "output-file-path=${output_file_full_path}" >> $GITHUB_OUTPUT
+        echo "✅ Badge saved to: ${output_file_full_path}"
 
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
@@ -269,7 +399,7 @@ runs:
         fi
 
         cat >> $GITHUB_STEP_SUMMARY << 'EOF'
-        <details><summary>Expand for details - 📊 Generate Badge Summary</summary>
+        <details><summary>📎 Generate Badge ${{ inputs.label || '(none)' }}</summary>
 
         ## 🔧 Input Parameters
         | Parameter | Value |
@@ -292,8 +422,8 @@ runs:
         | 🌐 Badge URL | [${{ steps.generate.outputs.badge-url }}](${{ steps.generate.outputs.badge-url }}) |
         | 📝 Markdown | `${{ steps.generate.outputs.badge-markdown }}` |
         | 🔗 HTML | `${{ steps.generate.outputs.badge-html }}` |
-        | 🎨 SVG Content | `${{ steps.generate.outputs.svg-content != '' && 'Available' || 'Not generated' }}` |
-        | 📁 Output File Path | `${{ steps.generate.outputs.output-file-path || '(not created)' }}` |
+        | 🎨 SVG Content | `${{ steps.download-svg-to-file.outputs.svg-content != '' && 'Available' || 'Not generated' }}` |
+        | 📁 Output File Path | `${{ steps.download-svg-to-file.outputs.output-file-path || '(not created)' }}` |
         | ${{ env.status_icon }} Status | `${{ env.status_text }}` |
 
         ## 🖼️ Badge Preview
@@ -303,7 +433,10 @@ runs:
         | Step | Status |
         |------|--------|
         | ✅ Input Validation | `✅ Completed` |
-        | 🏷️ Badge Generation | `${{ steps.generate.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | �️ URL Building | `${{ steps.build-url.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | 🏷️ Format Generation | `${{ steps.generate.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | 📥 SVG Download | `${{ (inputs.output-format == 'svg' || inputs.output-file != '') && (steps.download-svg-to-file.outcome == 'success' && '✅ Completed' || '❌ Failed') || '⏭️ Skipped' }}` |
+        | 💾 File Save | `${{ inputs.output-file != '' && (steps.download-svg-to-file.outcome == 'success' && '✅ Completed' || '❌ Failed') || '⏭️ Skipped' }}` |
 
         </details>
         EOF
@@ -312,5 +445,5 @@ runs:
         status_text: ${{ steps.generate.outcome == 'success' && 'Success' || 'Failed' }}
 
 branding:
-  icon: 'award'
-  color: 'blue'
+  icon: "award"
+  color: "blue"

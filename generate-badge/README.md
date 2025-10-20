@@ -1,269 +1,395 @@
 # 🏷️ Generate Badge Action
 
-A comprehensive GitHub Action that generates customizable static badges using shields.io with support for various styling options, logos, and output formats.
+A comprehensive GitHub Action for creating customizable static badges using shields.io with support for various styling options, logos, multiple output formats, and advanced badge management.
 
-## Features
+## ✨ Features
 
 - 📋 **Flexible Badge Creation** - Support for label-message or message-only badges
-- 🎨 **Comprehensive Styling** - Multiple styles, colors, and logo support
-- 🔗 **Multiple Output Formats** - URL, Markdown, HTML, and SVG formats
-- 📁 **File Output** - Optional file saving with custom paths
+- 🎨 **Comprehensive Styling** - Multiple styles, colors, logos, and visual customization
+- 🔗 **Multiple Output Formats** - URL, Markdown, HTML, and SVG formats with automatic encoding
+- 📁 **File Output Options** - Optional file saving with custom paths and format selection
 - ⚡ **Fast & Reliable** - Direct shields.io integration with proper URL encoding
 - 🛡️ **Input Validation** - Comprehensive parameter validation and error handling
-- 📊 **Detailed Summaries** - Rich action summaries with badge previews
+- 📊 **Rich Action Summaries** - Detailed summaries with badge previews and statistics
+- 🔍 **SVG Content Access** - Direct SVG content output for offline and custom usage
 
-## Usage
+## 🚀 Basic Usage
 
-### Basic Usage
+Generate a simple status badge:
 
 ```yaml
-- name: Generate simple badge
-  uses: framinosona/Github_Actions/generate-badge@main
+- name: "Generate simple badge"
+  uses: framinosona/github_actions/generate-badge@main
   with:
-    message: 'passing'
-    color: 'green'
+    message: "passing"
+    color: "green"
 ```
 
-Looks like : [![passing](https://img.shields.io/badge/-passing-green)](https://img.shields.io/badge/-passing-green)
-
-### Badge with Label
-
 ```yaml
-- name: Generate build status badge
-  uses: framinosona/Github_Actions/generate-badge@main
+- name: "Generate build status badge"
+  uses: framinosona/github_actions/generate-badge@main
   with:
-    label: 'build'
-    message: 'passing'
-    color: 'brightgreen'
+    label: "build"
+    message: "passing"
+    color: "brightgreen"
 ```
 
-Looks like : [![build: passing](https://img.shields.io/badge/build-passing-brightgreen)](https://img.shields.io/badge/build-passing-brightgreen)
-
-### Advanced Styling
-
 ```yaml
-- name: Generate styled badge with logo
-  uses: framinosona/Github_Actions/generate-badge@main
+- name: "Generate version badge with logo"
+  uses: framinosona/github_actions/generate-badge@main
   with:
-    label: 'npm'
-    message: 'v1.2.3'
-    color: 'blue'
-    style: 'for-the-badge'
-    logo: 'npm'
-    logo-color: 'white'
+    label: "npm"
+    message: "v1.2.3"
+    color: "blue"
+    logo: "npm"
+    style: "flat-square"
 ```
 
-Looks like : [![npm: v1.2.3](https://img.shields.io/badge/npm-v1.2.3-blue?style=for-the-badge&logo=npm&logoColor=white)](https://img.shields.io/badge/npm-v1.2.3-blue?style=for-the-badge&logo=npm&logoColor=white)
+## 🔧 Advanced Usage
 
-### Save to File
+Full configuration with all available options:
 
 ```yaml
-- name: Generate and save badge
-  uses: framinosona/Github_Actions/generate-badge@main
+- name: "Advanced styled badge with logo"
+  uses: framinosona/github_actions/generate-badge@main
   with:
-    label: 'coverage'
-    message: '95%'
-    color: 'brightgreen'
-    output-file: './badges/coverage.md'
-    output-format: 'markdown'
+    label: "coverage"
+    message: "95%"
+    color: "brightgreen"
+    label-color: "grey"
+    style: "for-the-badge"
+    logo: "codecov"
+    logo-color: "white"
+    logo-size: "auto"
+    output-file: "./badges/coverage.md"
+    output-format: "markdown"
+    cache-seconds: "3600"
+    show-summary: "true"
 ```
 
-Looks like : ![coverage: 95%](https://img.shields.io/badge/coverage-95%25-brightgreen)
+## 🔐 Permissions Required
 
-### Output Format Examples
+This action requires standard repository permissions:
 
 ```yaml
-# Save as URL
-- uses: framinosona/Github_Actions/generate-badge@main
-  with:
-    label: 'build'
-    message: 'passing'
-    color: 'green'
-    output-file: './badge-url.txt'
-    output-format: 'url'
-    # Creates: https://img.shields.io/badge/build-passing-green
-
-# Save as Markdown
-- uses: framinosona/Github_Actions/generate-badge@main
-  with:
-    label: 'build'
-    message: 'passing'
-    color: 'green'
-    output-file: './badge.md'
-    output-format: 'markdown'
-    # Creates: ![build: passing](https://img.shields.io/badge/build-passing-green)
-
-# Save as HTML
-- uses: framinosona/Github_Actions/generate-badge@main
-  with:
-    label: 'build'
-    message: 'passing'
-    color: 'green'
-    output-file: './badge.html'
-    output-format: 'html'
-    # Creates: <img src="https://img.shields.io/badge/build-passing-green" alt="build: passing" />
-
-# Save as SVG
-- uses: framinosona/Github_Actions/generate-badge@main
-  with:
-    label: 'build'
-    message: 'passing'
-    color: 'green'
-    output-file: './badge.svg'
-    output-format: 'svg'
-    # Creates: Full SVG markup for direct embedding
+permissions:
+  contents: read  # Required to checkout repository code
 ```
 
-### Complete Example Workflow
+If saving badges to repository:
 
 ```yaml
-name: Generate Project Badges
-on: [push]
+permissions:
+  contents: write  # Required to commit badge files
+```
+
+## 🏗️ CI/CD Example
+
+Complete workflow for generating project badges:
+
+```yaml
+name: "Generate Project Badges"
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_run:
+    workflows: ["Tests", "Build"]
+    types: [completed]
+
+permissions:
+  contents: write
 
 jobs:
-  badges:
+  generate-badges:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
 
-      - name: Generate build badge
+      - name: "🔧 Setup .NET"
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: "🧪 Run tests with coverage"
+        id: test-results
+        uses: framinosona/github_actions/dotnet-test@main
+        with:
+          projects: "./tests/**/*.csproj"
+          collect: "XPlat Code Coverage"
+          results-directory: "./test-results"
+
+      - name: "📊 Calculate coverage percentage"
+        id: coverage
+        run: |
+          # Extract coverage percentage from results
+          coverage=$(grep -oP 'Line coverage: \K[0-9.]+' ./test-results/coverage.xml || echo "0")
+          echo "percentage=$coverage" >> $GITHUB_OUTPUT
+
+      - name: "🏷️ Generate build status badge"
         id: build-badge
-        uses: framinosona/Github_Actions/generate-badge@main
+        uses: framinosona/github_actions/generate-badge@main
         with:
-          label: 'build'
-          message: 'passing'
-          color: 'brightgreen'
-          style: 'flat-square'
-          logo: 'github-actions'
-          show-summary: 'true'  # Enable detailed summary
+          label: "build"
+          message: ${{ job.status == 'success' && 'passing' || 'failing' }}
+          color: ${{ job.status == 'success' && 'brightgreen' || 'red' }}
+          style: "flat-square"
+          logo: "github-actions"
+          output-file: "./docs/badges/build.md"
+          output-format: "markdown"
+          show-summary: "true"
 
-      - name: Generate coverage badge
-        uses: framinosona/Github_Actions/generate-badge@main
+      - name: "📈 Generate coverage badge"
+        uses: framinosona/github_actions/generate-badge@main
         with:
-          label: 'coverage'
-          message: '95%'
-          color: 'green'
-          output-file: './docs/coverage-badge.md'
-          output-format: 'markdown'
-          show-summary: 'true'  # Show summary with badge preview
+          label: "coverage"
+          message: "${{ steps.coverage.outputs.percentage }}%"
+          color: ${{ steps.coverage.outputs.percentage >= 90 && 'brightgreen' || (steps.coverage.outputs.percentage >= 70 && 'yellow' || 'red') }}
+          style: "flat-square"
+          logo: "codecov"
+          output-file: "./docs/badges/coverage.md"
+          output-format: "markdown"
 
-      - name: Use badge URL in next step
-        run: echo "Badge URL: ${{ steps.build-badge.outputs.badge-url }}"
+      - name: "🔢 Generate version badge"
+        uses: framinosona/github_actions/generate-badge@main
+        with:
+          label: "version"
+          message: "v${{ env.VERSION || '1.0.0' }}"
+          color: "blue"
+          style: "flat-square"
+          logo: "semver"
+          output-file: "./docs/badges/version.md"
+          output-format: "markdown"
+
+      - name: "📄 Generate license badge"
+        uses: framinosona/github_actions/generate-badge@main
+        with:
+          label: "license"
+          message: "MIT"
+          color: "blue"
+          style: "flat-square"
+          output-file: "./docs/badges/license.svg"
+          output-format: "svg"
+
+      - name: "💾 Commit badge updates"
+        if: github.ref == 'refs/heads/main'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add docs/badges/
+          git diff --staged --quiet || git commit -m "🏷️ Update project badges"
+          git push
+
+      - name: "📊 Display badge URLs"
+        run: |
+          echo "Build badge: ${{ steps.build-badge.outputs.badge-url }}"
+          echo "Badge files created in: ./docs/badges/"
 ```
 
-## Inputs
+## 📋 Inputs
 
 | Input | Description | Required | Default | Example |
 |-------|-------------|----------|---------|---------|
-| `label` | Left-hand side text of the badge | `false` | `''` | `build`, `coverage`, `npm` |
-| `message` | Right-hand side text/message of the badge | `true` | - | `passing`, `95%`, `v1.2.3` |
-| `color` | Background color of the right part | `false` | `blue` | `green`, `red`, `#ff6b6b`, `rgb(255,107,107)` |
-| `label-color` | Background color of the left part | `false` | `''` | `grey`, `#555`, `rgba(85,85,85,1)` |
-| `style` | Badge style | `false` | `flat` | `flat`, `flat-square`, `plastic`, `for-the-badge`, `social` |
-| `logo` | Icon slug from simple-icons | `false` | `''` | `github`, `docker`, `node-dot-js`, `python` |
-| `logo-color` | Color of the logo | `false` | `''` | `white`, `black`, `#ffffff` |
-| `logo-size` | Logo size (set to "auto" for adaptive) | `false` | `''` | `auto` |
-| `output-file` | File path to save the badge | `false` | `''` | `./badges/build.md`, `./docs/status.html` |
-| `output-format` | Output format for file | `false` | `svg` | `url`, `markdown`, `html`, `svg` |
-| `cache-seconds` | HTTP cache lifetime in seconds | `false` | `''` | `3600`, `86400` |
-| `show-summary` | Whether to show action summary | `false` | `false` | `true`, `false` |
+| `label` | Left-hand side text of the badge | ❌ No | `''` | `build`, `coverage`, `npm` |
+| `message` | Right-hand side text/message of the badge | ✅ Yes | - | `passing`, `95%`, `v1.2.3` |
+| `color` | Background color of the right part | ❌ No | `blue` | `green`, `red`, `#ff6b6b`, `rgb(255,107,107)` |
+| `label-color` | Background color of the left part | ❌ No | `''` | `grey`, `#555`, `rgba(85,85,85,1)` |
+| `style` | Badge style | ❌ No | `flat` | `flat`, `flat-square`, `plastic`, `for-the-badge`, `social` |
+| `logo` | Icon slug from simple-icons | ❌ No | `''` | `github`, `docker`, `node-dot-js`, `python` |
+| `logo-color` | Color of the logo | ❌ No | `''` | `white`, `black`, `#ffffff` |
+| `logo-size` | Logo size (set to "auto" for adaptive) | ❌ No | `''` | `auto` |
+| `output-file` | File path to save the badge | ❌ No | `''` | `./badges/build.md`, `./docs/status.html` |
+| `output-format` | Output format for file | ❌ No | `svg` | `url`, `markdown`, `html`, `svg` |
+| `cache-seconds` | HTTP cache lifetime in seconds | ❌ No | `''` | `3600`, `86400` |
+| `show-summary` | Whether to show action summary | ❌ No | `false` | `true`, `false` |
 
-## Outputs
+## 📤 Outputs
 
 | Output | Description | Example |
 |--------|-------------|---------|
 | `badge-url` | The generated shields.io badge URL | `https://img.shields.io/badge/build-passing-brightgreen` |
 | `badge-markdown` | Badge in Markdown format | `![build: passing](https://img.shields.io/badge/build-passing-brightgreen)` |
 | `badge-html` | Badge in HTML format | `<img src="..." alt="build: passing" />` |
-| `svg-content` | The SVG content of the badge (when output-format is svg or output-file is specified) | `<svg xmlns="http://www.w3.org/2000/svg"...` |
+| `svg-content` | SVG content of the badge | `<svg xmlns="http://www.w3.org/2000/svg"...` |
 | `output-file-path` | Path to the output file if created | `/github/workspace/badges/build.md` |
 
-## SVG Output
+## 🔗 Related Actions
 
-The action supports direct SVG content output, which is useful for:
+| Action | Purpose | Repository |
+|--------|---------|------------|
+| 🧪 **dotnet-test** | Generate test result badges | `framinosona/github_actions/dotnet-test` |
+| 🔢 **generate-version** | Create version badges | `framinosona/github_actions/generate-version` |
+| 🚀 **dotnet** | Build status badges | `framinosona/github_actions/dotnet` |
+| 🏷️ **git-tag** | Tag-based badges | `framinosona/github_actions/git-tag` |
 
-- **Embedding badges directly** in HTML without external requests
-- **Customizing badge styling** through SVG manipulation
-- **Offline documentation** that includes badges
-- **Performance optimization** by avoiding external resource loading
+## 💡 Examples
 
-### SVG Content Availability
-
-SVG content is automatically downloaded and made available in the `svg-content` output when:
-
-- `output-format` is set to `svg`
-- `output-file` is specified (regardless of format)
-
-### SVG Output Examples
+### Build Status Badges
 
 ```yaml
-# Get SVG content in output
-- name: Generate SVG badge
-  id: svg-badge
-  uses: framinosona/Github_Actions/generate-badge@main
+# Success badge
+- name: "Generate success badge"
+  uses: framinosona/github_actions/generate-badge@main
   with:
-    label: 'build'
-    message: 'passing'
-    color: 'green'
-    output-format: 'svg'
+    label: "build"
+    message: "passing"
+    color: "brightgreen"
+    logo: "github-actions"
 
-- name: Use SVG content
-  run: echo "${{ steps.svg-badge.outputs.svg-content }}" > badge.svg
+# Failure badge
+- name: "Generate failure badge"
+  uses: framinosona/github_actions/generate-badge@main
+  with:
+    label: "build"
+    message: "failing"
+    color: "red"
+    logo: "github-actions"
 ```
+
+### Version Badges
 
 ```yaml
-# Save SVG directly to file
-- name: Save SVG badge
-  uses: framinosona/Github_Actions/generate-badge@main
+# NPM version
+- name: "Generate NPM version badge"
+  uses: framinosona/github_actions/generate-badge@main
   with:
-    label: 'coverage'
-    message: '95%'
-    color: 'brightgreen'
-    output-file: './docs/coverage.svg'
-    output-format: 'svg'
+    label: "npm"
+    message: "v1.2.3"
+    color: "blue"
+    logo: "npm"
+    style: "flat-square"
+
+# Docker version
+- name: "Generate Docker badge"
+  uses: framinosona/github_actions/generate-badge@main
+  with:
+    label: "docker"
+    message: "latest"
+    color: "blue"
+    logo: "docker"
+    logo-color: "white"
 ```
 
-### Character Encoding
+### Coverage Badges
 
-The action automatically handles URL encoding for special characters:
+```yaml
+# Dynamic coverage badge
+- name: "Generate coverage badge"
+  uses: framinosona/github_actions/generate-badge@main
+  with:
+    label: "coverage"
+    message: "${{ env.COVERAGE_PERCENT }}%"
+    color: ${{ env.COVERAGE_PERCENT >= 90 && 'brightgreen' || (env.COVERAGE_PERCENT >= 70 && 'yellow' || 'red') }}
+    style: "flat-square"
+    logo: "codecov"
+```
 
-| Character | Encoding |
-|-----------|----------|
-| Space ` ` | `%20` |
-| Underscore `_` | `__` |
-| Dash `-` | `--` |
+### License and Social Badges
 
-## Color Options
+```yaml
+# License badge
+- name: "Generate license badge"
+  uses: framinosona/github_actions/generate-badge@main
+  with:
+    label: "license"
+    message: "MIT"
+    color: "blue"
+    style: "for-the-badge"
 
-The action supports various color formats:
+# Social follow badge
+- name: "Generate social badge"
+  uses: framinosona/github_actions/generate-badge@main
+  with:
+    label: "follow"
+    message: "@username"
+    color: "1da1f2"
+    style: "social"
+    logo: "twitter"
+    logo-color: "white"
+```
 
-### Named Colors
+### Multi-Format Output
+
+```yaml
+# Save as different formats
+- name: "Generate badge in multiple formats"
+  uses: framinosona/github_actions/generate-badge@main
+  with:
+    label: "status"
+    message: "active"
+    color: "green"
+    output-file: "./badges/status.md"
+    output-format: "markdown"
+
+- name: "Generate SVG badge"
+  uses: framinosona/github_actions/generate-badge@main
+  with:
+    label: "status"
+    message: "active"
+    color: "green"
+    output-file: "./badges/status.svg"
+    output-format: "svg"
+```
+
+### Matrix Badge Generation
+
+```yaml
+strategy:
+  matrix:
+    badge:
+      - { label: "build", message: "passing", color: "brightgreen", logo: "github-actions" }
+      - { label: "tests", message: "100%", color: "brightgreen", logo: "pytest" }
+      - { label: "coverage", message: "95%", color: "brightgreen", logo: "codecov" }
+      - { label: "license", message: "MIT", color: "blue", logo: "" }
+
+steps:
+  - name: "Generate ${{ matrix.badge.label }} badge"
+    uses: framinosona/github_actions/generate-badge@main
+    with:
+      label: ${{ matrix.badge.label }}
+      message: ${{ matrix.badge.message }}
+      color: ${{ matrix.badge.color }}
+      logo: ${{ matrix.badge.logo }}
+      style: "flat-square"
+      output-file: "./docs/badges/${{ matrix.badge.label }}.md"
+      output-format: "markdown"
+```
+
+## 🎨 Styling Options
+
+### Available Styles
+
+| Style | Description | Preview |
+|-------|-------------|---------|
+| `flat` | Default flat style | ![flat](https://img.shields.io/badge/style-flat-blue?style=flat) |
+| `flat-square` | Flat with square corners | ![flat-square](https://img.shields.io/badge/style-flat--square-blue?style=flat-square) |
+| `plastic` | Plastic 3D effect | ![plastic](https://img.shields.io/badge/style-plastic-blue?style=plastic) |
+| `for-the-badge` | Large, bold style | ![for-the-badge](https://img.shields.io/badge/style-for--the--badge-blue?style=for-the-badge) |
+| `social` | Social media style | ![social](https://img.shields.io/badge/style-social-blue?style=social) |
+
+### Color Options
+
+#### Named Colors
 
 - `brightgreen`, `green`, `yellowgreen`, `yellow`, `orange`, `red`, `lightgrey`, `blue`
 
-### Hex Colors
+#### Hex Colors
 
 - `#ff6b6b`, `#4ecdc4`, `#45b7d1`
 
-### RGB/RGBA Colors
+#### RGB/RGBA Colors
 
 - `rgb(255,107,107)`, `rgba(255,107,107,0.8)`
 
-### HSL/HSLA Colors
+#### HSL/HSLA Colors
 
 - `hsl(0,100%,50%)`, `hsla(0,100%,50%,0.8)`
 
-## Style Examples
-
-| Style | Preview | Description |
-|-------|---------|-------------|
-| `flat` | ![flat](https://img.shields.io/badge/style-flat-blue?style=flat) | Default flat style |
-| `flat-square` | ![flat-square](https://img.shields.io/badge/style-flat--square-blue?style=flat-square) | Flat with square corners |
-| `plastic` | ![plastic](https://img.shields.io/badge/style-plastic-blue?style=plastic) | Plastic 3D effect |
-| `for-the-badge` | ![for-the-badge](https://img.shields.io/badge/style-for--the--badge-blue?style=for-the-badge) | Large, bold style |
-| `social` | ![social](https://img.shields.io/badge/style-social-blue?style=social) | Social media style |
-
-## Logo Support
+### Logo Support
 
 The action supports logos from [Simple Icons](https://simpleicons.org/). Popular examples:
 
@@ -275,192 +401,201 @@ The action supports logos from [Simple Icons](https://simpleicons.org/). Popular
 | Python | `python` | ![Python](https://img.shields.io/badge/Python-blue?logo=python&logoColor=white) |
 | TypeScript | `typescript` | ![TypeScript](https://img.shields.io/badge/TypeScript-blue?logo=typescript&logoColor=white) |
 
-## Examples
+## 📁 Output Formats
 
-### Build Status Badges
+### URL Format
 
-```yaml
-# Success badge
-- uses: framinosona/Github_Actions/generate-badge@main
-  with:
-    label: 'build'
-    message: 'passing'
-    color: 'brightgreen'
-    logo: 'github-actions'
-
-# Failure badge
-- uses: framinosona/Github_Actions/generate-badge@main
-  with:
-    label: 'build'
-    message: 'failing'
-    color: 'red'
-    logo: 'github-actions'
+```text
+https://img.shields.io/badge/build-passing-brightgreen
 ```
 
-Looks like : [![build: passing](https://img.shields.io/badge/build-passing-brightgreen?logo=github-actions)](https://img.shields.io/badge/build-passing-brightgreen)  [![build: failing](https://img.shields.io/badge/build-failing-red?logo=github-actions)](https://img.shields.io/badge/build-failing-red)
+### Markdown Format
 
-### Version Badges
-
-```yaml
-# NPM version
-- uses: framinosona/Github_Actions/generate-badge@main
-  with:
-    label: 'npm'
-    message: 'v1.2.3'
-    color: 'blue'
-    logo: 'npm'
-    style: 'flat-square'
-
-# Docker version
-- uses: framinosona/Github_Actions/generate-badge@main
-  with:
-    label: 'docker'
-    message: 'latest'
-    color: 'blue'
-    logo: 'docker'
-    logo-color: 'white'
+```markdown
+![build: passing](https://img.shields.io/badge/build-passing-brightgreen)
 ```
 
-Looks like : [![npm: v1.2.3](https://img.shields.io/badge/npm-v1.2.3-blue?style=flat-square&logo=npm)](https://img.shields.io/badge/npm-v1.2.3-blue?style=flat-square&logo=npm)  [![docker: latest](https://img.shields.io/badge/docker-latest-blue?logo=docker&logoColor=white)](https://img.shields.io/badge/docker-latest-blue?logo=docker&logoColor=white)
+### HTML Format
 
-### Coverage Badges
-
-```yaml
-# High coverage
-- uses: framinosona/Github_Actions/generate-badge@main
-  with:
-    label: 'coverage'
-    message: '95%'
-    color: 'brightgreen'
-
-# Medium coverage
-- uses: framinosona/Github_Actions/generate-badge@main
-  with:
-    label: 'coverage'
-    message: '75%'
-    color: 'yellow'
-
-# Low coverage
-- uses: framinosona/Github_Actions/generate-badge@main
-  with:
-    label: 'coverage'
-    message: '45%'
-    color: 'red'
+```html
+<img src="https://img.shields.io/badge/build-passing-brightgreen" alt="build: passing" />
 ```
 
-Looks like : [![coverage: 95%](https://img.shields.io/badge/coverage-95%25-brightgreen)](https://img.shields.io/badge/coverage-95%25-brightgreen)  [![coverage: 75%](https://img.shields.io/badge/coverage-75%25-yellow)](https://img.shields.io/badge/coverage-75%25-yellow)  [![coverage: 45%](https://img.shields.io/badge/coverage-45%25-red)](https://img.shields.io/badge/coverage-45%25-red)
+### SVG Format
 
-### License Badges
-
-```yaml
-- uses: framinosona/Github_Actions/generate-badge@main
-  with:
-    label: 'license'
-    message: 'MIT'
-    color: 'blue'
-    style: 'for-the-badge'
+```xml
+<svg xmlns="http://www.w3.org/2000/svg" width="104" height="20">
+  <!-- SVG content -->
+</svg>
 ```
 
-Looks like : [![license: MIT](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)
+## 🔧 Character Encoding
 
-### Custom Styled Badges
+The action automatically handles URL encoding for special characters:
 
-```yaml
-# Social media style
-- uses: framinosona/Github_Actions/generate-badge@main
-  with:
-    label: 'follow'
-    message: '@username'
-    color: '1da1f2'
-    style: 'social'
-    logo: 'twitter'
-    logo-color: 'white'
+| Character | Encoding |
+|-----------|----------|
+| Space ` ` | `%20` |
+| Underscore `_` | `__` |
+| Dash `-` | `--` |
+| Percent `%` | `%25` |
 
-# For-the-badge style
-- uses: framinosona/Github_Actions/generate-badge@main
-  with:
-    message: 'AWESOME'
-    color: 'ff6b6b'
-    style: 'for-the-badge'
-```
+## 🖥️ Requirements
 
-Looks like : [![follow: @username](https://img.shields.io/badge/follow-@username-1da1f2?style=social&logo=twitter&logoColor=white)](https://img.shields.io/badge/follow-@username-1da1f2?style=social&logo=twitter&logoColor=white)  [![AWESOME](https://img.shields.io/badge/-AWESOME-ff6b6b?style=for-the-badge)](https://img.shields.io/badge/-AWESOME-ff6b6b?style=for-the-badge)
-
-## Requirements
-
-- GitHub Actions runner (any OS: Windows, Linux, macOS)
+- GitHub Actions runner (Windows, Linux, or macOS)
 - Internet access to reach shields.io
 - Bash shell (available on all GitHub runners)
+- curl or wget (pre-installed on runners)
 
-## Troubleshooting
+## 🐛 Troubleshooting
 
 ### Common Issues
 
-#### Badge not displaying correctly
+#### Badge Not Displaying Correctly
 
-- **Problem**: Badge shows broken image or incorrect text
-- **Solution**: Check URL encoding of special characters. Spaces should be `%20` or `_`, underscores should be `__`
+**Problem**: Badge shows broken image or incorrect text
 
-#### Invalid color error
-
-- **Problem**: Action fails with color validation error
-- **Solution**: Use valid color formats: named colors, hex (#ffffff), rgb(), rgba(), hsl(), or hsla()
-
-#### File not saved
-
-- **Problem**: Output file not created despite setting `output-file`
-- **Solution**: Ensure the directory exists or the action will create it. Check file permissions.
-
-#### Logo not showing
-
-- **Problem**: Logo parameter ignored or not displaying
-- **Solution**: Verify the logo slug exists at [Simple Icons](https://simpleicons.org/). Use exact slug names (e.g., `node-dot-js` not `nodejs`)
-
-#### SVG content not available
-
-- **Problem**: `svg-content` output is empty
-- **Solution**: Ensure `output-format` is set to `svg` or `output-file` is specified. Check internet connectivity to shields.io
-
-#### SVG file corrupted or invalid
-
-- **Problem**: Generated SVG file is malformed or won't display
-- **Solution**: Verify the download completed successfully. Check that curl or wget is available on the runner
-
-### Debug Tips
-
-1. **Enable summary**: Set `show-summary: true` to see detailed parameter and result information
-2. **Check outputs**: Use the action outputs in subsequent steps to verify generated URLs
-3. **Test URLs**: Copy the generated badge URL and test it directly in a browser
-4. **Validate inputs**: The action provides comprehensive input validation with clear error messages
-
-### Example Debug Workflow
+**Solution**: Check URL encoding of special characters:
 
 ```yaml
-- name: Debug badge generation
-  id: debug-badge
-  uses: framinosona/Github_Actions/generate-badge@main
+- name: "Debug badge URL"
+  id: badge
+  uses: framinosona/github_actions/generate-badge@main
   with:
-    label: 'test'
-    message: 'debug'
-    color: 'blue'
+    label: "test with spaces"
+    message: "100%"
+    color: "green"
+    show-summary: "true"
 
-- name: Show debug info
-  run: |
-    echo "Badge URL: ${{ steps.debug-badge.outputs.badge-url }}"
-    echo "Markdown: ${{ steps.debug-badge.outputs.badge-markdown }}"
-    echo "HTML: ${{ steps.debug-badge.outputs.badge-html }}"
+- name: "Check generated URL"
+  run: echo "Badge URL: ${{ steps.badge.outputs.badge-url }}"
 ```
 
-## Contributing
+#### Invalid Color Error
 
-When contributing to this action, please follow the established patterns:
+**Problem**: Action fails with color validation error
 
-1. **Input validation**: Always validate inputs in the first step
-2. **Error handling**: Provide clear, actionable error messages
-3. **Documentation**: Update examples and troubleshooting sections
-4. **Testing**: Test with various input combinations
-5. **Consistency**: Follow the emoji and naming conventions
+**Solution**: Use valid color formats:
 
-## License
+```yaml
+# ✅ Valid colors
+color: "brightgreen"        # Named color
+color: "#00ff00"           # Hex color
+color: "rgb(0,255,0)"      # RGB color
+color: "hsl(120,100%,50%)" # HSL color
 
-This action is available under the same license as the repository.
+# ❌ Invalid colors
+color: "bright-green"      # Invalid name
+color: "00ff00"           # Missing #
+color: "green!"           # Invalid character
+```
+
+#### File Not Saved
+
+**Problem**: Output file not created despite setting `output-file`
+
+**Solution**: Verify directory structure and permissions:
+
+```yaml
+- name: "Create badge directory"
+  run: mkdir -p ./badges
+
+- name: "Generate badge with file output"
+  uses: framinosona/github_actions/generate-badge@main
+  with:
+    label: "status"
+    message: "active"
+    color: "green"
+    output-file: "./badges/status.md"
+    output-format: "markdown"
+
+- name: "Verify file creation"
+  run: ls -la ./badges/
+```
+
+#### Logo Not Showing
+
+**Problem**: Logo parameter ignored or not displaying
+
+**Solution**: Verify logo slug from Simple Icons:
+
+```yaml
+- name: "Test logo badge"
+  uses: framinosona/github_actions/generate-badge@main
+  with:
+    label: "test"
+    message: "logo"
+    color: "blue"
+    logo: "github"  # Exact slug from simpleicons.org
+    logo-color: "white"
+    show-summary: "true"
+```
+
+### Debug Mode
+
+Enable comprehensive debugging:
+
+```yaml
+- name: "Debug badge generation"
+  uses: framinosona/github_actions/generate-badge@main
+  with:
+    label: "debug"
+    message: "test"
+    color: "blue"
+    show-summary: "true"
+  env:
+    ACTIONS_STEP_DEBUG: true
+```
+
+## 🔧 Advanced Features
+
+### Conditional Badge Colors
+
+```yaml
+- name: "Generate status badge with conditional color"
+  uses: framinosona/github_actions/generate-badge@main
+  with:
+    label: "tests"
+    message: ${{ env.TEST_STATUS }}
+    color: ${{ env.TEST_STATUS == 'passing' && 'brightgreen' || 'red' }}
+    logo: "github-actions"
+```
+
+### Badge Caching
+
+```yaml
+- name: "Generate cached badge"
+  uses: framinosona/github_actions/generate-badge@main
+  with:
+    label: "build"
+    message: "stable"
+    color: "blue"
+    cache-seconds: "86400"  # Cache for 24 hours
+```
+
+### SVG Content Manipulation
+
+```yaml
+- name: "Generate and modify SVG badge"
+  id: svg-badge
+  uses: framinosona/github_actions/generate-badge@main
+  with:
+    label: "custom"
+    message: "badge"
+    color: "blue"
+    output-format: "svg"
+
+- name: "Customize SVG content"
+  run: |
+    # Modify SVG content for custom styling
+    echo '${{ steps.svg-badge.outputs.svg-content }}' | \
+      sed 's/fill="#4c1"/fill="#ff0000"/g' > custom-badge.svg
+```
+
+## 📄 License
+
+This action is part of the GitHub Actions collection by Francois Raminosona.
+
+---
+
+> 💡 **Tip**: Use this action to create comprehensive badge sets that automatically update based on your CI/CD pipeline results.
