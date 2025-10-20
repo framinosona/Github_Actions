@@ -1,8 +1,23 @@
-name: "🔗 .NET > Setup NuGet Feed"
+name: "🔗 Setup NuGet Feed"
 description: "Adds a NuGet package source using dotnet nuget add source with authentication support"
-author: 'Francois Raminosona'
+author: "Francois Raminosona"
 
 inputs:
+  # Arguments passed to dotnet
+  working-directory:
+    description: "Working directory for the operation"
+    required: false
+    default: "."
+  verbosity:
+    description: "Verbosity level (quiet, minimal, normal, detailed, diagnostic)"
+    required: false
+    default: ""
+  show-summary:
+    description: "Whether to show the action summary"
+    required: false
+    default: "false"
+
+  # Arguments unique to command
   name:
     description: "Name for the NuGet source (must be unique)"
     required: true
@@ -18,9 +33,9 @@ inputs:
     required: false
     default: ""
   store-password-in-clear-text:
-    description: "Store password in clear text instead of encrypted (true/false)"
+    description: "Store password in clear text instead of encrypted (default : true on Linux/MacOS, false on Windows)"
     required: false
-    default: "false"
+    default: ""
   valid-authentication-types:
     description: "Valid authentication types for this source (basic, negotiate, etc.)"
     required: false
@@ -29,26 +44,18 @@ inputs:
     description: "NuGet configuration file to modify"
     required: false
     default: ""
-  working-directory:
-    description: "Working directory for the operation"
-    required: false
-    default: "."
-  verbosity:
-    description: "Verbosity level (quiet, minimal, normal, detailed, diagnostic)"
+  protocol-version:
+    description: "The NuGet server protocol version to be used (2 or 3)"
     required: false
     default: ""
-  show-summary:
-    description: 'Whether to show the action summary'
-    required: false
-    default: 'false'
 
 outputs:
   exit-code:
     description: "Exit code of the nuget add source command"
-    value: ${{ steps.add-source.outputs.exit-code }}
+    value: ${{ steps.run-dotnet.outputs.exit-code }}
   executed-command:
     description: "The actual command that was executed (credentials masked)"
-    value: ${{ steps.add-source.outputs.executed-command }}
+    value: ${{ steps.run-dotnet.outputs.executed-command }}
   source-added:
     description: "Whether the source was successfully added"
     value: ${{ steps.verify-source.outputs.source-added }}
@@ -56,24 +63,84 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - name: "✅ Validate inputs"
+
+    - name: "🔒 Mask sensitive data"
       shell: bash
       run: |
-        echo "::group::🔍 NuGet Source Validation"
-        echo "::debug::Validating inputs for NuGet source configuration"
-
-        # Mask sensitive data
+        # Mask sensitive data FIRST
         if [ -n "${{ inputs.password }}" ]; then
           echo "::add-mask::${{ inputs.password }}"
         fi
 
-        # Validate name is not empty
+        echo "✅ Masked sensitive inputs"
+
+    - name: "✅ Validate input : store-password-in-clear-text"
+      id: validate-store-password-in-clear-text
+      shell: bash
+      run: |
+        echo "::debug::Validating boolean inputs"
+        if [ -n "${{ inputs.store-password-in-clear-text }}" ]; then
+          case "${{ inputs.store-password-in-clear-text }}" in
+            true|false) echo "store-password-in-clear-text=${{ inputs.store-password-in-clear-text }}" >> $GITHUB_OUTPUT;;
+            *) echo "::error::Parameter store-password-in-clear-text must be 'true' or 'false', got: ${{ inputs.store-password-in-clear-text }}"; exit 1 ;;
+          esac
+        else
+          # Default based on OS
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            echo "::debug::Defaulting store-password-in-clear-text to 'false' on Windows"
+            echo "store-password-in-clear-text=false" >> $GITHUB_OUTPUT
+          else
+            echo "::debug::Defaulting store-password-in-clear-text to 'true' on Linux/MacOS"
+            echo "store-password-in-clear-text=true" >> $GITHUB_OUTPUT
+          fi
+        fi
+
+        echo "✅ Boolean inputs validation completed successfully"
+
+    - name: "✅ Validate input : name"
+      shell: bash
+      run: |
+        echo "::debug::Validating name input: ${{ inputs.name }}"
+
         if [ -z "${{ inputs.name }}" ]; then
-          echo "::error::Source name cannot be empty"
+          echo "::error::Name cannot be empty"
           exit 1
         fi
 
-        # Validate source URL is not empty
+        echo "✅ Name validation completed successfully"
+
+    - name: "✅ Validate input : username"
+      if: ${{ inputs.username != '' || inputs.password != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating username input: ${{ inputs.username }}"
+
+        if [ -z "${{ inputs.username }}" ] && [ -n "${{ inputs.password }}" ]; then
+          echo "::error::Username must be provided when password is specified"
+          exit 1
+        fi
+
+        echo "✅ Username validation completed successfully"
+
+    - name: "✅ Validate input : password"
+      if: ${{ inputs.password != '' || inputs.username != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating password input"
+
+        # Validate authentication combination
+        if [ -n "${{ inputs.username }}" ] && [ -z "${{ inputs.password }}" ]; then
+          echo "::error::Password must be provided when username is specified"
+          exit 1
+        fi
+
+        echo "✅ Password validation completed successfully"
+
+    - name: "✅ Validate input : source"
+      shell: bash
+      run: |
+        echo "::debug::Validating source input: ${{ inputs.source }}"
+
         if [ -z "${{ inputs.source }}" ]; then
           echo "::error::Source URL cannot be empty"
           exit 1
@@ -85,89 +152,102 @@ runs:
           exit 1
         fi
 
-        # Validate working directory exists
-        if [ ! -d "${{ inputs.working-directory }}" ]; then
-          echo "::error::Working directory does not exist: ${{ inputs.working-directory }}"
+        echo "✅ Source validation completed successfully"
+
+    - name: "✅ Validate input : configfile"
+      if: ${{ inputs.configfile != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating configfile input: ${{ inputs.configfile }}"
+
+        if [ ! -f "${{ inputs.configfile }}" ]; then
+          echo "::error file=${{ inputs.configfile }}::NuGet configuration file not found: ${{ inputs.configfile }}"
           exit 1
         fi
 
-        # Validate store-password-in-clear-text flag
-        case "${{ inputs.store-password-in-clear-text }}" in
-          true|false) ;;
-          *) echo "::error::Store password in clear text flag must be 'true' or 'false', got: ${{ inputs.store-password-in-clear-text }}"; exit 1 ;;
-        esac
+        echo "✅ Configfile validation completed successfully"
 
-        # Validate configfile exists if specified
-        if [ -n "${{ inputs.configfile }}" ] && [ ! -f "${{ inputs.configfile }}" ]; then
-          echo "::error::Configuration file not found: ${{ inputs.configfile }}"
+    - name: "✅ Validate input : protocol-version"
+      if: ${{ inputs.protocol-version != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating protocol-version input: ${{ inputs.protocol-version }}"
+
+        if [ "${{ inputs.protocol-version }}" != "2" ] && [ "${{ inputs.protocol-version }}" != "3" ]; then
+          echo "::error::Protocol version must be '2' or '3', got: ${{ inputs.protocol-version }}"
           exit 1
         fi
 
-        # Validate verbosity level if specified
-        if [ -n "${{ inputs.verbosity }}" ]; then
-          case "${{ inputs.verbosity }}" in
-            quiet|minimal|normal|detailed|diagnostic) ;;
-            *) echo "::error::Invalid verbosity level: ${{ inputs.verbosity }}. Must be one of: quiet, minimal, normal, detailed, diagnostic"; exit 1 ;;
+        echo "✅ Protocol version validation completed successfully"
+
+    - name: "✅ Validate input : valid-authentication-types"
+      if: ${{ inputs.valid-authentication-types != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating valid-authentication-types input: ${{ inputs.valid-authentication-types }}"
+
+        # Split comma-separated values and validate each
+        IFS=',' read -ra AUTH_TYPES <<< "${{ inputs.valid-authentication-types }}"
+        for auth_type in "${AUTH_TYPES[@]}"; do
+          # Trim whitespace
+          auth_type=$(echo "$auth_type" | xargs)
+          case "$auth_type" in
+            basic|negotiate|kerberos|ntlm|digest) ;;
+            *) echo "::error::Invalid authentication type '$auth_type'. Must be one of: basic, negotiate, kerberos, ntlm, digest"; exit 1 ;;
           esac
-        fi
+        done
 
-        # Validate authentication combination
-        if [ -n "${{ inputs.username }}" ] && [ -z "${{ inputs.password }}" ]; then
-          echo "::error::Password must be provided when username is specified"
-          exit 1
-        fi
+        echo "✅ Valid authentication types validation completed successfully"
 
-        if [ -z "${{ inputs.username }}" ] && [ -n "${{ inputs.password }}" ]; then
-          echo "::error::Username must be provided when password is specified"
-          exit 1
-        fi
-
-        echo "✅ Input validation completed successfully"
-        echo "::endgroup::"
-
-    - name: "🔧 Build arguments"
+    - name: "🏗️ Build argument list"
       id: build-args
       shell: bash
       run: |
-        echo "🔧 Building dotnet arguments..."
+        echo "::debug::Building argument list for NuGet source configuration"
 
         # Start with base arguments
-        ARGS="add source '${{ inputs.source }}' --name '${{ inputs.name }}'"
+        ARGUMENTS="add source '${{ inputs.source }}'"
 
-        # Add conditional arguments
-        if [ -n "${{ inputs.username }}" ]; then
-          ARGS="$ARGS --username '${{ inputs.username }}'"
-        fi
+        # Boolean flags
+        for param in store-password-in-clear-text; do
+          case $param in
+            store-password-in-clear-text) value="${{ steps.validate-store-password-in-clear-text.outputs.store-password-in-clear-text }}" ;;
+          esac
+          if [ "$value" = "true" ]; then
+            ARGUMENTS="$ARGUMENTS --${param}"
+          fi
+        done
 
-        if [ -n "${{ inputs.password }}" ]; then
-          ARGS="$ARGS --password '${{ inputs.password }}'"
-        fi
+        # Key-value options
+        for param in name username password valid-authentication-types configfile protocol-version; do
+          case $param in
+            name) value="${{ inputs.name }}" ;;
+            username) value="${{ inputs.username }}" ;;
+            password) value="${{ inputs.password }}" ;;
+            valid-authentication-types) value="${{ inputs.valid-authentication-types }}" ;;
+            configfile) value="${{ inputs.configfile }}" ;;
+            protocol-version) value="${{ inputs.protocol-version }}" ;;
+          esac
+          if [ -n "$value" ]; then
+            ARGUMENTS="$ARGUMENTS --$param '$value'"
+          fi
+        done
 
-        if [ "${{ inputs.store-password-in-clear-text }}" = "true" ]; then
-          ARGS="$ARGS --store-password-in-clear-text"
-        fi
+        # Trim leading space
+        ARGUMENTS="${ARGUMENTS# }"
 
-        if [ -n "${{ inputs.valid-authentication-types }}" ]; then
-          ARGS="$ARGS --valid-authentication-types '${{ inputs.valid-authentication-types }}'"
-        fi
+        echo "arguments=$ARGUMENTS" >> $GITHUB_OUTPUT
+        echo "::debug::Argument list built successfully: $ARGUMENTS"
 
-        if [ -n "${{ inputs.configfile }}" ]; then
-          ARGS="$ARGS --configfile '${{ inputs.configfile }}'"
-        fi
-
-        echo "📋 Generated arguments: $ARGS"
-
-        # Output the arguments string
-        echo "arguments=$ARGS" >> $GITHUB_OUTPUT
-
-    - name: "🔗 Add NuGet source"
-      id: add-source
-      uses: ./dotnet
+    - name: "🔄 Execute NuGet source setup"
+      id: run-dotnet
+      uses: "framinosona/github_actions/dotnet@main"
       with:
         command: "nuget"
         arguments: ${{ steps.build-args.outputs.arguments }}
         working-directory: ${{ inputs.working-directory }}
-        force-verbosity: ${{ inputs.verbosity }}
+        verbosity: ${{ inputs.verbosity }}
+        show-summary: ${{ inputs.show-summary }}
 
     - name: "🔍 Verify source was added"
       id: verify-source
@@ -187,10 +267,10 @@ runs:
 
         if echo "$SOURCES_OUTPUT" | grep -q "${{ inputs.name }}"; then
           SOURCE_ADDED="true"
-          echo "✅ Source '${{ inputs.name }}' was successfully added"
+          echo "::debug::Source '${{ inputs.name }}' was successfully added"
 
           # Show the added source details (without sensitive info)
-          echo "📋 Source details:"
+          echo "::debug::Source details:"
           echo "$SOURCES_OUTPUT" | grep -A 1 "${{ inputs.name }}" || true
         else
           echo "::warning::Could not verify that source '${{ inputs.name }}' was added"
@@ -203,41 +283,57 @@ runs:
       shell: bash
       run: |
         cat >> $GITHUB_STEP_SUMMARY << 'EOF'
-        <details><summary>Expand for details - 📊 NuGet Source Setup Summary</summary>
+        <details><summary>📦 NuGet Add Source : ${{ inputs.name }}</summary>
 
-        ## 🔧 Input Parameters
+        ## 🔧 NuGet Source Specific Parameters
         | Parameter | Value |
         |-----------|-------|
         | 🔗 Source Name | `${{ inputs.name }}` |
         | 🌐 Source URL | `${{ inputs.source }}` |
         | 👤 Username | `${{ inputs.username != '' && inputs.username || 'not provided' }}` |
         | 🔑 Password | `${{ inputs.password != '' && '***configured***' || 'not provided' }}` |
-        | 📁 Working Directory | `${{ inputs.working-directory }}` |
-        | ⚙️ Config File | `${{ inputs.configfile || 'default' }}` |
-
-        ## 📤 Setup Results
-        | Metric | Value |
-        |--------|-------|
-        | ✅ Exit Code | `${{ steps.add-source.outputs.exit-code }}` |
-        | 🔗 Source Added | `${{ steps.verify-source.outputs.source-added }}` |
-        | 🚀 Executed Command | `${{ steps.add-source.outputs.executed-command }}` |
-
-        ## 🔐 Security Options
-        | Option | Status |
-        |--------|--------|
-        | 🔓 Store Password in Clear Text | `${{ inputs.store-password-in-clear-text }}` |
+        | 🔐 Store Password in Clear Text | `${{ inputs.store-password-in-clear-text }}` |
         | 🔐 Valid Auth Types | `${{ inputs.valid-authentication-types || 'default' }}` |
+        | ⚙️ Config File | `${{ inputs.configfile || 'default' }}` |
+        | 📜 Protocol Version | `${{ inputs.protocol-version || 'default' }}` |
 
         ## ⚙️ Process Details
         | Step | Status |
         |------|--------|
         | ✅ Input Validation | `✅ Completed` |
-        | 🔗 Source Addition | `${{ steps.add-source.outputs.exit-code == '0' && '✅ Completed' || '❌ Failed' }}` |
+        | 🏗️ Argument Building | `${{ steps.build-args.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | ⚙️ Base Action Execution | `${{ steps.run-dotnet.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
         | 🔍 Source Verification | `${{ steps.verify-source.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+
+        ## 📤 Execution Results
+        | Metric | Value |
+        |--------|-------|
+        | ✅ Exit Code | `${{ steps.run-dotnet.outputs.exit-code }}` |
+        | 🔗 Source Added | `${{ steps.verify-source.outputs.source-added }}` |
+        | 🔄 Executed Command | `${{ steps.run-dotnet.outputs.executed-command }}` |
 
         </details>
         EOF
 
 branding:
-  icon: 'link'
-  color: 'blue'
+  icon: "link"
+  color: "blue"
+
+# dotnet nuget add source --help
+
+
+# Usage: dotnet nuget add source [arguments] [options]
+
+# Arguments:
+#   PackageSourcePath  Path to the package source.
+
+# Options:
+#   -n|--name                       Name of the source.
+#   -u|--username                   Username to be used when connecting to an authenticated source.
+#   -p|--password                   Password to be used when connecting to an authenticated source.
+#   --store-password-in-clear-text  Enables storing portable package source credentials by disabling password encryption.
+#   --valid-authentication-types    Comma-separated list of valid authentication types for this source. Set this to basic if the server advertises NTLM or Negotiate and your credentials must be sent using the Basic mechanism, for instance when using a PAT with on-premises Azure DevOps Server. Other valid values include negotiate, kerberos, ntlm, and digest, but these values are unlikely to be useful.
+#   --protocol-version              The NuGet server protocol version to be used. Currently supported versions are 2 and 3. See https://learn.microsoft.com/nuget/api/overview for information about the version 3 protocol. Defaults to 2 if not specified.
+#   --configfile                    The NuGet configuration file. If specified, only the settings from this file will be used. If not specified, the hierarchy of configuration files from the current directory will be used. For more information, see https://docs.microsoft.com/nuget/consume-packages/configuring-nuget-behavior.
+#   --allow-insecure-connections    Allows HTTP connections for adding or updating packages. Note: This method is not secure. For secure options, see https://aka.ms/nuget-https-everywhere for more information.
+#   -h|--help                       Show help information
