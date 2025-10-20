@@ -1,127 +1,184 @@
-name: '🔢 Git > Generate Version'
-description: 'Generates semantic version numbers based on Git tags and branch information'
-author: 'Francois Raminosona'
+name: "🔢 Generate Version"
+description: "Generates semantic version numbers based on Git tags and branch information"
+author: "Francois Raminosona"
 
 inputs:
+  config-file:
+    description: 'Path to version.json file. Format : { "major": 1, "minor": 0 }'
+    required: false
   major:
-    description: 'Major version number'
-    required: true
+    description: "Major version number"
+    required: false
   minor:
-    description: 'Minor version number'
-    required: true
+    description: "Minor version number"
+    required: false
   main-branch:
-    description: 'Name of the main branch'
+    description: "Name of the main branch"
     required: false
     default: ${{ github.event.repository.default_branch }}
   build-id:
-    description: 'Build ID for revision numbering (defaults to GitHub run number)'
+    description: "Build ID for revision numbering (defaults to GitHub run number)"
     required: false
     default: ${{ github.run_number }}
   tag-prefix:
-    description: 'Prefix for version tags (e.g., "v" for "v1.0.0")'
+    description: "Prefix for version tags (e.g., 'v' for 'v1.0.0')"
     required: false
-    default: 'v'
+    default: "v"
   branch-suffix-max-length:
-    description: 'Maximum length for branch name suffix'
+    description: "Maximum length for branch name suffix"
     required: false
-    default: '20'
+    default: "40"
   output-txt:
-    description: 'Path to output txt file with key=value pairs'
+    description: "Path to output txt file with key=value pairs"
     required: false
-    default: ''
+    default: ""
   output-props:
-    description: 'Path to output .NET props file'
+    description: "Path to output .NET props file"
     required: false
-    default: ''
+    default: ""
   output-json:
-    description: 'Path to output JSON file with version information'
+    description: "Path to output JSON file with version information"
     required: false
-    default: ''
+    default: ""
   fetch-depth:
-    description: 'Depth of Git history to fetch for tag analysis'
+    description: "Depth of Git history to fetch for tag analysis"
     required: false
-    default: '0'
+    default: "0"
   show-summary:
-    description: 'Whether to show the action summary'
+    description: "Whether to show the action summary"
     required: false
-    default: 'false'
+    default: "false"
+  dry-run:
+    description: "Run in dry-run mode (generate versions but don't create output files)"
+    required: false
+    default: "false"
 
 outputs:
   VERSION_MAJOR:
-    description: 'Major version number'
+    description: "Major version number"
     value: ${{ steps.generate.outputs.VERSION_MAJOR }}
   VERSION_MINOR:
-    description: 'Minor version number'
+    description: "Minor version number"
     value: ${{ steps.generate.outputs.VERSION_MINOR }}
   VERSION_PATCH:
-    description: 'Patch version number'
+    description: "Patch version number"
     value: ${{ steps.generate.outputs.VERSION_PATCH }}
   VERSION_SUFFIX:
-    description: 'Version suffix (branch name for non-main branches)'
+    description: "Version suffix (branch name for non-main branches)"
     value: ${{ steps.generate.outputs.VERSION_SUFFIX }}
   VERSION_REVISION:
-    description: 'Revision number (build ID for non-main branches)'
+    description: "Revision number (build ID for non-main branches)"
     value: ${{ steps.generate.outputs.VERSION_REVISION }}
+  VERSION_ISPRERELEASE:
+    description: "Whether this is a prerelease version (true for non-main branches)"
+    value: ${{ steps.generate.outputs.VERSION_ISPRERELEASE }}
   VERSION_BUILDID:
-    description: 'Build ID used for versioning'
+    description: "Build ID used for versioning"
     value: ${{ steps.generate.outputs.VERSION_BUILDID }}
   VERSION_CORE:
-    description: 'Core version (major.minor.patch)'
+    description: "Core version (major.minor.patch)"
     value: ${{ steps.generate.outputs.VERSION_CORE }}
   VERSION_EXTENSION:
-    description: 'Version extension (suffix.revision for branches)'
+    description: "Version extension (suffix.revision for branches)"
     value: ${{ steps.generate.outputs.VERSION_EXTENSION }}
   VERSION_FULL:
-    description: 'Full version (core + extension)'
+    description: "Full version (core + extension)"
     value: ${{ steps.generate.outputs.VERSION_FULL }}
   VERSION_ASSEMBLY:
-    description: 'Assembly version for .NET (major.minor.patch.buildid)'
+    description: "Assembly version for .NET (major.minor.patch.buildid)"
     value: ${{ steps.generate.outputs.VERSION_ASSEMBLY }}
-  VERSION_FOR_TAG:
-    description: 'Version string suitable for Git tags (with prefix)'
+  VERSION_FORTAG:
+    description: "Version string suitable for Git tags (with prefix)"
     value: ${{ steps.generate.outputs.VERSION_PREFIX }}${{ steps.generate.outputs.VERSION_FULL }}
   VERSION_BRANCHNAME:
-    description: 'Current branch name'
+    description: "Current branch name"
     value: ${{ steps.generate.outputs.VERSION_BRANCHNAME }}
   VERSION_PREFIX:
-    description: 'Tag prefix used for version tags'
+    description: "Tag prefix used for version tags"
     value: ${{ steps.generate.outputs.VERSION_PREFIX }}
   VERSION_OUTPUTTXT:
-    description: 'Path to generated txt file (if created)'
+    description: "Path to generated txt file (if created)"
     value: ${{ steps.generate.outputs.VERSION_OUTPUTTXT }}
   VERSION_OUTPUTPROPS:
-    description: 'Path to generated props file (if created)'
+    description: "Path to generated props file (if created)"
     value: ${{ steps.generate.outputs.VERSION_OUTPUTPROPS }}
   VERSION_OUTPUTJSON:
-    description: 'Path to generated JSON file (if created)'
+    description: "Path to generated JSON file (if created)"
     value: ${{ steps.generate.outputs.VERSION_OUTPUTJSON }}
+  VERSION_TAG_EXISTS:
+    description: "Whether a tag already exists for this version"
+    value: ${{ steps.generate.outputs.VERSION_TAG_EXISTS }}
+  VERSION_LATEST_TAG:
+    description: "Latest tag found for this major.minor combination"
+    value: ${{ steps.generate.outputs.VERSION_LATEST_TAG }}
 
 runs:
   using: "composite"
   steps:
-    - name: "✅ Validate inputs"
+    - name: "✅ Validate input : version numbers"
       shell: bash
+      id: major-minor-validation
       run: |
-        echo "::group::🔍 Version Generation Input Validation"
-        echo "::debug::Validating inputs for semantic version generation"
+        echo "::debug::Validating version number inputs..."
+
+        if [ "${{ inputs.config-file }}" != "" ]; then
+          echo "::debug::📋 Config file provided (${{ inputs.config-file }})"
+
+          if [ ! -f "${{ inputs.config-file }}" ]; then
+            echo "::error::Version configuration file ${{ inputs.config-file }} not found"
+            exit 1
+          fi
+
+          VERSION_MAJOR=$(jq -r '.major' "${{ inputs.config-file }}")
+          VERSION_MINOR=$(jq -r '.minor' "${{ inputs.config-file }}")
+        elif [ "${{ inputs.major }}" != "" ] && [ "${{ inputs.minor }}" != "" ]; then
+          VERSION_MAJOR="${{ inputs.major }}"
+          VERSION_MINOR="${{ inputs.minor }}"
+        else
+          echo "::error::You must provide either a config-file or both major and minor version numbers."
+          exit 1
+        fi
 
         # Validate major version
-        if ! [[ "${{ inputs.major }}" =~ ^[0-9]+$ ]]; then
-          echo "::error::Major version must be a non-negative integer, got: ${{ inputs.major }}"
+        if ! [[ "$VERSION_MAJOR" =~ ^[0-9]+$ ]]; then
+          echo "::error::Major version must be a non-negative integer, got: $VERSION_MAJOR"
           exit 1
         fi
 
         # Validate minor version
-        if ! [[ "${{ inputs.minor }}" =~ ^[0-9]+$ ]]; then
-          echo "::error::Minor version must be a non-negative integer, got: ${{ inputs.minor }}"
+        if ! [[ "$VERSION_MINOR" =~ ^[0-9]+$ ]]; then
+          echo "::error::Minor version must be a non-negative integer, got: $VERSION_MINOR"
           exit 1
         fi
 
-        # Validate build-id
-        if ! [[ "${{ inputs.build-id }}" =~ ^[0-9]+$ ]]; then
-          echo "::error::Build ID must be a non-negative integer, got: ${{ inputs.build-id }}"
+        echo "major=$VERSION_MAJOR" >> $GITHUB_OUTPUT
+        echo "minor=$VERSION_MINOR" >> $GITHUB_OUTPUT
+
+        echo "✅ Version number validation completed successfully"
+
+    - name: "✅ Validate input : build ID"
+      shell: bash
+      run: |
+        echo "::debug::Validating build ID input..."
+
+        BUILD_ID="${{ inputs.build-id }}"
+
+        if [ -z "$BUILD_ID" ]; then
+          BUILD_ID="${{ github.run_number }}"
+          echo "::debug::No build ID provided, using GitHub run number: $BUILD_ID"
+        fi
+
+        if ! [[ "$BUILD_ID" =~ ^[0-9]+$ ]]; then
+          echo "::error::Build ID must be a non-negative integer, got: $BUILD_ID"
           exit 1
         fi
+
+        echo "✅ Build ID validation completed successfully"
+
+    - name: "✅ Validate input : numeric parameters"
+      shell: bash
+      run: |
+        echo "::debug::Validating numeric parameter inputs..."
 
         # Validate fetch-depth
         if ! [[ "${{ inputs.fetch-depth }}" =~ ^[0-9]+$ ]]; then
@@ -130,46 +187,136 @@ runs:
         fi
 
         # Validate branch-suffix-max-length
-        if ! [[ "${{ inputs.branch-suffix-max-length }}" =~ ^[0-9]+$ ]]; then
+        if ! [[ "${{ inputs.branch-suffix-max-length }}" =~ ^[0-9]+$ ]] || [ "${{ inputs.branch-suffix-max-length }}" -eq 0 ]; then
           echo "::error::Branch suffix max length must be a positive integer, got: ${{ inputs.branch-suffix-max-length }}"
           exit 1
         fi
 
-        # Validate output file paths if provided
-        if [ -n "${{ inputs.output-txt }}" ]; then
-          OUTPUT_DIR=$(dirname "${{ inputs.output-txt }}")
-          if [ ! -d "$OUTPUT_DIR" ] && [ "$OUTPUT_DIR" != "." ]; then
-            echo "::debug::Creating directory for output txt: $OUTPUT_DIR"
+        echo "✅ Numeric parameter validation completed successfully"
+
+    - name: "✅ Validate input : booleans"
+      shell: bash
+      run: |
+        echo "::debug::Validating boolean inputs..."
+        for param in show-summary dry-run; do
+          case $param in
+            show-summary) value="${{ inputs.show-summary }}" ;;
+            dry-run) value="${{ inputs.dry-run }}" ;;
+          esac
+          if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
+            echo "::error::Parameter $param must be 'true' or 'false', got: $value"
+            exit 1
           fi
+        done
+
+        echo "✅ Boolean inputs validation completed successfully"
+
+    - name: "✅ Validate input : tag-prefix"
+      shell: bash
+      run: |
+        echo "::debug::Validating tag-prefix input: ${{ inputs.tag-prefix }}"
+
+        # Tag prefix should be safe for Git tags (no spaces, special chars)
+        if [[ "${{ inputs.tag-prefix }}" =~ [[:space:]] ]] || [[ "${{ inputs.tag-prefix }}" =~ [\"\'] ]] || [[ "${{ inputs.tag-prefix }}" =~ [\\] ]]; then
+          echo "::error::Tag prefix cannot contain spaces, quotes, or backslashes: ${{ inputs.tag-prefix }}"
+          exit 1
         fi
 
-        if [ -n "${{ inputs.output-props }}" ]; then
-          OUTPUT_DIR=$(dirname "${{ inputs.output-props }}")
-          if [ ! -d "$OUTPUT_DIR" ] && [ "$OUTPUT_DIR" != "." ]; then
-            echo "::debug::Creating directory for output props: $OUTPUT_DIR"
-          fi
+        echo "✅ Tag prefix validation completed successfully"
+
+    - name: "✅ Validate input : main-branch"
+      if: ${{ inputs.main-branch != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating main-branch input: ${{ inputs.main-branch }}"
+
+        # Main branch name should be a valid Git branch name
+        if [[ "${{ inputs.main-branch }}" =~ [[:space:]] ]] || [[ "${{ inputs.main-branch }}" =~ \.\. ]] || [[ "${{ inputs.main-branch }}" =~ ^[\-\.] ]] || [[ "${{ inputs.main-branch }}" =~ [\-\.]$ ]]; then
+          echo "::error::Invalid main branch name format: ${{ inputs.main-branch }}"
+          exit 1
         fi
 
-        if [ -n "${{ inputs.output-json }}" ]; then
-          OUTPUT_DIR=$(dirname "${{ inputs.output-json }}")
-          if [ ! -d "$OUTPUT_DIR" ] && [ "$OUTPUT_DIR" != "." ]; then
-            echo "::debug::Creating directory for output JSON: $OUTPUT_DIR"
-          fi
+        echo "✅ Main branch validation completed successfully"
+
+    - name: "✅ Validate input : output-txt"
+      if: ${{ inputs.output-txt != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating output-txt input: ${{ inputs.output-txt }}"
+
+        # Validate file extension
+        if [[ ! "${{ inputs.output-txt }}" =~ \.(txt|env)$ ]]; then
+          echo "::warning::Output txt file should typically have .txt or .env extension"
         fi
 
-        echo "✅ Input validation completed successfully"
-        echo "::endgroup::"
+        # Validate output directory exists or can be created
+        OUTPUT_DIR=$(dirname "${{ inputs.output-txt }}")
+        if [ "$OUTPUT_DIR" != "." ] && [ ! -d "$OUTPUT_DIR" ]; then
+          echo "::debug::Output directory will be created: $OUTPUT_DIR"
+        fi
+
+        echo "✅ Output txt validation completed successfully"
+
+    - name: "✅ Validate input : output-props"
+      if: ${{ inputs.output-props != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating output-props input: ${{ inputs.output-props }}"
+
+        # Validate file extension
+        if [[ ! "${{ inputs.output-props }}" =~ \.(props|xml)$ ]]; then
+          echo "::warning::Output props file should typically have .props or .xml extension"
+        fi
+
+        # Validate output directory exists or can be created
+        OUTPUT_DIR=$(dirname "${{ inputs.output-props }}")
+        if [ "$OUTPUT_DIR" != "." ] && [ ! -d "$OUTPUT_DIR" ]; then
+          echo "::debug::Output directory will be created: $OUTPUT_DIR"
+        fi
+
+        echo "✅ Output props validation completed successfully"
+
+    - name: "✅ Validate input : output-json"
+      if: ${{ inputs.output-json != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating output-json input: ${{ inputs.output-json }}"
+
+        # Validate file extension
+        if [[ ! "${{ inputs.output-json }}" =~ \.json$ ]]; then
+          echo "::warning::Output JSON file should have .json extension"
+        fi
+
+        # Validate output directory exists or can be created
+        OUTPUT_DIR=$(dirname "${{ inputs.output-json }}")
+        if [ "$OUTPUT_DIR" != "." ] && [ ! -d "$OUTPUT_DIR" ]; then
+          echo "::debug::Output directory will be created: $OUTPUT_DIR"
+        fi
+
+        echo "✅ Output JSON validation completed successfully"
 
     - name: "🔍 Fetch Git history"
       shell: bash
       run: |
-        echo "::group::🔍 Git History Analysis"
         echo "::debug::Fetching Git history for tag analysis and version calculation"
+
+        # Verify we're in a Git repository
+        if ! git rev-parse --git-dir >/dev/null 2>&1; then
+          echo "::error::Not in a Git repository"
+          exit 1
+        fi
 
         # Fetch full history if fetch-depth is 0, otherwise fetch specified depth
         if [ "${{ inputs.fetch-depth }}" = "0" ]; then
           echo "::debug::Fetching full Git history"
-          git fetch --unshallow --tags || git fetch --tags
+          if git rev-parse --is-shallow-repository | grep -q true; then
+            git fetch --unshallow --tags || {
+              echo "::warning::Failed to unshallow repository, falling back to tag fetch"
+              git fetch --tags
+            }
+          else
+            git fetch --tags
+          fi
         else
           echo "::debug::Fetching Git history with depth ${{ inputs.fetch-depth }}"
           git fetch --depth=${{ inputs.fetch-depth }} --tags
@@ -178,13 +325,19 @@ runs:
         # Verify we have access to tags
         TAG_COUNT=$(git tag -l | wc -l)
         echo "✅ Found $TAG_COUNT existing tags"
-        echo "::endgroup::"
+
+        # Verify current branch information
+        if git rev-parse --abbrev-ref HEAD >/dev/null 2>&1; then
+          CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          echo "✅ Current branch: $CURRENT_BRANCH"
+        else
+          echo "::warning::Unable to determine current branch (detached HEAD?)"
+        fi
 
     - name: "🔢 Generate version numbers"
       id: generate
       shell: bash
       run: |
-        echo "::group::🔢 Generating Semantic Versions"
         echo "::debug::Calculating version numbers based on Git tags and branch information"
 
         # Helper function to set environment variables and outputs
@@ -196,8 +349,8 @@ runs:
         }
 
         # Input values
-        major_version="${{ inputs.major }}"
-        minor_version="${{ inputs.minor }}"
+        major_version="${{ steps.major-minor-validation.outputs.major }}"
+        minor_version="${{ steps.major-minor-validation.outputs.minor }}"
         main_branch="${{ inputs.main-branch }}"
         build_id="${{ inputs.build-id }}"
         tag_prefix="${{ inputs.tag-prefix }}"
@@ -275,21 +428,32 @@ runs:
           suffix=""
           revision_version=""
           version_extension=""
+          is_prerelease="false"
         else
           echo "🌿 On feature branch - adding suffix and revision"
+          echo "::debug::Original branch name: '$branch_name'"
 
           # Clean and truncate branch name for suffix
-          suffix=$(echo "$branch_name" | sed 's/[^a-zA-Z0-9]/-/g' | tr '[:upper:]' '[:lower:]')
+          # Replace non-alphanumeric characters with hyphens, then clean up multiple consecutive hyphens
+          suffix=$(echo "$branch_name" | sed 's/[^a-zA-Z0-9]/-/g' | sed 's/-\+/-/g' | sed 's/^-\|-$//g' | tr '[:upper:]' '[:lower:]')
+          echo "::debug::After character replacement: '$suffix'"
+
           if [ ${#suffix} -gt $branch_suffix_max_length ]; then
+            original_suffix="$suffix"
             suffix=${suffix:0:$branch_suffix_max_length}
+            # Remove trailing hyphens that might result from truncation
+            suffix=$(echo "$suffix" | sed 's/-*$//')
+            echo "::debug::Truncated from '$original_suffix' to '$suffix'"
           fi
 
           revision_version="$build_id"
           version_extension="${suffix}.${revision_version}"
+          is_prerelease="true"
 
           echo "📎 Suffix: $suffix"
           echo "🔄 Revision: $revision_version"
           echo "🔗 Extension: $version_extension"
+          echo "🚧 Prerelease: $is_prerelease"
         fi
 
         # Build full version
@@ -310,6 +474,16 @@ runs:
         echo "  📚 Assembly: $version_assembly"
         echo "  🏷️ For Tag: $version_for_tag"
 
+        # Check if the version tag already exists
+        potential_tag="${tag_prefix}${version_full}"
+        if git tag -l | grep -q "^${potential_tag}$"; then
+          tag_exists="true"
+          echo "⚠️ Tag already exists: $potential_tag"
+        else
+          tag_exists="false"
+          echo "✅ Tag does not exist: $potential_tag"
+        fi
+
         # Set all environment variables and outputs
         setEnvironmentVariable "VERSION_MAJOR" "$major_version"
         setEnvironmentVariable "VERSION_MINOR" "$minor_version"
@@ -317,98 +491,111 @@ runs:
         setEnvironmentVariable "VERSION_PREFIX" "$tag_prefix"
         setEnvironmentVariable "VERSION_SUFFIX" "$suffix"
         setEnvironmentVariable "VERSION_REVISION" "$revision_version"
+        setEnvironmentVariable "VERSION_ISPRERELEASE" "$is_prerelease"
         setEnvironmentVariable "VERSION_BUILDID" "$build_id"
         setEnvironmentVariable "VERSION_CORE" "$version_core"
         setEnvironmentVariable "VERSION_EXTENSION" "$version_extension"
         setEnvironmentVariable "VERSION_FULL" "$version_full"
         setEnvironmentVariable "VERSION_ASSEMBLY" "$version_assembly"
-        setEnvironmentVariable "VERSION_FOR_TAG" "$version_for_tag"
+        setEnvironmentVariable "VERSION_FORTAG" "$version_for_tag"
         setEnvironmentVariable "VERSION_BRANCHNAME" "$branch_name"
+        setEnvironmentVariable "VERSION_TAG_EXISTS" "$tag_exists"
+        setEnvironmentVariable "VERSION_LATEST_TAG" "$latest_tag"
         setEnvironmentVariable "VERSION_SCRIPTCALLED" "true"
 
-        # Generate txt file if requested
-        output_txt="${{ inputs.output-txt }}"
-        if [ -n "$output_txt" ]; then
-          echo "📝 Generating txt file: $output_txt"
-          mkdir -p "$(dirname "$output_txt")" && touch "$output_txt"
-          {
-            echo "VERSION_MAJOR=$major_version"
-            echo "VERSION_MINOR=$minor_version"
-            echo "VERSION_PATCH=$patch_version"
-            echo "VERSION_PREFIX=$tag_prefix"
-            echo "VERSION_SUFFIX=$suffix"
-            echo "VERSION_REVISION=$revision_version"
-            echo "VERSION_BUILDID=$build_id"
-            echo "VERSION_CORE=$version_core"
-            echo "VERSION_EXTENSION=$version_extension"
-            echo "VERSION_FULL=$version_full"
-            echo "VERSION_ASSEMBLY=$version_assembly"
-            echo "VERSION_FOR_TAG=$version_for_tag"
-            echo "VERSION_BRANCHNAME=$branch_name"
-            echo "VERSION_SCRIPTCALLED=true"
-          } > "$output_txt"
-          echo "✅ Generated $output_txt"
-          setEnvironmentVariable "VERSION_OUTPUTTXT" "$output_txt"
-        fi
+        # Check if running in dry-run mode
+        if [ "${{ inputs.dry-run }}" = "true" ]; then
+          echo "🧪 Running in dry-run mode - skipping file generation"
+          setEnvironmentVariable "VERSION_OUTPUTTXT" ""
+          setEnvironmentVariable "VERSION_OUTPUTPROPS" ""
+          setEnvironmentVariable "VERSION_OUTPUTJSON" ""
+        else
+          # Generate txt file if requested
+          output_txt="${{ inputs.output-txt }}"
+          if [ -n "$output_txt" ]; then
+            echo "📝 Generating txt file: $output_txt"
+            mkdir -p "$(dirname "$output_txt")" && touch "$output_txt"
+            {
+              echo "VERSION_MAJOR=$major_version"
+              echo "VERSION_MINOR=$minor_version"
+              echo "VERSION_PATCH=$patch_version"
+              echo "VERSION_PREFIX=$tag_prefix"
+              echo "VERSION_SUFFIX=$suffix"
+              echo "VERSION_REVISION=$revision_version"
+              echo "VERSION_ISPRERELEASE=$is_prerelease"
+              echo "VERSION_BUILDID=$build_id"
+              echo "VERSION_CORE=$version_core"
+              echo "VERSION_EXTENSION=$version_extension"
+              echo "VERSION_FULL=$version_full"
+              echo "VERSION_ASSEMBLY=$version_assembly"
+              echo "VERSION_FORTAG=$version_for_tag"
+              echo "VERSION_BRANCHNAME=$branch_name"
+              echo "VERSION_SCRIPTCALLED=true"
+            } > "$output_txt"
+            echo "✅ Generated $output_txt"
+            setEnvironmentVariable "VERSION_OUTPUTTXT" "$output_txt"
+          fi
 
-        # Generate props file if requested
-        output_props="${{ inputs.output-props }}"
-        if [ -n "$output_props" ]; then
-          echo "📝 Generating props file: $output_props"
-          mkdir -p "$(dirname "$output_props")" && touch "$output_props"
-          {
-            echo "<Project>"
-            echo "    <PropertyGroup>"
-            echo "        <Version_Major>$major_version</Version_Major>"
-            echo "        <Version_Minor>$minor_version</Version_Minor>"
-            echo "        <Version_Patch>$patch_version</Version_Patch>"
-            echo "        <Version_Prefix>$tag_prefix</Version_Prefix>"
-            echo "        <Version_Suffix>$suffix</Version_Suffix>"
-            echo "        <Version_Revision>$revision_version</Version_Revision>"
-            echo "        <Version_BuildId>$build_id</Version_BuildId>"
-            echo "        <Version_Core>$version_core</Version_Core>"
-            echo "        <Version_Extension>$version_extension</Version_Extension>"
-            echo "        <Version_Full>$version_full</Version_Full>"
-            echo "        <Version_Assembly>$version_assembly</Version_Assembly>"
-            echo "        <Version_ForTag>$version_for_tag</Version_ForTag>"
-            echo "        <Version_BranchName>$branch_name</Version_BranchName>"
-            echo "        <Version_ScriptCalled>true</Version_ScriptCalled>"
-            echo "    </PropertyGroup>"
-            echo "</Project>"
-          } > "$output_props"
-          echo "✅ Generated $output_props"
-          setEnvironmentVariable "VERSION_OUTPUTPROPS" "$output_props"
-        fi
+          # Generate props file if requested
+          output_props="${{ inputs.output-props }}"
+          if [ -n "$output_props" ]; then
+            echo "📝 Generating props file: $output_props"
+            mkdir -p "$(dirname "$output_props")" && touch "$output_props"
+            {
+              echo "<Project>"
+              echo "    <PropertyGroup>"
+              echo "        <Version_Major>$major_version</Version_Major>"
+              echo "        <Version_Minor>$minor_version</Version_Minor>"
+              echo "        <Version_Patch>$patch_version</Version_Patch>"
+              echo "        <Version_Prefix>$tag_prefix</Version_Prefix>"
+              echo "        <Version_Suffix>$suffix</Version_Suffix>"
+              echo "        <Version_Revision>$revision_version</Version_Revision>"
+              echo "        <Version_IsPrerelease>$is_prerelease</Version_IsPrerelease>"
+              echo "        <Version_BuildId>$build_id</Version_BuildId>"
+              echo "        <Version_Core>$version_core</Version_Core>"
+              echo "        <Version_Extension>$version_extension</Version_Extension>"
+              echo "        <Version_Full>$version_full</Version_Full>"
+              echo "        <Version_Assembly>$version_assembly</Version_Assembly>"
+              echo "        <Version_ForTag>$version_for_tag</Version_ForTag>"
+              echo "        <Version_BranchName>$branch_name</Version_BranchName>"
+              echo "        <Version_ScriptCalled>true</Version_ScriptCalled>"
+              echo "    </PropertyGroup>"
+              echo "</Project>"
+            } > "$output_props"
+            echo "✅ Generated $output_props"
+            setEnvironmentVariable "VERSION_OUTPUTPROPS" "$output_props"
+          fi
 
-        # Generate JSON file if requested
-        output_json="${{ inputs.output-json }}"
-        if [ -n "$output_json" ]; then
-          echo "📝 Generating JSON file: $output_json"
-          mkdir -p "$(dirname "$output_json")" && touch "$output_json"
-          {
-            echo "{"
-            echo "  \"VERSION_MAJOR\": \"$major_version\","
-            echo "  \"VERSION_MINOR\": \"$minor_version\","
-            echo "  \"VERSION_PATCH\": \"$patch_version\","
-            echo "  \"VERSION_PREFIX\": \"$tag_prefix\","
-            echo "  \"VERSION_SUFFIX\": \"$suffix\","
-            echo "  \"VERSION_REVISION\": \"$revision_version\","
-            echo "  \"VERSION_BUILDID\": \"$build_id\","
-            echo "  \"VERSION_CORE\": \"$version_core\","
-            echo "  \"VERSION_EXTENSION\": \"$version_extension\","
-            echo "  \"VERSION_FULL\": \"$version_full\","
-            echo "  \"VERSION_ASSEMBLY\": \"$version_assembly\","
-            echo "  \"VERSION_FOR_TAG\": \"$version_for_tag\","
-            echo "  \"VERSION_BRANCHNAME\": \"$branch_name\","
-            echo "  \"VERSION_SCRIPTCALLED\": true"
-            echo "}"
-          } > "$output_json"
-          echo "✅ Generated $output_json"
-          setEnvironmentVariable "VERSION_OUTPUTJSON" "$output_json"
-        fi
+          # Generate JSON file if requested
+          output_json="${{ inputs.output-json }}"
+          if [ -n "$output_json" ]; then
+            echo "📝 Generating JSON file: $output_json"
+            mkdir -p "$(dirname "$output_json")" && touch "$output_json"
+            {
+              echo "{"
+              echo "  \"VERSION_MAJOR\": \"$major_version\","
+              echo "  \"VERSION_MINOR\": \"$minor_version\","
+              echo "  \"VERSION_PATCH\": \"$patch_version\","
+              echo "  \"VERSION_PREFIX\": \"$tag_prefix\","
+              echo "  \"VERSION_SUFFIX\": \"$suffix\","
+              echo "  \"VERSION_REVISION\": \"$revision_version\","
+              echo "  \"VERSION_ISPRERELEASE\": $is_prerelease,"
+              echo "  \"VERSION_BUILDID\": \"$build_id\","
+              echo "  \"VERSION_CORE\": \"$version_core\","
+              echo "  \"VERSION_EXTENSION\": \"$version_extension\","
+              echo "  \"VERSION_FULL\": \"$version_full\","
+              echo "  \"VERSION_ASSEMBLY\": \"$version_assembly\","
+              echo "  \"VERSION_FORTAG\": \"$version_for_tag\","
+              echo "  \"VERSION_BRANCHNAME\": \"$branch_name\","
+              echo "  \"VERSION_SCRIPTCALLED\": true"
+              echo "}"
+            } > "$output_json"
+            echo "✅ Generated $output_json"
+            setEnvironmentVariable "VERSION_OUTPUTJSON" "$output_json"
+          fi
+        fi  # End of dry-run check
 
         echo "✅ Version generation completed successfully"
-        echo "::endgroup::"
 
     - name: "🔍 Verify generated versions"
       id: verify
@@ -421,7 +608,7 @@ runs:
           "VERSION_MAJOR" "VERSION_MINOR" "VERSION_PATCH"
           "VERSION_CORE" "VERSION_FULL" "VERSION_ASSEMBLY"
           "VERSION_BRANCHNAME" "VERSION_BUILDID" "VERSION_PREFIX"
-          "VERSION_FOR_TAG"
+          "VERSION_FORTAG"
         )
 
         for var in "${REQUIRED_VARS[@]}"; do
@@ -496,25 +683,25 @@ runs:
         fi
 
         echo "✅ Version verification completed successfully"
-        echo "::endgroup::"
-        echo "::endgroup::"
 
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash
       run: |
         cat >> $GITHUB_STEP_SUMMARY << 'EOF'
-        <details><summary>Expand for details - 📊 Version Generation Summary</summary>
+        <details><summary>🔢 Generate Version : ${{ steps.generate.outputs.VERSION_FULL }}</summary>
 
         ## 🔧 Input Parameters
         | Parameter | Value |
         |-----------|-------|
-        | 🔢 Major Version | `${{ inputs.major }}` |
-        | 🔢 Minor Version | `${{ inputs.minor }}` |
+        | 🔢 Major Version | `${{ steps.major-minor-validation.outputs.major }}` |
+        | 🔢 Minor Version | `${{ steps.major-minor-validation.outputs.minor }}` |
         | 🌿 Main Branch | `${{ inputs.main-branch }}` |
         | 🆔 Build ID | `${{ inputs.build-id }}` |
         | 🏷️ Tag Prefix | `${{ inputs.tag-prefix }}` |
         | 📏 Branch Suffix Max Length | `${{ inputs.branch-suffix-max-length }}` |
+        | 🧪 Dry Run | `${{ inputs.dry-run }}` |
+        | 🔍 Fetch Depth | `${{ inputs.fetch-depth }}` |
 
         ## 📤 Generated Versions
         | Version Type | Value |
@@ -522,11 +709,13 @@ runs:
         | 🎯 Core Version | `${{ steps.generate.outputs.VERSION_CORE }}` |
         | 🔗 Full Version | `${{ steps.generate.outputs.VERSION_FULL }}` |
         | 📚 Assembly Version | `${{ steps.generate.outputs.VERSION_ASSEMBLY }}` |
-        | 🏷️ For Tag | `${{ steps.generate.outputs.VERSION_FOR_TAG }}` |
+        | 🏷️ For Tag | `${{ steps.generate.outputs.VERSION_FORTAG }}` |
         | 🌿 Branch Name | `${{ steps.generate.outputs.VERSION_BRANCHNAME }}` |
         | 🏷️ Tag Prefix | `${{ steps.generate.outputs.VERSION_PREFIX }}` |
         | 📎 Suffix | `${{ steps.generate.outputs.VERSION_SUFFIX || 'none' }}` |
         | 🔄 Revision | `${{ steps.generate.outputs.VERSION_REVISION || 'none' }}` |
+        | 🏷️ Tag Exists | `${{ steps.generate.outputs.VERSION_TAG_EXISTS }}` |
+        | 📋 Latest Tag | `${{ steps.generate.outputs.VERSION_LATEST_TAG || 'none' }}` |
 
         ## 📁 Output Files
         | File Type | Path | Status |
@@ -556,5 +745,5 @@ runs:
         EOF
 
 branding:
-  icon: 'hash'
-  color: 'blue'
+  icon: "hash"
+  color: "blue"
