@@ -1,211 +1,437 @@
-# 📄 DocFX Generate PDF Action
+# 📄 DocFX PDF Generation Action
 
-Generates PDF documentation using DocFX .NET Global Tool. This action converts DocFX documentation projects into high-quality PDF documents suitable for offline distribution and archival purposes.
+A comprehensive GitHub Action for generating high-quality PDF documentation from DocFX projects with support for custom templates, advanced configuration, and enterprise documentation workflows.
 
-## Features
+## ✨ Features
 
-- 📋 Generates PDF from DocFX documentation projects
-- ⚙️ Configurable output directory and logging
-- 🔧 Support for custom DocFX configurations
-- 📊 Comprehensive error handling and validation
-- 🌐 Cross-platform compatibility (Windows, Linux, macOS)
-- 📄 Detailed output analysis and reporting
+- 📋 **PDF Generation** - Convert DocFX documentation projects to professional PDF documents
+- ⚙️ **Flexible Configuration** - Support for custom DocFX configurations and output directories
+- 🔧 **Advanced Options** - Configurable logging, error handling, and validation settings
+- 📊 **Rich Reporting** - Comprehensive output analysis with file statistics and generation metrics
+- 🌐 **Cross-Platform** - Full compatibility across Windows, Linux, and macOS runners
+- 📄 **Professional Output** - High-quality PDF suitable for offline distribution and archival
+- 🚀 **Performance Optimization** - Efficient processing and resource management
+- ✅ **Quality Assurance** - Built-in validation and error detection
 
-## Usage
+## 🚀 Basic Usage
 
-### Basic Usage
+Generate PDF documentation:
 
 ```yaml
-steps:
-  - name: Generate PDF documentation
-    uses: ./dotnet-docfx-pdf
-    with:
-      config: 'docfx.json'
-      output: '_site'
+- name: "Generate PDF documentation"
+  uses: framinosona/github_actions/dotnet-docfx-pdf@main
+  with:
+    config: "docfx.json"
+    output: "_site"
 ```
 
-### Advanced Usage
-
 ```yaml
-steps:
-  - name: Generate PDF with custom settings
-    uses: ./dotnet-docfx-pdf
-    with:
-      config: 'docs/docfx.json'
-      output: 'pdf-output'
-      log-level: 'verbose'
-      warnings-as-errors: 'true'
-      log-file: 'pdf-generation.log'
-      docfx-version: '2.70.0'
-      show-summary: 'true'
+- name: "Generate with custom output"
+  uses: framinosona/github_actions/dotnet-docfx-pdf@main
+  with:
+    config: "docs/docfx.json"
+    output: "pdf-output"
+    log-level: "info"
 ```
 
-## Inputs
+```yaml
+- name: "Generate with specific DocFX version"
+  uses: framinosona/github_actions/dotnet-docfx-pdf@main
+  with:
+    config: "docfx.json"
+    docfx-version: "2.70.0"
+    show-summary: "true"
+```
 
-| Input | Description | Required | Default |
-|-------|-------------|----------|---------|
-| `config` | Path to the docfx configuration file | false | `docfx.json` |
-| `output` | Specify the output base directory | false | `_site` |
-| `log-level` | Set log level (error, warning, info, verbose, diagnostic) | false | `info` |
-| `log-file` | Save log as structured JSON to the specified file | false | `` |
-| `verbose` | Set log level to verbose | false | `false` |
-| `warnings-as-errors` | Treats warnings as errors | false | `false` |
-| `docfx-version` | Version of DocFX tool to install | false | `` |
-| `show-summary` | Whether to show the action summary | false | `false` |
+## 🔧 Advanced Usage
 
-## Outputs
-
-| Output | Description |
-|--------|-------------|
-| `output-path` | Full path to the generated PDF output directory |
-| `config-path` | Path to the DocFX configuration file used |
-| `pdf-files` | Comma-separated list of generated PDF files |
-| `files-count` | Number of PDF files generated |
-| `output-size` | Total size of the output directory in bytes |
-
-## Examples
-
-### Basic Documentation PDF Generation
+Complete PDF generation with all configuration options:
 
 ```yaml
-name: Generate PDF Documentation
+- name: "Advanced PDF generation"
+  uses: framinosona/github_actions/dotnet-docfx-pdf@main
+  with:
+    config: "docs/docfx.json"
+    output: "documentation/pdf"
+    log-level: "verbose"
+    log-file: "pdf-generation.log"
+    verbose: "true"
+    warnings-as-errors: "true"
+    docfx-version: "2.70.0"
+    show-summary: "true"
+```
+
+## 🔐 Permissions Required
+
+This action requires standard repository permissions:
+
+```yaml
+permissions:
+  contents: read  # Required to checkout repository code
+```
+
+For uploading artifacts or releases:
+
+```yaml
+permissions:
+  contents: write  # Required to upload artifacts or create releases
+```
+
+## 🏗️ CI/CD Example
+
+Complete documentation workflow with PDF generation:
+
+```yaml
+name: "Documentation Pipeline"
 
 on:
   push:
-    branches: [ main ]
-    paths: [ 'docs/**' ]
+    branches: ["main"]
+    paths: ["docs/**", "src/**/*.cs"]
+  release:
+    types: [published]
+
+permissions:
+  contents: write
 
 jobs:
-  generate-pdf:
+  generate-documentation:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: "🔧 Setup .NET"
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: "🔧 Install DocFX"
+        uses: framinosona/github_actions/dotnet-tool-install@main
+        with:
+          package-name: "docfx"
+          version: "2.70.0"
+          global: "true"
+
+      - name: "📊 Generate API metadata"
+        id: metadata
+        uses: framinosona/github_actions/dotnet-docfx-metadata@main
+        with:
+          config: "docs/docfx.json"
+          output: "docs/api"
+          log-level: "info"
+          show-summary: "true"
+
+      - name: "🔨 Build documentation site"
+        id: build
+        uses: framinosona/github_actions/dotnet-docfx-build@main
+        with:
+          config: "docs/docfx.json"
+          output: "docs/_site"
+          log-level: "info"
+          warnings-as-errors: "true"
+          show-summary: "true"
+
+      - name: "📄 Generate PDF documentation"
+        id: pdf
+        uses: framinosona/github_actions/dotnet-docfx-pdf@main
+        with:
+          config: "docs/docfx.json"
+          output: "docs/pdf"
+          log-level: "info"
+          log-file: "pdf-generation.log"
+          warnings-as-errors: "true"
+          show-summary: "true"
+
+      - name: "📊 Display generation results"
+        run: |
+          echo "📄 PDF Generation Results:"
+          echo "Files generated: ${{ steps.pdf.outputs.files-count }}"
+          echo "Output size: ${{ steps.pdf.outputs.output-size }} bytes"
+          echo "PDF files: ${{ steps.pdf.outputs.pdf-files }}"
+          echo "Output path: ${{ steps.pdf.outputs.output-path }}"
+
+      - name: "📦 Upload PDF artifacts"
+        uses: actions/upload-artifact@v4
+        with:
+          name: "documentation-pdf-${{ github.sha }}"
+          path: ${{ steps.pdf.outputs.output-path }}
+          retention-days: 90
+
+      - name: "🚀 Attach PDF to release"
+        if: github.event_name == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: "${{ steps.pdf.outputs.output-path }}/documentation.pdf"
+          asset_name: "documentation-${{ github.event.release.tag_name }}.pdf"
+          asset_content_type: "application/pdf"
+
+      - name: "🏷️ Generate documentation badge"
+        if: success()
+        uses: framinosona/github_actions/generate-badge@main
+        with:
+          label: "docs"
+          message: "PDF ready"
+          color: "brightgreen"
+          style: "flat-square"
+          logo: "read-the-docs"
+
+  multi-version-docs:
+    strategy:
+      matrix:
+        version: ["v1.0", "v2.0", "latest"]
+        include:
+          - version: "v1.0"
+            config: "docs/v1/docfx.json"
+            output: "docs/pdf/v1"
+          - version: "v2.0"
+            config: "docs/v2/docfx.json"
+            output: "docs/pdf/v2"
+          - version: "latest"
+            config: "docs/docfx.json"
+            output: "docs/pdf/latest"
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+
+      - name: "🔧 Setup .NET"
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: "📄 Generate PDF for ${{ matrix.version }}"
+        id: generate
+        uses: framinosona/github_actions/dotnet-docfx-pdf@main
+        with:
+          config: ${{ matrix.config }}
+          output: ${{ matrix.output }}
+          log-level: "info"
+          log-file: "pdf-${{ matrix.version }}.log"
+          show-summary: "true"
+
+      - name: "📦 Archive versioned documentation"
+        uses: actions/upload-artifact@v4
+        with:
+          name: "docs-${{ matrix.version }}"
+          path: ${{ matrix.output }}/
+          retention-days: 365
+```
+
+## 📋 Inputs
+
+| Input | Description | Required | Default | Example |
+|-------|-------------|----------|---------|---------|
+| `config` | Path to DocFX configuration file | ❌ No | `docfx.json` | `docs/docfx.json`, `./docfx.yaml` |
+| `output` | Output base directory | ❌ No | `_site` | `pdf-docs`, `documentation/output` |
+| `log-level` | Log level for DocFX | ❌ No | `info` | `error`, `warning`, `info`, `verbose`, `diagnostic` |
+| `log-file` | Save log to structured JSON file | ❌ No | `''` | `generation.log`, `logs/docfx.json` |
+| `verbose` | Enable verbose logging | ❌ No | `false` | `true`, `false` |
+| `warnings-as-errors` | Treat warnings as errors | ❌ No | `false` | `true`, `false` |
+| `docfx-version` | DocFX tool version to install | ❌ No | `''` | `2.70.0`, `2.59.4` |
+| `show-summary` | Show detailed action summary | ❌ No | `false` | `true`, `false` |
+
+## 📤 Outputs
+
+| Output | Description | Example |
+|--------|-------------|---------|
+| `output-path` | Full path to generated PDF output | `/github/workspace/docs/pdf` |
+| `config-path` | Path to DocFX configuration used | `/github/workspace/docs/docfx.json` |
+| `pdf-files` | Comma-separated list of PDF files | `documentation.pdf,api-reference.pdf` |
+| `files-count` | Number of PDF files generated | `2`, `5` |
+| `output-size` | Total output directory size in bytes | `2048576`, `10485760` |
+
+## 🔗 Related Actions
+
+| Action | Purpose | Repository |
+|--------|---------|------------|
+| 📊 **dotnet-docfx-metadata** | Generate API metadata | `framinosona/github_actions/dotnet-docfx-metadata` |
+| 🔨 **dotnet-docfx-build** | Build HTML documentation | `framinosona/github_actions/dotnet-docfx-build` |
+| 🔧 **dotnet-tool-install** | Install DocFX tool | `framinosona/github_actions/dotnet-tool-install` |
+| 🚀 **dotnet** | Build .NET projects | `framinosona/github_actions/dotnet` |
+
+## 💡 Examples
+
+### Basic PDF Documentation Workflow
+
+```yaml
+name: "Generate Documentation PDF"
+
+on:
+  push:
+    branches: ["main"]
+    paths: ["docs/**"]
+
+jobs:
+  pdf-docs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+      - name: "Setup .NET"
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: "8.0.x"
 
-      - name: Generate PDF documentation
-        uses: ./dotnet-docfx-pdf
+      - name: "Generate PDF"
+        uses: framinosona/github_actions/dotnet-docfx-pdf@main
         with:
-          config: 'docfx.json'
-          output: 'pdf-docs'
-          show-summary: 'true'
+          config: "docfx.json"
+          output: "pdf-output"
+          show-summary: "true"
 
-      - name: Upload PDF artifacts
-        uses: actions/upload-artifact@v3
+      - name: "Upload PDF"
+        uses: actions/upload-artifact@v4
         with:
-          name: documentation-pdf
-          path: pdf-docs/*.pdf
+          name: "documentation-pdf"
+          path: pdf-output/*.pdf
 ```
 
-### Release Documentation Workflow
+### Release Documentation Automation
 
 ```yaml
-name: Generate Release Documentation
+name: "Release Documentation"
 
 on:
   release:
     types: [published]
 
 jobs:
-  generate-release-docs:
+  release-docs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+      - name: "Setup .NET"
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: "8.0.x"
 
-      - name: Generate API metadata
-        uses: ./dotnet-docfx-metadata
+      - name: "Generate metadata"
+        uses: framinosona/github_actions/dotnet-docfx-metadata@main
         with:
-          config: 'docs/docfx.json'
-          output: 'docs/api'
+          config: "docs/docfx.json"
 
-      - name: Build documentation site
-        uses: ./dotnet-docfx-build
+      - name: "Build site"
+        uses: framinosona/github_actions/dotnet-docfx-build@main
         with:
-          config: 'docs/docfx.json'
-          output: 'docs/_site'
+          config: "docs/docfx.json"
 
-      - name: Generate PDF documentation
+      - name: "Generate PDF"
         id: pdf
-        uses: ./dotnet-docfx-pdf
+        uses: framinosona/github_actions/dotnet-docfx-pdf@main
         with:
-          config: 'docs/docfx.json'
-          output: 'docs/pdf'
-          log-level: 'info'
-          warnings-as-errors: 'true'
-          show-summary: 'true'
+          config: "docs/docfx.json"
+          output: "docs/pdf"
+          warnings-as-errors: "true"
+          show-summary: "true"
 
-      - name: Attach PDF to release
+      - name: "Attach to release"
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ${{ steps.pdf.outputs.pdf-files }}
-          asset_name: documentation-${{ github.event.release.tag_name }}.pdf
-          asset_content_type: application/pdf
+          asset_path: "${{ steps.pdf.outputs.pdf-files }}"
+          asset_name: "docs-${{ github.event.release.tag_name }}.pdf"
+          asset_content_type: "application/pdf"
 ```
 
-### Multi-Version Documentation
+### Multi-Language Documentation
 
 ```yaml
-name: Generate Versioned PDF Documentation
+strategy:
+  matrix:
+    language: ["en", "es", "fr", "de"]
+    include:
+      - language: "en"
+        config: "docs/en/docfx.json"
+        output: "docs/pdf/en"
+      - language: "es"
+        config: "docs/es/docfx.json"
+        output: "docs/pdf/es"
+      - language: "fr"
+        config: "docs/fr/docfx.json"
+        output: "docs/pdf/fr"
+      - language: "de"
+        config: "docs/de/docfx.json"
+        output: "docs/pdf/de"
+
+steps:
+  - name: "Generate ${{ matrix.language }} PDF"
+    uses: framinosona/github_actions/dotnet-docfx-pdf@main
+    with:
+      config: ${{ matrix.config }}
+      output: ${{ matrix.output }}
+      log-level: "info"
+      show-summary: "true"
+
+  - name: "Upload ${{ matrix.language }} docs"
+    uses: actions/upload-artifact@v4
+    with:
+      name: "docs-${{ matrix.language }}"
+      path: ${{ matrix.output }}/
+```
+
+### Scheduled Documentation Generation
+
+```yaml
+name: "Weekly Documentation Update"
 
 on:
+  schedule:
+    - cron: "0 2 * * 1"  # Every Monday at 2 AM
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Documentation version'
-        required: true
-        default: 'latest'
 
 jobs:
-  generate-versioned-pdf:
+  weekly-docs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Generate PDF for version
-        id: generate
-        uses: ./dotnet-docfx-pdf
+      - name: "Setup .NET"
+        uses: actions/setup-dotnet@v4
         with:
-          config: 'docs/docfx.json'
-          output: 'versioned-docs/${{ github.event.inputs.version }}'
-          log-level: 'verbose'
-          log-file: 'pdf-${{ github.event.inputs.version }}.log'
-          show-summary: 'true'
+          dotnet-version: "8.0.x"
 
-      - name: Display generation results
+      - name: "Generate weekly PDF"
+        id: weekly
+        uses: framinosona/github_actions/dotnet-docfx-pdf@main
+        with:
+          config: "docs/docfx.json"
+          output: "weekly-docs"
+          log-level: "verbose"
+          log-file: "weekly-generation.log"
+          show-summary: "true"
+
+      - name: "Archive weekly docs"
         run: |
-          echo "Generated ${{ steps.generate.outputs.files-count }} PDF files"
-          echo "Total size: ${{ steps.generate.outputs.output-size }} bytes"
-          echo "Files: ${{ steps.generate.outputs.pdf-files }}"
+          date_suffix=$(date +%Y-%m-%d)
+          mkdir -p "archive/weekly"
+          cp -r weekly-docs/ "archive/weekly/docs-$date_suffix/"
 
-      - name: Archive versioned documentation
-        uses: actions/upload-artifact@v3
-        with:
-          name: docs-${{ github.event.inputs.version }}
-          path: versioned-docs/${{ github.event.inputs.version }}/
-          retention-days: 90
+      - name: "Commit archive"
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add archive/
+          git commit -m "📄 Weekly documentation update $(date +%Y-%m-%d)" || exit 0
+          git push
 ```
 
-## Requirements
-
-- **.NET SDK**: Required for DocFX tool installation and execution
-- **DocFX Configuration**: A valid `docfx.json` configuration file
-- **Documentation Content**: Existing documentation project (usually built with metadata and articles)
-- **System Dependencies**: PDF generation may require additional system libraries on some platforms
-
-## DocFX Configuration for PDF
+## 🔧 DocFX Configuration for PDF
 
 Your `docfx.json` should include PDF-specific configuration:
+
+### Basic PDF Configuration
 
 ```json
 {
@@ -213,8 +439,8 @@ Your `docfx.json` should include PDF-specific configuration:
     {
       "src": [
         {
-          "files": [ "**.csproj" ],
-          "exclude": [ "**/bin/**", "**/obj/**" ]
+          "files": ["**.csproj"],
+          "exclude": ["**/bin/**", "**/obj/**"]
         }
       ],
       "dest": "api"
@@ -223,24 +449,19 @@ Your `docfx.json` should include PDF-specific configuration:
   "build": {
     "content": [
       {
-        "files": [ "api/**.yml", "api/index.md" ]
+        "files": ["api/**.yml", "api/index.md"]
       },
       {
-        "files": [ "articles/**.md", "articles/**/toc.yml", "toc.yml", "*.md" ]
+        "files": ["articles/**.md", "articles/**/toc.yml", "toc.yml", "*.md"]
       }
     ],
     "resource": [
       {
-        "files": [ "images/**" ]
+        "files": ["images/**"]
       }
     ],
     "dest": "_site",
-    "globalMetadataFiles": [],
-    "fileMetadataFiles": [],
-    "template": [
-      "default",
-      "modern"
-    ],
+    "template": ["default", "modern"],
     "globalMetadata": {
       "_appTitle": "My Documentation",
       "_appFooter": "© 2024 My Company"
@@ -249,163 +470,330 @@ Your `docfx.json` should include PDF-specific configuration:
   "pdf": {
     "content": [
       {
-        "files": [ "articles/toc.yml" ],
+        "files": ["articles/toc.yml"],
         "tocFilter": "excludeUnreferencedPages"
       },
       {
-        "files": [ "api/toc.yml" ],
+        "files": ["api/toc.yml"],
         "tocFilter": "excludeUnreferencedPages"
       }
     ],
-    "dest": "_pdf"
+    "dest": "_pdf",
+    "wkhtmltopdf": {
+      "additionalArguments": "--enable-local-file-access --print-media-type"
+    }
   }
 }
 ```
 
-## Troubleshooting
+### Advanced PDF Configuration
+
+```json
+{
+  "pdf": {
+    "content": [
+      {
+        "files": ["manual/toc.yml"],
+        "tocFilter": "excludeUnreferencedPages"
+      }
+    ],
+    "dest": "_pdf",
+    "wkhtmltopdf": {
+      "additionalArguments": "--enable-local-file-access --print-media-type --page-size A4 --margin-top 0.75in --margin-right 0.75in --margin-bottom 0.75in --margin-left 0.75in"
+    },
+    "excludedToc": ["api/toc.yml"],
+    "generatesAppendices": true,
+    "generatesExternalLink": false,
+    "keepRawFiles": false,
+    "rawOutputFolder": "raw"
+  }
+}
+```
+
+## 🖥️ Requirements
+
+- .NET SDK 6.0 or later installed on the runner
+- Valid DocFX configuration file with PDF section
+- DocFX tool (automatically installed if version specified)
+- System dependencies for PDF generation:
+  - **Linux**: `libgdiplus`, `libc6-dev`
+  - **Windows**: Built-in support
+  - **macOS**: System updates may be required
+
+### Platform-Specific Setup
+
+#### Ubuntu/Debian Linux
+
+```yaml
+- name: "Install PDF dependencies"
+  run: |
+    sudo apt-get update
+    sudo apt-get install -y libgdiplus libc6-dev wkhtmltopdf
+```
+
+#### CentOS/RHEL
+
+```yaml
+- name: "Install PDF dependencies"
+  run: |
+    sudo yum install -y libgdiplus-devel glibc-devel wkhtmltopdf
+```
+
+#### Docker Setup
+
+```yaml
+- name: "Setup Docker for PDF"
+  run: |
+    docker run --rm -v $(pwd):/workspace \
+      mcr.microsoft.com/dotnet/sdk:8.0 \
+      /bin/bash -c "cd /workspace && dotnet tool install -g docfx && docfx pdf docfx.json"
+```
+
+## 🐛 Troubleshooting
 
 ### Common Issues
 
-#### Configuration file not found
+#### Configuration File Not Found
 
-```text
-❌ Error: DocFX configuration file not found: docfx.json
+**Problem**: "DocFX configuration file not found: docfx.json"
+
+**Solution**: Verify file path and existence:
+
+```yaml
+- name: "Verify configuration"
+  run: |
+    echo "Checking DocFX configuration..."
+    if [ -f "docfx.json" ]; then
+      echo "✅ Configuration file found"
+      cat docfx.json | jq '.pdf' || echo "No PDF section found"
+    else
+      echo "❌ Configuration file missing"
+      find . -name "*.json" -type f | grep -i docfx || echo "No DocFX config found"
+    fi
+
+- name: "Generate PDF with verification"
+  uses: framinosona/github_actions/dotnet-docfx-pdf@main
+  with:
+    config: "docfx.json"
+    show-summary: "true"
 ```
 
-**Solution:**
+#### No PDF Files Generated
 
-- Ensure the `config` path is correct relative to the repository root
-- Verify the file exists and has the correct name
-- Check file permissions
+**Problem**: "⚠️ No PDF files were generated"
 
-#### No PDF files generated
+**Solution**: Check PDF configuration and content:
 
-```text
-⚠️ No PDF files were generated
+```yaml
+- name: "Debug PDF generation"
+  run: |
+    echo "Checking PDF configuration..."
+    if [ -f "docfx.json" ]; then
+      # Check if PDF section exists
+      if jq -e '.pdf' docfx.json > /dev/null; then
+        echo "✅ PDF section found in configuration"
+        jq '.pdf' docfx.json
+      else
+        echo "❌ No PDF section in configuration"
+        exit 1
+      fi
+
+      # Check for table of contents files
+      if [ -f "toc.yml" ] || [ -f "articles/toc.yml" ]; then
+        echo "✅ TOC files found"
+      else
+        echo "❌ No TOC files found"
+      fi
+    fi
+
+- name: "Generate with debug"
+  uses: framinosona/github_actions/dotnet-docfx-pdf@main
+  with:
+    config: "docfx.json"
+    log-level: "diagnostic"
+    verbose: "true"
+    show-summary: "true"
 ```
 
-**Solution:**
+#### PDF Generation Dependencies Missing
 
-- Verify your `docfx.json` includes a `pdf` section
-- Ensure the content files specified in the PDF section exist
-- Check that the table of contents (toc.yml) files are properly configured
-- Review the log output for specific error messages
+**Problem**: PDF generation fails with system dependency errors
 
-#### PDF generation fails with missing dependencies
+**Solution**: Install required system packages:
 
-```text
-❌ Error: PDF generation failed
+```yaml
+- name: "Install PDF dependencies (Linux)"
+  if: runner.os == 'Linux'
+  run: |
+    sudo apt-get update
+    sudo apt-get install -y libgdiplus libc6-dev wkhtmltopdf xvfb
+
+- name: "Test PDF generation with dependencies"
+  run: |
+    # Test wkhtmltopdf installation
+    wkhtmltopdf --version || echo "wkhtmltopdf not available"
+
+    # Test with virtual display (Linux)
+    if [ "$RUNNER_OS" = "Linux" ]; then
+      xvfb-run -a wkhtmltopdf --version || echo "xvfb test failed"
+    fi
+
+- name: "Generate PDF with dependencies"
+  uses: framinosona/github_actions/dotnet-docfx-pdf@main
+  with:
+    config: "docfx.json"
+    log-level: "verbose"
+    show-summary: "true"
 ```
 
-**Solution:**
+#### Memory Issues with Large Documentation
 
-- On Linux: Install required packages
-  ```bash
-  sudo apt-get update
-  sudo apt-get install -y libgdiplus libc6-dev
-  ```
-- On macOS: Ensure system is up to date
-- On Windows: Usually works out of the box
+**Problem**: Out of memory errors during PDF generation
 
-#### Memory issues with large documentation
+**Solution**: Optimize configuration and split large docs:
 
-**Solution:**
+```yaml
+- name: "Optimize for large docs"
+  run: |
+    # Check documentation size
+    echo "Documentation size analysis:"
+    find . -name "*.md" -type f | wc -l
+    find . -name "*.yml" -type f | wc -l
+    du -sh docs/ 2>/dev/null || echo "docs/ not found"
 
-- Split large documentation into smaller sections
-- Use `log-level: 'error'` to reduce memory usage
-- Consider generating PDFs for specific sections only
+- name: "Generate PDF with optimization"
+  uses: framinosona/github_actions/dotnet-docfx-pdf@main
+  with:
+    config: "docfx.json"
+    log-level: "error"  # Reduce memory usage
+    show-summary: "true"
+  env:
+    DOTNET_CLI_TELEMETRY_OPTOUT: true  # Reduce memory overhead
+```
 
-### Debugging Tips
+### Debug Mode
 
-1. **Enable verbose logging:**
+Enable comprehensive debugging:
 
-   ```yaml
-   verbose: 'true'
-   log-level: 'diagnostic'
-   ```
+```yaml
+- name: "Debug PDF generation"
+  uses: framinosona/github_actions/dotnet-docfx-pdf@main
+  with:
+    config: "docfx.json"
+    log-level: "diagnostic"
+    verbose: "true"
+    log-file: "debug-pdf.log"
+    show-summary: "true"
+  env:
+    ACTIONS_STEP_DEBUG: true
+    DOTNET_CLI_TELEMETRY_OPTOUT: true
+```
 
-2. **Save logs to file:**
+### Local Testing
 
-   ```yaml
-   log-file: 'docfx-pdf-debug.log'
-   ```
-
-3. **Check PDF configuration:**
-
-   ```bash
-   dotnet tool install -g docfx
-   docfx pdf docfx.json --dry-run
-   ```
-
-4. **Validate content structure:**
-
-   ```yaml
-   show-summary: 'true'
-   ```
-
-5. **Test locally:**
-
-   ```bash
-   # Install DocFX globally
-   dotnet tool install -g docfx
-
-   # Generate metadata first
-   docfx metadata docfx.json
-
-   # Build the site
-   docfx build docfx.json
-
-   # Generate PDF
-   docfx pdf docfx.json
-   ```
-
-### Platform-Specific Notes
-
-#### Windows
-
-- PDF generation typically works without additional setup
-- Ensure .NET SDK is properly installed
-
-#### Linux (Ubuntu/Debian)
+Test PDF generation locally:
 
 ```bash
-sudo apt-get update
-sudo apt-get install -y libgdiplus libc6-dev
+# Install DocFX globally
+dotnet tool install -g docfx
+
+# Generate metadata first
+docfx metadata docfx.json
+
+# Build the site
+docfx build docfx.json
+
+# Generate PDF
+docfx pdf docfx.json --log-level verbose
+
+# Check output
+ls -la _pdf/
 ```
 
-#### macOS
+## 🔧 Advanced Features
 
-- May require additional system updates
-- Consider using Docker for consistent results
+### Custom PDF Styling
 
-## Output Structure
+```yaml
+- name: "Generate with custom styling"
+  run: |
+    # Create custom CSS for PDF
+    cat > pdf-styles.css << EOF
+    @page {
+      size: A4;
+      margin: 1in;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-size: 12pt;
+      line-height: 1.4;
+    }
+    h1, h2, h3 {
+      color: #2e75b6;
+      page-break-after: avoid;
+    }
+    EOF
 
-The action generates the following output structure:
-
-```text
-output-directory/
-├── documentation.pdf      # Main documentation PDF
-├── api-reference.pdf      # API reference PDF (if configured)
-└── assets/               # Supporting assets
-    └── images/           # Images used in PDF
+- name: "Generate PDF with styling"
+  uses: framinosona/github_actions/dotnet-docfx-pdf@main
+  with:
+    config: "docfx.json"
+    output: "styled-pdf"
+    show-summary: "true"
 ```
 
-## Related Actions
+### Batch PDF Generation
 
-- **dotnet-docfx-metadata**: Generate API metadata from source code
-- **dotnet-docfx-build**: Build HTML documentation sites
-- **dotnet-tool-install**: Install .NET tools including DocFX
-- **dotnet**: Execute .NET CLI commands
+```yaml
+- name: "Generate multiple PDFs"
+  run: |
+    configs=("user-guide/docfx.json" "api-docs/docfx.json" "tutorials/docfx.json")
 
-## Best Practices
+    for config in "${configs[@]}"; do
+      echo "Processing $config..."
+      if [ -f "$config" ]; then
+        base_dir=$(dirname "$config")
+        echo "Config found in $base_dir"
+      fi
+    done
 
-1. **Generate metadata first**: Always run `dotnet-docfx-metadata` before PDF generation
-2. **Build the site**: Consider running `dotnet-docfx-build` to validate content
-3. **Use appropriate templates**: Choose templates that work well for PDF output
-4. **Optimize images**: Ensure images are appropriately sized for PDF
-5. **Test locally**: Validate PDF generation locally before CI/CD deployment
-6. **Version your PDFs**: Include version information in PDF metadata
+- name: "User guide PDF"
+  uses: framinosona/github_actions/dotnet-docfx-pdf@main
+  with:
+    config: "user-guide/docfx.json"
+    output: "pdfs/user-guide"
 
-## License
+- name: "API documentation PDF"
+  uses: framinosona/github_actions/dotnet-docfx-pdf@main
+  with:
+    config: "api-docs/docfx.json"
+    output: "pdfs/api-docs"
+```
+
+### Conditional PDF Generation
+
+```yaml
+- name: "Check if PDF generation needed"
+  id: check-changes
+  run: |
+    if git diff --name-only HEAD~1 | grep -E '\.(md|yml|json)$' > /dev/null; then
+      echo "needs-pdf=true" >> $GITHUB_OUTPUT
+    else
+      echo "needs-pdf=false" >> $GITHUB_OUTPUT
+    fi
+
+- name: "Generate PDF if needed"
+  if: steps.check-changes.outputs.needs-pdf == 'true'
+  uses: framinosona/github_actions/dotnet-docfx-pdf@main
+  with:
+    config: "docfx.json"
+    show-summary: "true"
+```
+
+## 📄 License
 
 This action is part of the GitHub Actions collection by Francois Raminosona.
+
+---
+
+> 💡 **Tip**: Always generate metadata and build the site before PDF generation for best results, and test PDF output locally during development.

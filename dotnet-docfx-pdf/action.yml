@@ -1,86 +1,88 @@
-name: '📄 DocFX > Generate PDF'
-description: 'Generates PDF documentation using DocFX .NET Global Tool'
-author: 'Francois Raminosona'
+name: "📄 Generate DocFX PDF"
+description: "Generates PDF documentation using DocFX .NET Global Tool"
+author: "Francois Raminosona"
 
 inputs:
-  config:
-    description: 'Path to the docfx configuration file (default: docfx.json)'
+  # Arguments passed to dotnet
+  working-directory:
+    description: "Working directory for the command"
     required: false
-    default: 'docfx.json'
-  output:
-    description: 'Specify the output base directory'
+    default: "."
+  global:
+    description: "Install the DocFX .NET global tool if not already installed"
     required: false
-    default: '_site'
-  log-level:
-    description: 'Set log level to error, warning, info, verbose or diagnostic'
-    required: false
-    default: 'info'
-  log-file:
-    description: 'Save log as structured JSON to the specified file'
-    required: false
-    default: ''
-  verbose:
-    description: 'Set log level to verbose'
-    required: false
-    default: 'false'
-  warnings-as-errors:
-    description: 'Treats warnings as errors'
-    required: false
-    default: 'false'
-  docfx-version:
-    description: 'Version of DocFX tool to install'
-    required: false
-    default: ''
+    default: "false"
   show-summary:
-    description: 'Whether to show the action summary'
+    description: "Whether to show the action summary"
     required: false
-    default: 'false'
+    default: "false"
+
+  # Arguments unique to DocFX PDF
+  config:
+    description: "Path to the docfx configuration file (default: docfx.json)"
+    required: false
+    default: "docfx.json"
+  output:
+    description: "Specify the output base directory"
+    required: false
+    default: "_site"
+  logLevel:
+    description: "Set log level to error, warning, info, verbose or diagnostic"
+    required: false
+    default: "info"
+  logFile:
+    description: "Save log as structured JSON to the specified file"
+    required: false
+    default: ""
+  verbose:
+    description: "Set log level to verbose"
+    required: false
+    default: "false"
+  warningsAsErrors:
+    description: "Treats warnings as errors"
+    required: false
+    default: "false"
+  docfx-version:
+    description: "Version of DocFX tool to install"
+    required: false
+    default: ""
 
 outputs:
+  exit-code:
+    description: "Exit code of the dotnet command"
+    value: ${{ steps.run-dotnet.outputs.exit-code }}
+  executed-command:
+    description: "The actual command that was executed"
+    value: ${{ steps.run-dotnet.outputs.executed-command }}
   output-path:
-    description: 'Full path to the generated PDF output directory'
+    description: "Full path to the generated PDF output directory"
     value: ${{ steps.build-args.outputs.output-path }}
   config-path:
-    description: 'Path to the DocFX configuration file used'
+    description: "Path to the DocFX configuration file used"
     value: ${{ steps.build-args.outputs.config-path }}
   pdf-files:
-    description: 'List of generated PDF files'
+    description: "List of generated PDF files"
     value: ${{ steps.analyze.outputs.pdf-files }}
   files-count:
-    description: 'Number of PDF files generated'
+    description: "Number of PDF files generated"
     value: ${{ steps.analyze.outputs.files-count }}
   output-size:
-    description: 'Total size of the output directory in bytes'
+    description: "Total size of the output directory in bytes"
     value: ${{ steps.analyze.outputs.output-size }}
 
 runs:
   using: "composite"
   steps:
-    - name: "✅ Validate inputs"
+    - name: "✅ Validate input : booleans"
       shell: bash
       run: |
-        echo "::group::🔍 DocFX PDF Input Validation"
-        echo "::debug::Validating DocFX PDF inputs for documentation generation"
+        echo "::debug::Validating boolean inputs for DocFX PDF generation"
 
-        # Validate config file exists if specified and not default
-        if [ "${{ inputs.config }}" != "docfx.json" ] && [ ! -f "${{ inputs.config }}" ]; then
-          echo "::error file=${{ inputs.config }}::DocFX configuration file not found: ${{ inputs.config }}"
-          exit 1
-        fi
-
-        # Validate log level
-        if [ -n "${{ inputs.log-level }}" ]; then
-          case "${{ inputs.log-level }}" in
-            error|warning|info|verbose|diagnostic) ;;
-            *) echo "::error::Invalid log level. Must be one of: error, warning, info, verbose, diagnostic"; exit 1 ;;
-          esac
-        fi
-
-        # Validate boolean inputs
-        for param in verbose warnings-as-errors; do
+        for param in verbose warningsAsErrors show-summary; do
           case $param in
             verbose) value="${{ inputs.verbose }}" ;;
-            warnings-as-errors) value="${{ inputs.warnings-as-errors }}" ;;
+            warningsAsErrors) value="${{ inputs.warningsAsErrors }}" ;;
+            show-summary) value="${{ inputs.show-summary }}" ;;
           esac
           if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
             echo "::error::Parameter $param must be 'true' or 'false', got: $value"
@@ -88,72 +90,116 @@ runs:
           fi
         done
 
-        echo "::notice::Input validation completed successfully"
-        echo "::endgroup::"
+        echo "✅ Boolean input validation completed successfully"
+
+    - name: "✅ Validate input : config"
+      if: ${{ inputs.config != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating config input for DocFX PDF generation"
+
+        if [ ! -f "${{ inputs.config }}" ]; then
+          echo "::error file=${{ inputs.config }}::DocFX configuration file not found: ${{ inputs.config }}"
+          exit 1
+        fi
+
+        echo "✅ Config input validation completed successfully"
+
+    - name: "✅ Validate input : logLevel"
+      if: ${{ inputs.logLevel != '' && inputs.logLevel != 'info' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating logLevel input for DocFX PDF generation"
+
+        case "${{ inputs.logLevel }}" in
+          error|warning|info|verbose|diagnostic) ;;
+          *) echo "::error::Invalid logLevel. Must be one of: error, warning, info, verbose, diagnostic"; exit 1 ;;
+        esac
+
+        echo "✅ Log-level input validation completed successfully"
+
+    - name: "✅ Validate input : docfx-version"
+      if: ${{ inputs.docfx-version != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating docfx-version input for DocFX PDF generation"
+
+        if ! [[ "${{ inputs.docfx-version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "::warning::Version format may be invalid. Expected format: X.Y.Z, got: ${{ inputs.docfx-version }}"
+        fi
+
+        echo "✅ docfx-version input validation completed successfully"
 
     - name: "📦 Install DocFX tool"
-      uses: "./dotnet-tool-install"
+      uses: "framinosona/github_actions/dotnet-tool-install@main"
       with:
-        tool-name: 'docfx'
-        tool-version: ${{ inputs.docfx-version }}
+        tool-name: "docfx"
+        global: ${{ inputs.global }}
+        create-manifest-if-needed: "true"
+        version: ${{ inputs.docfx-version }}
 
     - name: "🔧 Build arguments"
       id: build-args
       shell: bash
       run: |
-        echo "::group::🔧 Building DocFX PDF Arguments"
-        echo "::debug::Building dotnet arguments for DocFX PDF generation"
+        echo "::debug::Building arguments for DocFX PDF generation"
 
-        # Start with base arguments
+        # Start with base command
         ARGS="run docfx pdf"
 
-        # Config file
+        # Add config file path
         if [ -n "${{ inputs.config }}" ]; then
           ARGS="$ARGS '${{ inputs.config }}'"
         fi
         CONFIG_PATH=$(realpath "${{ inputs.config }}")
         echo "config-path=$CONFIG_PATH" >> $GITHUB_OUTPUT
 
-        # Output directory
+        # Add output directory
         if [ -n "${{ inputs.output }}" ]; then
           ARGS="$ARGS --output '${{ inputs.output }}'"
         fi
         OUTPUT_PATH=$(realpath "${{ inputs.output }}")
         echo "output-path=$OUTPUT_PATH" >> $GITHUB_OUTPUT
 
-        # Log level
-        if [ -n "${{ inputs.log-level }}" ]; then
-          ARGS="$ARGS --logLevel '${{ inputs.log-level }}'"
+        # Boolean flags
+        for param in verbose warningsAsErrors; do
+          case $param in
+            verbose) value="${{ inputs.verbose }}" ;;
+            warningsAsErrors) value="${{ inputs.warningsAsErrors }}" ;;
+          esac
+          if [ "$value" == "true" ]; then
+            ARGS="$ARGS --${param}"
+          fi
+        done
+
+        # Handle parameters with meaningful defaults
+        if [ "${{ inputs.logLevel }}" != "info" ]; then
+          ARGS="$ARGS --logLevel '${{ inputs.logLevel }}'"
         fi
 
         # Log file
-        if [ -n "${{ inputs.log-file }}" ]; then
-          ARGS="$ARGS --log '${{ inputs.log-file }}'"
+        if [ -n "${{ inputs.logFile }}" ]; then
+          ARGS="$ARGS --log '${{ inputs.logFile }}'"
         fi
 
-        # Boolean flags
-        [ "${{ inputs.verbose }}" = "true" ] && ARGS="$ARGS --verbose"
-        [ "${{ inputs.warnings-as-errors }}" = "true" ] && ARGS="$ARGS --warningsAsErrors"
-
         echo "::debug::Generated arguments: $ARGS"
-
-        # Output the arguments string
         echo "arguments=$ARGS" >> $GITHUB_OUTPUT
-        echo "::endgroup::"
+        echo "✅ Arguments built successfully"
 
     - name: "📄 Generate PDF with DocFX"
-      id: generate
-      uses: ./dotnet
+      id: run-dotnet
+      uses: "framinosona/github_actions/dotnet@main"
       with:
         command: "tool"
+        working-directory: ${{ inputs.working-directory }}
         arguments: ${{ steps.build-args.outputs.arguments }}
+        show-summary: "${{ inputs.show-summary }}"
 
     - name: "📊 Analyze generated PDF files"
       id: analyze
       shell: bash
       run: |
-        echo "::group::📊 Analyzing Generated PDF Files"
-        echo "::debug::Analyzing generated DocFX PDF files"
+        echo "📊 Analyzing generated PDF files..."
 
         OUTPUT_DIR="${{ steps.build-args.outputs.output-path }}"
 
@@ -211,21 +257,19 @@ runs:
           echo "pdf-files=" >> $GITHUB_OUTPUT
         fi
 
-        echo "::endgroup::"
-
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash
       run: |
         cat >> $GITHUB_STEP_SUMMARY << 'EOF'
-        <details><summary>Expand for details - 📊 DocFX PDF Generation Summary</summary>
+        <details><summary>📄 DocFX PDF</summary>
 
         ## 🔧 Input Parameters
         | Parameter | Value |
         |-----------|-------|
         | 📋 Config File | `${{ inputs.config }}` |
         | 📁 Output Directory | `${{ inputs.output }}` |
-        | 📊 Log Level | `${{ inputs.log-level }}` |
+        | 📊 Log Level | `${{ inputs.logLevel }}` |
 
         ## 📤 Generation Results
         | Metric | Value |
@@ -244,19 +288,20 @@ runs:
         | Option | Status |
         |--------|--------|
         | 🔍 Verbose Logging | `${{ inputs.verbose }}` |
-        | ⚠️ Warnings as Errors | `${{ inputs.warnings-as-errors }}` |
+        | ⚠️ Warnings as Errors | `${{ inputs.warningsAsErrors }}` |
 
         ## 🔧 Process Details
         | Step | Status |
         |------|--------|
         | ✅ Input Validation | `✅ Completed` |
         | 📦 Tool Installation | `✅ Completed` |
-        | 📄 PDF Generation | `${{ steps.generate.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | � Argument Building | `${{ steps.build-args.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | �📄 PDF Generation | `${{ steps.run-dotnet.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
         | 📊 Output Analysis | `${{ steps.analyze.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
 
         </details>
         EOF
 
 branding:
-  icon: 'file-text'
-  color: 'blue'
+  icon: "file-text"
+  color: "blue"
