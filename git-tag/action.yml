@@ -1,89 +1,93 @@
-name: '🏷️ Git > Create Tag'
-description: 'Creates and pushes Git tags with validation and configuration'
-author: 'Francois Raminosona'
+name: "🏷️ Create Git Tag"
+description: "Creates and pushes Git tags with validation and configuration"
+author: "Francois Raminosona"
 
 inputs:
   tag:
-    description: 'Tag name to create'
+    description: "Tag name to create"
     required: true
   message:
-    description: 'Tag message (for annotated tags)'
+    description: "Tag message (for annotated tags)"
     required: false
-    default: ''
+    default: ""
   prefix:
-    description: 'Prefix to add to the tag name'
+    description: "Prefix to add to the tag name"
     required: false
-    default: ''
+    default: ""
   annotated:
-    description: 'Create an annotated tag instead of lightweight tag'
+    description: "Create an annotated tag instead of lightweight tag"
     required: false
-    default: 'true'
+    default: "true"
   push:
-    description: 'Push the tag to remote repository'
+    description: "Push the tag to remote repository"
     required: false
-    default: 'true'
+    default: "true"
   force:
-    description: 'Force create/update tag if it already exists'
+    description: "Force create/update tag if it already exists"
     required: false
-    default: 'false'
+    default: "false"
   fail-if-exists:
-    description: 'Fail if tag already exists (ignored if force is true)'
+    description: "Fail if tag already exists (ignored if force is true)"
     required: false
-    default: 'true'
+    default: "true"
   git-user-name:
-    description: 'Git user name for commits'
+    description: "Git user name for commits"
     required: false
     default: ${{ github.actor }}
   git-user-email:
-    description: 'Git user email for commits'
+    description: "Git user email for commits"
     required: false
     default: ${{ github.actor }}@users.noreply.github.com
   target:
-    description: 'Target commit/branch/SHA for the tag (defaults to current HEAD)'
+    description: "Target commit/branch/SHA for the tag (defaults to current HEAD)"
     required: false
-    default: ''
+    default: ""
   github-token:
-    description: 'GitHub token for authentication'
+    description: "GitHub token for authentication"
     required: false
     default: ${{ github.token }}
   show-summary:
-    description: 'Whether to show the action summary'
+    description: "Whether to show the action summary"
     required: false
-    default: 'false'
+    default: "false"
 
 outputs:
   tag-name:
-    description: 'Full name of the created tag (including prefix)'
+    description: "Full name of the created tag (including prefix)"
     value: ${{ steps.create.outputs.tag-name }}
   tag-exists:
-    description: 'Whether the tag already existed before creation'
+    description: "Whether the tag already existed before creation"
     value: ${{ steps.create.outputs.tag-exists }}
   tag-sha:
-    description: 'SHA of the commit the tag points to'
+    description: "SHA of the commit the tag points to"
     value: ${{ steps.create.outputs.tag-sha }}
   tag-created:
-    description: 'Whether a new tag was created'
+    description: "Whether a new tag was created"
     value: ${{ steps.create.outputs.tag-created }}
   tag-pushed:
-    description: 'Whether the tag was pushed to remote'
+    description: "Whether the tag was pushed to remote"
     value: ${{ steps.create.outputs.tag-pushed }}
   tag-url:
-    description: 'URL to the tag on GitHub'
+    description: "URL to the tag on GitHub"
     value: ${{ steps.create.outputs.tag-url }}
 
 runs:
   using: "composite"
   steps:
-    - name: "✅ Validate inputs"
+    - name: "🔒 Mask sensitive data"
       shell: bash
       run: |
-        echo "::group::🔍 Git Tag Creation Input Validation"
-        echo "::debug::Validating inputs for Git tag creation"
-
         # Mask sensitive data FIRST
         if [ -n "${{ inputs.github-token }}" ]; then
           echo "::add-mask::${{ inputs.github-token }}"
         fi
+
+        echo "::debug::Masked sensitive inputs"
+
+    - name: "✅ Validate input : required parameters"
+      shell: bash
+      run: |
+        echo "::debug::Validating required parameters..."
 
         # Validate tag name is provided and not empty
         if [ -z "${{ inputs.tag }}" ]; then
@@ -91,29 +95,19 @@ runs:
           exit 1
         fi
 
-        # Validate tag name format (basic Git tag validation)
-        if [[ "${{ inputs.tag }}" =~ [[:space:]] ]]; then
-          echo "::error::Tag name cannot contain spaces"
-          exit 1
-        fi
+        echo "✅ Required parameters validation completed successfully"
 
-        if [[ "${{ inputs.tag }}" =~ \.\.|\.\. ]]; then
-          echo "::error::Tag name cannot contain '..' sequences"
-          exit 1
-        fi
-
-        if [[ "${{ inputs.tag }}" == *"/"* ]] && [[ "${{ inputs.tag }}" == "/"* || "${{ inputs.tag }}" == *"/" ]]; then
-          echo "::error::Tag name cannot start or end with '/'"
-          exit 1
-        fi
-
-        # Validate boolean inputs
-        for param in annotated push force fail-if-exists; do
+    - name: "✅ Validate input : booleans"
+      shell: bash
+      run: |
+        echo "::debug::Validating boolean inputs..."
+        for param in annotated push force fail-if-exists show-summary; do
           case $param in
             annotated) value="${{ inputs.annotated }}" ;;
             push) value="${{ inputs.push }}" ;;
             force) value="${{ inputs.force }}" ;;
             fail-if-exists) value="${{ inputs.fail-if-exists }}" ;;
+            show-summary) value="${{ inputs.show-summary }}" ;;
           esac
           if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
             echo "::error::Parameter $param must be 'true' or 'false', got: $value"
@@ -121,40 +115,154 @@ runs:
           fi
         done
 
-        # Validate email format
-        if ! [[ "${{ inputs.git-user-email }}" =~ ^[^@]+@[^@]+$ ]]; then
+        echo "✅ Boolean inputs validation completed successfully"
+
+    - name: "✅ Validate input : tag"
+      shell: bash
+      run: |
+        echo "::debug::Validating tag input: ${{ inputs.tag }}"
+
+        # Validate tag name format (comprehensive Git tag validation)
+        if [[ "${{ inputs.tag }}" =~ [[:space:]] ]]; then
+          echo "::error::Tag name cannot contain spaces: ${{ inputs.tag }}"
+          exit 1
+        fi
+
+        if [[ "${{ inputs.tag }}" =~ \.\.|\.\.\. ]]; then
+          echo "::error::Tag name cannot contain '..' sequences: ${{ inputs.tag }}"
+          exit 1
+        fi
+
+        if [[ "${{ inputs.tag }}" == *"/"* ]] && [[ "${{ inputs.tag }}" == "/"* || "${{ inputs.tag }}" == *"/" ]]; then
+          echo "::error::Tag name cannot start or end with '/': ${{ inputs.tag }}"
+          exit 1
+        fi
+
+        # Additional Git tag safety checks
+        if [[ "${{ inputs.tag }}" =~ ^[.-] ]] || [[ "${{ inputs.tag }}" =~ [.-]$ ]]; then
+          echo "::error::Tag name cannot start or end with '.' or '-': ${{ inputs.tag }}"
+          exit 1
+        fi
+
+        if [[ "${{ inputs.tag }}" =~ [\\\~\^\:\*\?\[\]] ]]; then
+          echo "::error::Tag name contains invalid characters (\\, ~, ^, :, *, ?, [, ]): ${{ inputs.tag }}"
+          exit 1
+        fi
+
+        echo "✅ Tag validation completed successfully"
+
+    - name: "✅ Validate input : prefix"
+      if: ${{ inputs.prefix != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating prefix input: ${{ inputs.prefix }}"
+
+        # Prefix should follow similar rules as tag names
+        if [[ "${{ inputs.prefix }}" =~ [[:space:]] ]]; then
+          echo "::error::Tag prefix cannot contain spaces: ${{ inputs.prefix }}"
+          exit 1
+        fi
+
+        if [[ "${{ inputs.prefix }}" =~ [\\\~\^\:\*\?\[\]] ]]; then
+          echo "::error::Tag prefix contains invalid characters: ${{ inputs.prefix }}"
+          exit 1
+        fi
+
+        echo "✅ Prefix validation completed successfully"
+
+    - name: "✅ Validate input : git-user-email"
+      shell: bash
+      run: |
+        echo "::debug::Validating git-user-email input: ${{ inputs.git-user-email }}"
+
+        if ! [[ "${{ inputs.git-user-email }}" =~ ^[^@]+@[^@]+\.[^@]+$ ]]; then
           echo "::error::Invalid email format: ${{ inputs.git-user-email }}"
           exit 1
         fi
 
-        # Validate target if provided
-        if [ -n "${{ inputs.target }}" ]; then
-          echo "::debug::Target specified: ${{ inputs.target }}"
+        echo "✅ Git user email validation completed successfully"
+
+    - name: "✅ Validate input : git-user-name"
+      shell: bash
+      run: |
+        echo "::debug::Validating git-user-name input: ${{ inputs.git-user-name }}"
+
+        # Basic validation for Git user name
+        if [ -z "${{ inputs.git-user-name }}" ]; then
+          echo "::error::Git user name cannot be empty"
+          exit 1
         fi
 
-        echo "::notice::Input validation completed successfully"
-        echo "::endgroup::"
+        if [[ "${{ inputs.git-user-name }}" =~ ^[[:space:]]+$ ]]; then
+          echo "::error::Git user name cannot be only whitespace"
+          exit 1
+        fi
+
+        echo "✅ Git user name validation completed successfully"
+
+    - name: "✅ Validate input : target"
+      if: ${{ inputs.target != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating target input: ${{ inputs.target }}"
+
+        # Check if target exists (commit, branch, or tag)
+        if ! git rev-parse --verify "${{ inputs.target }}" >/dev/null 2>&1; then
+          echo "::error::Target commit/branch/tag does not exist: ${{ inputs.target }}"
+          exit 1
+        fi
+
+        TARGET_SHA=$(git rev-parse "${{ inputs.target }}")
+        echo "::debug::Target '${{ inputs.target }}' resolves to SHA: $TARGET_SHA"
+
+        echo "✅ Target validation completed successfully"
+
+    - name: "✅ Validate input : github-token"
+      shell: bash
+      run: |
+        echo "::debug::Validating GitHub token..."
+
+        if [ -z "${{ inputs.github-token }}" ]; then
+          echo "::warning::No GitHub token provided - push operations may fail"
+        fi
+
+        echo "✅ GitHub token validation completed successfully"
 
     - name: "🔧 Configure Git"
       shell: bash
       run: |
-        echo "🔧 Configuring Git user settings..."
+        echo "::debug::Configuring Git user settings..."
 
+        # Set Git user configuration
         git config --local user.name "${{ inputs.git-user-name }}"
         git config --local user.email "${{ inputs.git-user-email }}"
 
+        # Verify configuration was set
+        CONFIGURED_NAME=$(git config --local user.name)
+        CONFIGURED_EMAIL=$(git config --local user.email)
+
+        if [ "$CONFIGURED_NAME" != "${{ inputs.git-user-name }}" ]; then
+          echo "::error::Failed to set Git user name"
+          exit 1
+        fi
+
+        if [ "$CONFIGURED_EMAIL" != "${{ inputs.git-user-email }}" ]; then
+          echo "::error::Failed to set Git user email"
+          exit 1
+        fi
+
         echo "👤 Git user: ${{ inputs.git-user-name }} <${{ inputs.git-user-email }}>"
-        echo "✅ Git configuration completed"
+        echo "✅ Git configuration completed successfully"
 
     - name: "🏷️ Create and push Git tag"
       id: create
       shell: bash
       run: |
-        echo "🏷️ Creating Git tag..."
+        echo "::debug::Creating Git tag..."
 
         # Build full tag name with prefix
         TAG_NAME="${{ inputs.prefix }}${{ inputs.tag }}"
-        echo "🏷️ Full tag name: $TAG_NAME"
+        echo "::debug::Full tag name: $TAG_NAME"
         echo "tag-name=$TAG_NAME" >> $GITHUB_OUTPUT
 
         # Set default values for outputs
@@ -168,16 +276,17 @@ runs:
           echo "tag-exists=true" >> $GITHUB_OUTPUT
 
           if [ "${{ inputs.force }}" = "true" ]; then
-            echo "🔄 Force mode enabled - will update existing tag"
+            echo "::debug::Force mode enabled - will update existing tag"
           elif [ "${{ inputs.fail-if-exists }}" = "true" ]; then
             echo "::error::Tag $TAG_NAME already exists and fail-if-exists is true"
             exit 1
           else
-            echo "⏭️ Tag exists but continuing without error"
+            echo "::debug::Tag exists but continuing without error"
             # Get existing tag information
             TAG_SHA=$(git rev-list -n 1 "$TAG_NAME")
             echo "tag-sha=$TAG_SHA" >> $GITHUB_OUTPUT
             echo "tag-url=https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME" >> $GITHUB_OUTPUT
+            echo "✅ Using existing tag $TAG_NAME"
             exit 0
           fi
         fi
@@ -185,15 +294,15 @@ runs:
         # Determine target for the tag
         if [ -n "${{ inputs.target }}" ]; then
           TARGET="${{ inputs.target }}"
-          echo "🎯 Using specified target: $TARGET"
+          echo "::debug::Using specified target: $TARGET"
         else
           TARGET="HEAD"
-          echo "🎯 Using HEAD as target"
+          echo "::debug::Using HEAD as target"
         fi
 
         # Get the SHA of the target
         TAG_SHA=$(git rev-parse "$TARGET")
-        echo "📍 Target SHA: $TAG_SHA"
+        echo "::debug::Target SHA: $TAG_SHA"
         echo "tag-sha=$TAG_SHA" >> $GITHUB_OUTPUT
 
         # Create the tag
@@ -205,7 +314,7 @@ runs:
             TAG_MESSAGE="Tag $TAG_NAME"
           fi
 
-          echo "📝 Creating annotated tag with message: $TAG_MESSAGE"
+          echo "::debug::Creating annotated tag with message: $TAG_MESSAGE"
 
           if [ "${{ inputs.force }}" = "true" ]; then
             git tag -f -a "$TAG_NAME" -m "$TAG_MESSAGE" "$TARGET"
@@ -214,7 +323,7 @@ runs:
           fi
         else
           # Create lightweight tag
-          echo "🏷️ Creating lightweight tag"
+          echo "::debug::Creating lightweight tag"
 
           if [ "${{ inputs.force }}" = "true" ]; then
             git tag -f "$TAG_NAME" "$TARGET"
@@ -228,29 +337,40 @@ runs:
 
         # Push the tag if requested
         if [ "${{ inputs.push }}" = "true" ]; then
-          echo "🚀 Pushing tag to remote repository..."
+          echo "::debug::Pushing tag to remote repository..."
 
           # Configure authentication if token is provided
           if [ -n "${{ inputs.github-token }}" ]; then
+            echo "::debug::Configuring Git authentication with token"
             git remote set-url origin "https://x-access-token:${{ inputs.github-token }}@github.com/${{ github.repository }}.git"
           fi
 
+          # Push with proper error handling
           if [ "${{ inputs.force }}" = "true" ]; then
-            git push --force origin "$TAG_NAME"
+            if git push --force origin "$TAG_NAME"; then
+              echo "✅ Tag $TAG_NAME force pushed to remote"
+              echo "tag-pushed=true" >> $GITHUB_OUTPUT
+            else
+              echo "::error::Failed to force push tag $TAG_NAME"
+              exit 1
+            fi
           else
-            git push origin "$TAG_NAME"
+            if git push origin "$TAG_NAME"; then
+              echo "✅ Tag $TAG_NAME pushed to remote"
+              echo "tag-pushed=true" >> $GITHUB_OUTPUT
+            else
+              echo "::error::Failed to push tag $TAG_NAME"
+              exit 1
+            fi
           fi
-
-          echo "✅ Tag $TAG_NAME pushed to remote"
-          echo "tag-pushed=true" >> $GITHUB_OUTPUT
         else
-          echo "⏭️ Skipping push (push disabled)"
+          echo "::debug::Skipping push (push disabled)"
         fi
 
         # Set GitHub URL for the tag
         echo "tag-url=https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME" >> $GITHUB_OUTPUT
 
-        echo "🎉 Git tag operation completed successfully"
+        echo "✅ Git tag operation completed successfully"
 
     - name: "🔍 Verify tag creation"
       id: verify
@@ -264,41 +384,45 @@ runs:
         if git tag -l "$TAG_NAME" | grep -q "^$TAG_NAME$"; then
           echo "✅ Tag $TAG_NAME exists locally"
 
-          # Get tag information
-          if git cat-file -t "$TAG_NAME" | grep -q "tag"; then
-            echo "📝 Annotated tag detected"
-            echo "📄 Tag details:"
-            git cat-file -p "$TAG_NAME" | head -10 | sed 's/^/  /'
+          # Get tag information with error handling
+          if git cat-file -t "$TAG_NAME" 2>/dev/null | grep -q "tag"; then
+            echo "::debug::Annotated tag detected"
+            echo "::debug::Tag details:"
+            git cat-file -p "$TAG_NAME" 2>/dev/null | head -10 | sed 's/^/  /' || echo "  Could not read tag details"
           else
-            echo "🏷️ Lightweight tag detected"
-            TAG_COMMIT=$(git rev-list -n 1 "$TAG_NAME")
-            echo "📍 Points to commit: $TAG_COMMIT"
+            echo "::debug::Lightweight tag detected"
+            TAG_COMMIT=$(git rev-list -n 1 "$TAG_NAME" 2>/dev/null)
+            if [ -n "$TAG_COMMIT" ]; then
+              echo "::debug::Points to commit: $TAG_COMMIT"
+            else
+              echo "::warning::Could not determine tag commit"
+            fi
           fi
         else
           echo "::error::Tag $TAG_NAME not found locally"
           exit 1
         fi
 
-        # Verify remote push if it was requested
+        # Verify remote push if it was requested and successful
         if [ "${{ inputs.push }}" = "true" ] && [ "${{ steps.create.outputs.tag-pushed }}" = "true" ]; then
           echo "::debug::Verifying remote tag..."
 
           # Try to fetch the tag from remote to verify it exists
-          if git ls-remote --tags origin | grep -q "refs/tags/$TAG_NAME$"; then
+          if git ls-remote --tags origin 2>/dev/null | grep -q "refs/tags/$TAG_NAME$"; then
             echo "✅ Tag $TAG_NAME verified on remote"
           else
-            echo "::warning::Tag may not be fully propagated to remote yet"
+            echo "::warning::Tag may not be fully propagated to remote yet, or remote verification failed"
           fi
         fi
 
-        echo "✅ Tag verification completed"
+        echo "✅ Tag verification completed successfully"
 
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash
       run: |
         cat >> $GITHUB_STEP_SUMMARY << 'EOF'
-        <details><summary>Expand for details - 📊 Git Tag Creation Summary</summary>
+        <details><summary>🏷️ Git Tag : ${{ steps.create.outputs.tag-name }}</summary>
 
         ## 🔧 Input Parameters
         | Parameter | Value |
@@ -341,5 +465,5 @@ runs:
         EOF
 
 branding:
-  icon: 'tag'
-  color: 'blue'
+  icon: "tag"
+  color: "blue"
