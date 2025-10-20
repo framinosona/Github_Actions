@@ -1,614 +1,412 @@
-# 📄 Generate CycloneDX SBOM Action
+# 📄 CycloneDX SBOM Generator Action
 
-Generates Software Bill of Materials (SBOM) using the CycloneDX .NET Global Tool with comprehensive configuration options and validation.
+A comprehensive GitHub Action for generating Software Bill of Materials (SBOM) files using the CycloneDX .NET Global Tool with extensive configuration options and cross-platform support.
 
-## Features
+## ✨ Features
 
-- 📄 Generate industry-standard CycloneDX SBOM files
-- 🎯 Support for multiple .NET project types and frameworks
-- 📋 Multiple output formats (XML, JSON, UnsafeJSON)
-- 🔍 Advanced dependency analysis and filtering
-- 🔐 GitHub license resolution integration
-- 📦 Custom NuGet repository support
-- ⚙️ Extensive configuration options
-- 📊 Detailed analysis and reporting
+- 📄 **SBOM Generation** - Creates CycloneDX-compliant Software Bill of Materials
+- 🔧 **Multiple Formats** - Supports XML, JSON, and UnsafeJSON output formats
+- 🎯 **Smart Detection** - Handles .sln, .csproj, packages.config, and directory scanning
+- 🔍 **GitHub Integration** - License resolution using GitHub API
+- 📦 **Dependency Management** - Excludes dev/test dependencies with filtering options
+- 🛡️ **Security-First** - Automatic masking of sensitive tokens and passwords
+- ⚡ **Performance Optimized** - Configurable timeouts and restore options
+- 🌐 **Cross-Platform** - Works on Windows, Linux, and macOS runners
 
-## Usage
+## 🚀 Basic Usage
 
-### Basic Usage - Generate SBOM for Project
+Minimal configuration to generate an SBOM:
+
 ```yaml
-- name: Generate SBOM
-  uses: ./dotnet-cyclonedx
+- name: "Generate SBOM"
+  uses: framinosona/github_actions/dotnet-cyclonedx@main
   with:
-    path: './src/MyProject.csproj'
+    path: "./src/MyProject.csproj"
 ```
 
-### Solution-Level SBOM with Custom Output
 ```yaml
-- name: Generate solution SBOM
-  uses: ./dotnet-cyclonedx
+- name: "Generate JSON SBOM"
+  uses: framinosona/github_actions/dotnet-cyclonedx@main
   with:
-    path: './MyApp.sln'
-    output: './artifacts/security'
-    filename: 'security-sbom.xml'
-    exclude-dev: 'true'
-    exclude-test-projects: 'true'
+    path: "./MySolution.sln"
+    output-format: "Json"
 ```
 
-### Advanced Usage - JSON Format with GitHub License Resolution
 ```yaml
-- name: Generate comprehensive SBOM
-  uses: ./dotnet-cyclonedx
+- name: "Generate SBOM for entire directory"
+  uses: framinosona/github_actions/dotnet-cyclonedx@main
   with:
-    path: './src'
-    output-format: 'Json'
-    filename: 'sbom.json'
-    recursive: 'true'
-    include-project-references: 'true'
-    enable-github-licenses: 'true'
-    github-username: ${{ github.actor }}
-    github-token: ${{ secrets.GITHUB_TOKEN }}
-    set-name: 'MyApplication'
-    set-version: ${{ github.ref_name }}
+    working-directory: "./src"
+    recursive: "true"
 ```
 
-### Enterprise Usage - Custom NuGet Feed with Filtering
+## 🔧 Advanced Usage
+
+Full configuration with all available options:
+
 ```yaml
-- name: Generate enterprise SBOM
-  uses: ./dotnet-cyclonedx
+- name: "Advanced SBOM generation"
+  uses: framinosona/github_actions/dotnet-cyclonedx@main
   with:
-    path: './Enterprise.sln'
-    framework: 'net8.0'
-    runtime: 'linux-x64'
-    nuget-url: 'https://nuget.company.com/v3/index.json'
-    nuget-username: ${{ secrets.NUGET_USERNAME }}
-    nuget-password: ${{ secrets.NUGET_PASSWORD }}
-    exclude-filter: 'TestPackage@1.0.0,LegacyLib@2.1.0'
-    set-type: 'Application'
-    dotnet-command-timeout: '600000'
+    path: "./src/MyApp/MyApp.csproj"
+    working-directory: "./backend"
+    framework: "net8.0"
+    runtime: "linux-x64"
+    output: "./sbom"
+    filename: "software-bom.json"
+    output-format: "Json"
+    exclude-dev: "true"
+    exclude-test-projects: "true"
+    recursive: "true"
+    enable-github-licenses: "true"
+    github-bearer-token: "${{ secrets.GITHUB_TOKEN }}"
+    set-name: "MyApplication"
+    set-version: "1.2.3"
+    set-type: "Application"
+    exclude-filter: "TestFramework@1.0.0,MockLibrary@2.1.0"
+    dotnet-command-timeout: "600000"
+    global: "true"
+    show-summary: "true"
 ```
 
-## Inputs
+## 🔐 Permissions Required
 
-| Input | Description | Required | Default |
-|-------|-------------|----------|---------|
-| `path` | Path to a .sln, .slnf, .slnx, .csproj, .fsproj, .vbproj, .xsproj, or packages.config file or directory | ✅ Yes | |
-| `framework` | Target framework to use. If not defined, all will be aggregated | ❌ No | `""` |
-| `runtime` | Runtime to use. If not defined, all will be aggregated | ❌ No | `""` |
-| `output` | Directory to write the BOM | ❌ No | `"${{ github.workspace }}/output/sbom"` |
-| `filename` | Filename for the BOM | ❌ No | `"sbom.xml"` |
-| `output-format` | BOM output format (Auto, Xml, Json, UnsafeJson) | ❌ No | `"Auto"` |
-| `exclude-dev` | Exclude development dependencies from the BOM | ❌ No | `"true"` |
-| `exclude-test-projects` | Exclude test projects from the BOM | ❌ No | `"true"` |
-| `recursive` | Recursively scan project references | ❌ No | `"false"` |
-| `include-project-references` | Include project references as components | ❌ No | `"false"` |
-| `no-serial-number` | Omit the serial number from the resulting BOM | ❌ No | `"false"` |
-| `disable-package-restore` | Disable package restore | ❌ No | `"false"` |
-| `disable-hash-computation` | Disable hash computation for packages | ❌ No | `"false"` |
-| `set-name` | Override the autogenerated BOM metadata component name | ❌ No | `""` |
-| `set-version` | Override the default BOM metadata component version | ❌ No | `""` |
-| `set-type` | Override the default BOM metadata component type | ❌ No | `"Application"` |
-| `dotnet-command-timeout` | dotnet command timeout in milliseconds | ❌ No | `"300000"` |
-| `github-username` | GitHub username for license resolution | ❌ No | `""` |
-| `github-token` | GitHub personal access token for license resolution | ❌ No | `""` |
-| `github-bearer-token` | GitHub bearer token for license resolution | ❌ No | `""` |
-| `enable-github-licenses` | Enable GitHub license resolution | ❌ No | `"false"` |
-| `nuget-url` | Alternative NuGet repository URL | ❌ No | `""` |
-| `nuget-username` | Alternative NuGet repository username | ❌ No | `""` |
-| `nuget-password` | Alternative NuGet repository password/apikey | ❌ No | `""` |
-| `nuget-password-clear-text` | NuGet repository password is cleartext | ❌ No | `"false"` |
-| `base-intermediate-output-path` | Custom build environment folder (if obj folder is relocated) | ❌ No | `""` |
-| `import-metadata-path` | Metadata template path with project specific details | ❌ No | `""` |
-| `exclude-filter` | Comma separated list of dependencies to exclude (name1@version1,name2@version2) | ❌ No | `""` |
-| `cyclonedx-version` | Version of CycloneDX tool to install | ❌ No | `""` |
+This action requires standard repository permissions:
 
-## Outputs
-
-| Output | Description |
-|--------|-------------|
-| `sbom-path` | Full path to the generated SBOM file |
-| `sbom-size` | Size of the generated SBOM file in bytes |
-| `dependencies-count` | Number of dependencies found in the SBOM |
-| `output-format` | Actual output format used |
-
-## Component Types
-
-Valid values for `set-type` parameter:
-
-| Type | Description |
-|------|-------------|
-| `Application` | Software application (default) |
-| `Container` | Container image |
-| `Cryptographic_Asset` | Cryptographic asset |
-| `Data` | Data asset |
-| `Device` | Hardware device |
-| `Device_Driver` | Device driver |
-| `File` | File asset |
-| `Firmware` | Firmware |
-| `Framework` | Software framework |
-| `Library` | Software library |
-| `Machine_Learning_Model` | ML model |
-| `Null` | Null component |
-| `Operating_System` | Operating system |
-| `Platform` | Platform |
-
-## Output Formats
-
-| Format | Description | File Extension |
-|--------|-------------|----------------|
-| `Auto` | Automatically determined based on filename | `.xml` or `.json` |
-| `Xml` | CycloneDX XML format | `.xml` |
-| `Json` | CycloneDX JSON format | `.json` |
-| `UnsafeJson` | CycloneDX JSON format without validation | `.json` |
-
-## Examples
-
-### Example 1: CI/CD Pipeline with SBOM Generation
 ```yaml
-name: Build and Generate SBOM
+permissions:
+  contents: read  # Required to checkout repository code
+```
+
+For GitHub license resolution, add:
+
+```yaml
+permissions:
+  contents: read
+  metadata: read  # Optional: for enhanced GitHub license resolution
+```
+
+> **Note**: When using `github-bearer-token`, the `GITHUB_TOKEN` secret provides sufficient permissions for license resolution.
+
+## 🏗️ CI/CD Example
+
+Complete workflow for .NET SBOM generation:
+
+```yaml
+name: "SBOM Generation Pipeline"
+
 on:
   push:
-    branches: [main]
+    branches: ["main", "develop"]
   pull_request:
-    branches: [main]
+    branches: ["main"]
+
+permissions:
+  contents: read
+  metadata: read
 
 jobs:
-  security-scan:
+  generate-sbom:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: Setup .NET
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+
+      - name: "🔧 Setup .NET"
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: "8.0.x"
 
-      - name: Restore dependencies
-        run: dotnet restore
-
-      - name: Build application
-        run: dotnet build --configuration Release --no-restore
-
-      - name: Generate SBOM
-        uses: ./dotnet-cyclonedx
+      - name: "📦 Restore dependencies"
+        uses: framinosona/github_actions/dotnet@main
         with:
-          path: './src/MyApp.csproj'
-          output: './artifacts/security'
-          filename: 'sbom.xml'
-          exclude-dev: 'true'
-          exclude-test-projects: 'true'
-          set-name: 'MyApplication'
-          set-version: ${{ github.sha }}
+          command: "restore"
 
-      - name: Upload SBOM artifact
+      - name: "📄 Generate SBOM"
+        id: generate-sbom
+        uses: framinosona/github_actions/dotnet-cyclonedx@main
+        with:
+          path: "./src/MyApp.sln"
+          output: "./artifacts/sbom"
+          output-format: "Json"
+          filename: "software-bill-of-materials.json"
+          exclude-dev: "true"
+          exclude-test-projects: "true"
+          enable-github-licenses: "true"
+          github-bearer-token: "${{ secrets.GITHUB_TOKEN }}"
+          set-name: "${{ github.repository }}"
+          set-version: "${{ github.ref_name }}"
+          show-summary: "true"
+
+      - name: "📤 Upload SBOM artifact"
         uses: actions/upload-artifact@v4
         with:
-          name: sbom
-          path: './artifacts/security/sbom.xml'
+          name: "software-bill-of-materials"
+          path: ${{ steps.generate-sbom.outputs.sbom-path }}
 
-      - name: Validate SBOM
+      - name: "🔍 Validate SBOM generation"
         run: |
-          echo "SBOM generated at: ${{ steps.generate-sbom.outputs.sbom-path }}"
-          echo "File size: ${{ steps.generate-sbom.outputs.sbom-size }} bytes"
-          echo "Dependencies: ${{ steps.generate-sbom.outputs.dependencies-count }}"
+          echo "SBOM generated: ${{ steps.generate-sbom.outputs.is-sbom-generated }}"
+          echo "SBOM location: ${{ steps.generate-sbom.outputs.sbom-path }}"
+          ls -la ${{ steps.generate-sbom.outputs.sbom-path }}
 ```
 
-### Example 2: Multi-Framework SBOM Generation
+## 📋 Inputs
+
+| Input | Description | Required | Default | Example |
+|-------|-------------|----------|---------|---------|
+| `path` | Path to .sln, .csproj, packages.config file or directory | ❌ No | `""` | `./src/MyProject.csproj` |
+| `working-directory` | Working directory for command execution | ❌ No | `"."` | `./backend` |
+| `framework` | Target framework to use | ❌ No | `""` | `net8.0`, `net6.0` |
+| `runtime` | Target runtime identifier | ❌ No | `""` | `win-x64`, `linux-x64` |
+| `output` | Directory to write the SBOM | ❌ No | `""` | `./sbom`, `./artifacts` |
+| `filename` | Custom filename for the SBOM | ❌ No | `""` | `software-bom.xml`, `app-sbom.json` |
+| `output-format` | SBOM output format | ❌ No | `"Auto"` | `Auto`, `Json`, `UnsafeJson`, `Xml` |
+| `exclude-dev` | Exclude development dependencies | ❌ No | `"false"` | `true`, `false` |
+| `exclude-test-projects` | Exclude test projects | ❌ No | `"false"` | `true`, `false` |
+| `recursive` | Recursively scan project references | ❌ No | `"false"` | `true`, `false` |
+| `no-serial-number` | Omit serial number from SBOM | ❌ No | `"false"` | `true`, `false` |
+| `enable-github-licenses` | Enable GitHub license resolution | ❌ No | `"false"` | `true`, `false` |
+| `github-username` | GitHub username for license resolution | ❌ No | `""` | `myusername` |
+| `github-token` | GitHub personal access token | ❌ No | `""` | `${{ secrets.GITHUB_TOKEN }}` |
+| `github-bearer-token` | GitHub bearer token (recommended) | ❌ No | `""` | `${{ secrets.GITHUB_TOKEN }}` |
+| `url` | Alternative NuGet repository URL | ❌ No | `""` | `https://nuget.example.com/v3/index.json` |
+| `baseUrlUsername` | Alternative NuGet repository username | ❌ No | `""` | `nuget-user` |
+| `baseUrlUserPassword` | Alternative NuGet repository password | ❌ No | `""` | `${{ secrets.NUGET_PASSWORD }}` |
+| `isBaseUrlPasswordClearText` | NuGet password is cleartext | ❌ No | `"false"` | `true`, `false` |
+| `disable-package-restore` | Disable package restore | ❌ No | `"false"` | `true`, `false` |
+| `disable-hash-computation` | Disable hash computation | ❌ No | `"false"` | `true`, `false` |
+| `dotnet-command-timeout` | Command timeout in milliseconds | ❌ No | `"300000"` | `600000`, `900000` |
+| `include-project-references` | Include project references as components | ❌ No | `"false"` | `true`, `false` |
+| `set-name` | Override BOM component name | ❌ No | `""` | `MyApplication` |
+| `set-version` | Override BOM component version | ❌ No | `""` | `1.0.0`, `2.1.3` |
+| `set-type` | Override BOM component type | ❌ No | `"Application"` | `Library`, `Framework` |
+| `set-nuget-purl` | Override BOM ref and PURL as NuGet package | ❌ No | `"false"` | `true`, `false` |
+| `exclude-filter` | Dependencies to exclude (name@version) | ❌ No | `""` | `TestLib@1.0.0,MockFramework@2.0.0` |
+| `base-intermediate-output-path` | Custom build environment folder | ❌ No | `""` | `./custom-obj` |
+| `import-metadata-path` | Metadata template file path | ❌ No | `""` | `./templates/metadata.json` |
+| `global` | Install CycloneDX global tool if needed | ❌ No | `"true"` | `true`, `false` |
+| `show-summary` | Display action summary | ❌ No | `"false"` | `true`, `false` |
+
+## 📤 Outputs
+
+| Output | Description | Type | Example |
+|--------|-------------|------|---------|
+| `exit-code` | Exit code of the CycloneDX command | `string` | `0`, `1` |
+| `executed-command` | Full command that was executed | `string` | `dotnet tool run CycloneDX ./src --output-format Json` |
+| `sbom-path` | Path to the generated SBOM file | `string` | `./sbom/bom.json` |
+| `is-sbom-generated` | Whether SBOM was successfully generated | `string` | `true`, `false` |
+
+## 🔗 Related Actions
+
+| Action | Purpose | Repository |
+|--------|---------|------------|
+| 🚀 **dotnet** | Execute .NET CLI commands | `framinosona/github_actions/dotnet` |
+| 🔧 **dotnet-tool-install** | Install .NET global tools | `framinosona/github_actions/dotnet-tool-install` |
+| 🧪 **dotnet-test** | Enhanced .NET testing | `framinosona/github_actions/dotnet-test` |
+
+## 💡 Examples
+
+### Different Output Formats
+
 ```yaml
-name: Generate Multi-Framework SBOMs
-on: [workflow_dispatch]
+- name: "Generate XML SBOM"
+  uses: framinosona/github_actions/dotnet-cyclonedx@main
+  with:
+    path: "./src/MyApp.csproj"
+    output-format: "Xml"
+    filename: "software-bom.xml"
 
-jobs:
-  generate-sboms:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        framework: ['net6.0', 'net7.0', 'net8.0']
-        format: ['Xml', 'Json']
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: |
-            6.0.x
-            7.0.x
-            8.0.x
-
-      - name: Generate SBOM for ${{ matrix.framework }}
-        uses: ./dotnet-cyclonedx
-        with:
-          path: './src/MultiTarget.csproj'
-          framework: ${{ matrix.framework }}
-          output-format: ${{ matrix.format }}
-          filename: 'sbom-${{ matrix.framework }}.${{ matrix.format == "Json" && "json" || "xml" }}'
-          output: './artifacts/sboms'
-          recursive: 'true'
-          include-project-references: 'true'
-
-      - name: Upload SBOM artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: sbom-${{ matrix.framework }}-${{ matrix.format }}
-          path: './artifacts/sboms/'
+- name: "Generate JSON SBOM"
+  uses: framinosona/github_actions/dotnet-cyclonedx@main
+  with:
+    path: "./src/MyApp.csproj"
+    output-format: "Json"
+    filename: "software-bom.json"
 ```
 
-### Example 3: Enterprise SBOM with License Resolution
+### Multi-Project Solution
+
 ```yaml
-name: Enterprise Security Compliance
-on:
-  schedule:
-    - cron: '0 2 * * 1'  # Weekly on Monday
-  workflow_dispatch:
-
-jobs:
-  compliance-scan:
-    runs-on: ubuntu-latest
-    environment: production
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
-
-      - name: Configure enterprise NuGet sources
-        uses: ./dotnet-nuget-feed-setup
-        with:
-          name: 'Enterprise'
-          source: 'https://nuget.enterprise.com/v3/index.json'
-          username: ${{ secrets.ENTERPRISE_NUGET_USER }}
-          password: ${{ secrets.ENTERPRISE_NUGET_TOKEN }}
-
-      - name: Generate comprehensive SBOM
-        uses: ./dotnet-cyclonedx
-        with:
-          path: './Enterprise.sln'
-          output: './compliance/sbom'
-          filename: 'enterprise-sbom.json'
-          output-format: 'Json'
-          recursive: 'true'
-          include-project-references: 'true'
-          enable-github-licenses: 'true'
-          github-username: ${{ github.actor }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          nuget-url: 'https://nuget.enterprise.com/v3/index.json'
-          nuget-username: ${{ secrets.ENTERPRISE_NUGET_USER }}
-          nuget-password: ${{ secrets.ENTERPRISE_NUGET_TOKEN }}
-          exclude-filter: 'TestUtilities@1.0.0,MockFramework@2.1.0'
-          set-name: 'EnterpriseApplication'
-          set-version: ${{ github.ref_name }}
-          set-type: 'Application'
-          dotnet-command-timeout: '900000'
-
-      - name: Validate compliance
-        run: |
-          echo "🔍 SBOM Analysis Results:"
-          echo "📄 File: ${{ steps.generate-sbom.outputs.sbom-path }}"
-          echo "📏 Size: ${{ steps.generate-sbom.outputs.sbom-size }} bytes"
-          echo "📦 Dependencies: ${{ steps.generate-sbom.outputs.dependencies-count }}"
-
-          # Validate SBOM structure
-          jq '.metadata.component.name' ./compliance/sbom/enterprise-sbom.json
-          jq '.components | length' ./compliance/sbom/enterprise-sbom.json
-
-      - name: Upload to compliance system
-        run: |
-          # Upload SBOM to enterprise compliance system
-          curl -X POST \
-            -H "Authorization: Bearer ${{ secrets.COMPLIANCE_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d @./compliance/sbom/enterprise-sbom.json \
-            https://compliance.enterprise.com/api/sbom/upload
+- name: "Generate SBOM for entire solution"
+  uses: framinosona/github_actions/dotnet-cyclonedx@main
+  with:
+    path: "./MySolution.sln"
+    exclude-test-projects: "true"
+    exclude-dev: "true"
+    recursive: "true"
+    output: "./artifacts/sbom"
 ```
 
-### Example 4: Container SBOM Generation
+### Framework-Specific SBOM
+
 ```yaml
-name: Container Security Scan
-on:
-  push:
-    tags: ['v*']
+strategy:
+  matrix:
+    framework: ["net6.0", "net8.0"]
 
-jobs:
-  container-sbom:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
-
-      - name: Generate application SBOM
-        uses: ./dotnet-cyclonedx
-        with:
-          path: './src/WebApp.csproj'
-          output: './docker/security'
-          filename: 'app-sbom.xml'
-          exclude-dev: 'true'
-          exclude-test-projects: 'true'
-          recursive: 'true'
-          set-name: 'WebApplication'
-          set-version: ${{ github.ref_name }}
-          set-type: 'Container'
-
-      - name: Build container image
-        run: |
-          docker build -t myapp:${{ github.ref_name }} .
-
-      - name: Scan container for vulnerabilities
-        run: |
-          # Use SBOM for container security scanning
-          echo "🔍 Scanning container with SBOM data..."
-          # Integration with security scanning tools
+steps:
+  - name: "Generate SBOM for ${{ matrix.framework }}"
+    uses: framinosona/github_actions/dotnet-cyclonedx@main
+    with:
+      path: "./src/MultiTarget.csproj"
+      framework: ${{ matrix.framework }}
+      filename: "sbom-${{ matrix.framework }}.json"
+      output-format: "Json"
 ```
-
-## Requirements
-
-- ✅ .NET SDK must be installed (use `actions/setup-dotnet`)
-- ✅ Valid .NET project or solution file
-- ✅ CycloneDX tool is automatically installed
-- ✅ Network access for NuGet package resolution
-- ✅ GitHub token for license resolution (optional)
-
-## Security and Compliance
-
-### 🛡️ **Security Benefits**
-- **Vulnerability Management**: Track all dependencies for security scanning
-- **License Compliance**: Identify license obligations and risks
-- **Supply Chain Security**: Complete visibility into software components
-- **Audit Trail**: Detailed component provenance information
-
-### 📋 **Compliance Standards**
-- **NTIA Minimum Elements**: Meets NIST guidelines for SBOM
-- **SPDX Compatible**: Industry-standard format
-- **CycloneDX Standard**: OWASP-endorsed SBOM format
-- **Executive Order 14028**: US government cybersecurity requirements
-
-### 🔍 **Best Practices**
-- **Regular Generation**: Generate SBOMs for every release
-- **Version Control**: Store SBOMs with source code
-- **Automated Scanning**: Integrate with vulnerability databases
-- **License Review**: Regular license compliance audits
-
-## Advanced Configuration
 
 ### GitHub License Resolution
 
-Enable comprehensive license detection:
-
 ```yaml
-- name: Generate SBOM with license data
-  uses: ./dotnet-cyclonedx
+- name: "Generate SBOM with license information"
+  uses: framinosona/github_actions/dotnet-cyclonedx@main
   with:
-    path: './src'
-    enable-github-licenses: 'true'
-    github-username: ${{ github.actor }}
-    github-token: ${{ secrets.GITHUB_TOKEN }}
+    path: "./src/MyApp.csproj"
+    enable-github-licenses: "true"
+    github-bearer-token: "${{ secrets.GITHUB_TOKEN }}"
+    output-format: "Json"
 ```
 
-### Custom NuGet Sources
-
-For private package feeds:
+### Custom NuGet Repository
 
 ```yaml
-- name: Generate SBOM from private feeds
-  uses: ./dotnet-cyclonedx
+- name: "Generate SBOM from private NuGet"
+  uses: framinosona/github_actions/dotnet-cyclonedx@main
   with:
-    path: './src'
-    nuget-url: 'https://private.nuget.company.com/v3/index.json'
-    nuget-username: ${{ secrets.PRIVATE_NUGET_USER }}
-    nuget-password: ${{ secrets.PRIVATE_NUGET_TOKEN }}
-    nuget-password-clear-text: 'false'
+    path: "./src/MyApp.csproj"
+    url: "https://nuget.company.com/v3/index.json"
+    baseUrlUsername: "${{ secrets.NUGET_USERNAME }}"
+    baseUrlUserPassword: "${{ secrets.NUGET_PASSWORD }}"
+    isBaseUrlPasswordClearText: "false"
 ```
 
 ### Dependency Filtering
 
-Exclude specific packages:
-
 ```yaml
-- name: Generate filtered SBOM
-  uses: ./dotnet-cyclonedx
+- name: "Generate filtered SBOM"
+  uses: framinosona/github_actions/dotnet-cyclonedx@main
   with:
-    path: './src'
-    exclude-filter: 'TestPackage@1.0.0,DevTool@2.1.0,LegacyLib@3.0.0'
-    exclude-dev: 'true'
-    exclude-test-projects: 'true'
+    path: "./src/MyApp.csproj"
+    exclude-dev: "true"
+    exclude-test-projects: "true"
+    exclude-filter: "Microsoft.AspNetCore.App@8.0.0,System.Text.Json@7.0.0"
+    output-format: "Json"
 ```
 
-### Custom Metadata
+## 🔧 Output Format Support
 
-Override component information:
+| Format | Description | File Extension | Use Case |
+|--------|-------------|----------------|----------|
+| `Auto` | Automatically detects based on filename | `.xml` or `.json` | Default, flexible |
+| `Xml` | CycloneDX XML format | `.xml` | Standards compliance |
+| `Json` | CycloneDX JSON format | `.json` | API integration |
+| `UnsafeJson` | JSON with relaxed escaping | `.json` | Special characters |
 
-```yaml
-- name: Generate SBOM with custom metadata
-  uses: ./dotnet-cyclonedx
-  with:
-    path: './src'
-    set-name: 'ProductionApplication'
-    set-version: ${{ github.ref_name }}
-    set-type: 'Application'
-    import-metadata-path: './metadata/component-info.json'
-```
+## 🎯 Component Types
 
-## Output Analysis
+| Type | Description | Example Use Case |
+|------|-------------|------------------|
+| `Application` | Standalone application | Web apps, desktop apps |
+| `Library` | Reusable library | NuGet packages, class libraries |
+| `Framework` | Development framework | ASP.NET Core, Entity Framework |
+| `Container` | Container image | Docker containers |
+| `Operating_System` | OS components | Linux distributions |
+| `Device` | Hardware device | IoT devices |
+| `Firmware` | Device firmware | Embedded systems |
 
-### SBOM Structure (XML)
-```xml
-<?xml version="1.0" encoding="utf-8"?>
-<bom xmlns="http://cyclonedx.org/schema/bom/1.4" version="1">
-  <metadata>
-    <component type="application">
-      <name>MyApplication</name>
-      <version>1.0.0</version>
-    </component>
-  </metadata>
-  <components>
-    <component type="library">
-      <name>Newtonsoft.Json</name>
-      <version>13.0.3</version>
-      <purl>pkg:nuget/Newtonsoft.Json@13.0.3</purl>
-    </component>
-  </components>
-</bom>
-```
-
-### SBOM Structure (JSON)
-```json
-{
-  "bomFormat": "CycloneDX",
-  "specVersion": "1.4",
-  "version": 1,
-  "metadata": {
-    "component": {
-      "type": "application",
-      "name": "MyApplication",
-      "version": "1.0.0"
-    }
-  },
-  "components": [
-    {
-      "type": "library",
-      "name": "Newtonsoft.Json",
-      "version": "13.0.3",
-      "purl": "pkg:nuget/Newtonsoft.Json@13.0.3"
-    }
-  ]
-}
-```
-
-## Error Handling
-
-The action includes comprehensive error handling:
-
-### 🔍 **Validation Errors**
-- Missing or invalid project files
-- Invalid component types or output formats
-- Malformed authentication credentials
-- Invalid timeout values
-
-### 📦 **Tool Installation Errors**
-- CycloneDX tool installation failures
-- Version compatibility issues
-- Network connectivity problems
-
-### 🔧 **Generation Errors**
-- Project compilation failures
-- Package restore issues
-- Memory or timeout limitations
-- Invalid exclude filters
-
-## Troubleshooting
+## 🐛 Troubleshooting
 
 ### Common Issues
 
-1. **Tool Installation Failed**
-   ```
-   Failed to install CycloneDX tool
-   ```
-   - **Solution**: Check network connectivity and NuGet access
+#### CycloneDX Tool Not Found
 
-2. **Project Build Failed**
-   ```
-   Build failed for project
-   ```
-   - **Solution**: Ensure project builds successfully with `dotnet build`
+**Problem**: CycloneDX global tool is not installed
 
-3. **Large Memory Usage**
-   ```
-   OutOfMemoryException during SBOM generation
-   ```
-   - **Solution**: Increase `dotnet-command-timeout` or use `exclude-dev: 'true'`
-
-4. **Missing Dependencies**
-   ```
-   Unable to resolve package references
-   ```
-   - **Solution**: Configure proper NuGet sources or disable package restore
-
-### Debug Mode
-
-Enable verbose output:
+**Solution**: Ensure `global: "true"` (default) or install manually:
 
 ```yaml
-env:
-  ACTIONS_STEP_DEBUG: true
+- name: "Install CycloneDX"
+  run: dotnet tool install --global CycloneDX
 ```
 
-### Performance Tuning
+#### Project File Not Found
 
-For large solutions:
+**Problem**: Specified path does not exist
+
+**Solution**: Verify the path and file existence:
 
 ```yaml
-- name: Generate optimized SBOM
-  uses: ./dotnet-cyclonedx
-  with:
-    path: './Large.sln'
-    exclude-dev: 'true'
-    exclude-test-projects: 'true'
-    disable-hash-computation: 'true'
-    dotnet-command-timeout: '900000'
+- name: "Check project file"
+  run: ls -la ./src/MyProject.csproj
 ```
 
-## Integration with Security Tools
+#### GitHub API Rate Limiting
 
-### Vulnerability Scanning
+**Problem**: License resolution fails due to rate limits
+
+**Solution**: Provide authentication token:
 
 ```yaml
-- name: Generate SBOM
-  uses: ./dotnet-cyclonedx
-  with:
-    path: './src'
-    output-format: 'Json'
-    filename: 'sbom.json'
-
-- name: Scan for vulnerabilities
-  run: |
-    # Example with GitHub Advisory Database
-    npm install -g @cyclonedx/cli
-    cyclonedx-cli validate --input-file ./output/sbom/sbom.json
+github-bearer-token: "${{ secrets.GITHUB_TOKEN }}"
+enable-github-licenses: "true"
 ```
 
-### License Analysis
+#### Large Project Timeouts
+
+**Problem**: Command times out on large solutions
+
+**Solution**: Increase timeout value:
 
 ```yaml
-- name: Generate SBOM with licenses
-  uses: ./dotnet-cyclonedx
-  with:
-    path: './src'
-    enable-github-licenses: 'true'
-    github-token: ${{ secrets.GITHUB_TOKEN }}
-
-- name: Analyze licenses
-  run: |
-    # Extract license information
-    jq '.components[].licenses' ./output/sbom/sbom.xml
+dotnet-command-timeout: "900000"  # 15 minutes
 ```
 
-## Version Compatibility
+#### Missing Dependencies in SBOM
 
-| .NET Version | CycloneDX Support |
-|--------------|-------------------|
-| .NET 8.0 | ✅ Full Support |
-| .NET 7.0 | ✅ Full Support |
-| .NET 6.0 | ✅ Full Support |
-| .NET 5.0 | ✅ Full Support |
-| .NET Core 3.1 | ✅ Full Support |
-| .NET Framework | ✅ Limited Support |
+**Problem**: Some dependencies not included
 
-## Contributing
+**Solution**: Ensure proper restore and disable selective restore:
 
-When contributing to this action, please ensure:
+```yaml
+disable-package-restore: "false"
+recursive: "true"
+```
 
-- ✅ Follow the Actions structure principles
-- 🧪 Test with various project types and sizes
-- 📝 Update documentation for new features
-- 🔐 Handle sensitive information securely
-- 🔍 Validate all inputs thoroughly
-- 📊 Maintain comprehensive summary reporting
-- 🛡️ Consider security and compliance implications
+### Debug Tips
+
+1. **Enable Summary**: Set `show-summary: "true"` for detailed information
+2. **Check Outputs**: Use the `sbom-path` output to verify file location
+3. **Validate Format**: Ensure the generated SBOM is valid CycloneDX
+4. **Review Exclusions**: Check if dependencies are excluded by filters
+
+## 📝 Requirements
+
+- GitHub Actions runner (Windows, Linux, or macOS)
+- .NET SDK installed (use `actions/setup-dotnet`)
+- Valid .NET project, solution, or packages.config structure
+- CycloneDX global tool (auto-installed by default)
+
+## 🔒 Security Considerations
+
+- **Token Masking**: Sensitive tokens are automatically masked in logs
+- **Private Repositories**: Use appropriate authentication for private NuGet feeds
+- **License Data**: GitHub license resolution requires minimal read permissions
+- **SBOM Content**: Review generated SBOMs before publishing to ensure no sensitive data
+
+## 📋 SBOM Standards Compliance
+
+This action generates CycloneDX-compliant SBOMs that meet:
+
+- **CycloneDX Specification**: Follows official CycloneDX schema
+- **SPDX Compatibility**: Can be converted to SPDX format
+- **NTIA Minimum Elements**: Includes required SBOM components
+- **Supply Chain Security**: Supports vulnerability scanning integration
+
+## 📄 License
+
+This action is part of the GitHub Actions collection by Francois Raminosona.
+
+---
+
+> 💡 **Tip**: For complete SBOM workflows, combine this action with our signing and publishing actions in the [Related Actions](#-related-actions) section.
