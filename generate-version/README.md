@@ -2,6 +2,16 @@
 
 A GitHub Action for semantic version generation based on Git tag analysis and branch information with multiple output formats.
 
+> 🚀 **New**: Looking for a ready-to-use solution? Check out our [**Reusable Workflow**](./WORKFLOW.md) that handles checkout, version generation, and artifact management automatically!
+
+## 📋 Quick Navigation
+
+| What do you want to do? | Use this |
+|-------------------------|----------|
+| 🚀 **Get started quickly** | [**Reusable Workflow**](./WORKFLOW.md) - Complete solution |
+| 🔧 **Custom integration** | **Standalone Action** (this page) - Full control |
+| 🎯 **Compare approaches** | [Action vs Workflow](#-action-vs-reusable-workflow) |
+
 ## ✨ Features
 
 - 🔍 **Git Tag Analysis** - Automatic patch version increment based on existing Git tags
@@ -67,6 +77,38 @@ With a version configuration file (`version.json`):
   "minor": 1
 }
 ```
+
+## 🎯 Action vs Reusable Workflow
+
+Choose the right approach for your needs:
+
+| Feature | **Standalone Action** | **[Reusable Workflow](./WORKFLOW.md)** |
+|---------|----------------------|---------------------------------------|
+| **Setup Complexity** | Manual checkout + action call | Single workflow call |
+| **Artifact Handling** | Manual upload/download | Automatic |
+| **Output Management** | Manual output mapping | Pre-configured |
+| **Customization** | Full control over each step | Opinionated defaults |
+| **Best For** | Custom integrations, Complex workflows | Standard CI/CD, Quick setup |
+
+### 🚀 Quick Start with Reusable Workflow
+
+```yaml
+jobs:
+  version:
+    uses: framinosona/github_actions/generate-version/workflow.yml@main
+    with:
+      major: "1"
+      minor: "0"
+
+  build:
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Build v${{ needs.version.outputs.version-full }}"
+        run: echo "Building..."
+```
+
+[**📖 See full workflow documentation →**](./WORKFLOW.md)
 
 ## 🔧 Advanced Usage
 

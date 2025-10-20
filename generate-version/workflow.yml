@@ -1,0 +1,225 @@
+name: "🔢 Generate Version Workflow"
+
+on:
+  workflow_call:
+    inputs:
+      config-file:
+        description: 'Path to version.json file. Format : { "major": 1, "minor": 0 }'
+        required: false
+        type: string
+        default: ""
+      major:
+        description: "Major version number"
+        required: false
+        type: string
+        default: ""
+      minor:
+        description: "Minor version number"
+        required: false
+        type: string
+        default: ""
+      main-branch:
+        description: "Name of the main branch"
+        required: false
+        type: string
+        default: ""
+      build-id:
+        description: "Build ID for revision numbering (defaults to GitHub run number)"
+        required: false
+        type: string
+        default: ""
+      tag-prefix:
+        description: "Prefix for version tags (e.g., 'v' for 'v1.0.0')"
+        required: false
+        type: string
+        default: "v"
+      branch-suffix-max-length:
+        description: "Maximum length for branch name suffix"
+        required: false
+        type: string
+        default: "40"
+      output-txt:
+        description: "Path to output txt file with key=value pairs"
+        required: false
+        type: string
+        default: "./version.txt"
+      output-props:
+        description: "Path to output .NET props file"
+        required: false
+        type: string
+        default: ""
+      output-json:
+        description: "Path to output JSON file with version information"
+        required: false
+        type: string
+        default: "./version.json"
+      fetch-depth:
+        description: "Depth of Git history to fetch for tag analysis"
+        required: false
+        type: string
+        default: "0"
+      show-summary:
+        description: "Whether to show the action summary"
+        required: false
+        type: boolean
+        default: true
+      dry-run:
+        description: "Run in dry-run mode (generate versions but don't create output files)"
+        required: false
+        type: boolean
+        default: false
+      upload-artifacts:
+        description: "Whether to upload generated files as artifacts"
+        required: false
+        type: boolean
+        default: true
+      artifact-name:
+        description: "Name for the uploaded artifact"
+        required: false
+        type: string
+        default: "version-files"
+      artifact-retention-days:
+        description: "Number of days to retain the artifact"
+        required: false
+        type: number
+        default: 30
+
+    outputs:
+      version-major:
+        description: "Major version number"
+        value: ${{ jobs.generate-version.outputs.version-major }}
+      version-minor:
+        description: "Minor version number"
+        value: ${{ jobs.generate-version.outputs.version-minor }}
+      version-patch:
+        description: "Patch version number"
+        value: ${{ jobs.generate-version.outputs.version-patch }}
+      version-suffix:
+        description: "Version suffix (branch name for non-main branches)"
+        value: ${{ jobs.generate-version.outputs.version-suffix }}
+      version-revision:
+        description: "Revision number (build ID for non-main branches)"
+        value: ${{ jobs.generate-version.outputs.version-revision }}
+      version-isprerelease:
+        description: "Whether this is a prerelease version (true for non-main branches)"
+        value: ${{ jobs.generate-version.outputs.version-isprerelease }}
+      version-buildid:
+        description: "Build ID used for versioning"
+        value: ${{ jobs.generate-version.outputs.version-buildid }}
+      version-core:
+        description: "Core version (major.minor.patch)"
+        value: ${{ jobs.generate-version.outputs.version-core }}
+      version-extension:
+        description: "Version extension (suffix.revision for branches)"
+        value: ${{ jobs.generate-version.outputs.version-extension }}
+      version-full:
+        description: "Full version (core + extension)"
+        value: ${{ jobs.generate-version.outputs.version-full }}
+      version-assembly:
+        description: "Assembly version for .NET (major.minor.patch.buildid)"
+        value: ${{ jobs.generate-version.outputs.version-assembly }}
+      version-fortag:
+        description: "Version string suitable for Git tags (with prefix)"
+        value: ${{ jobs.generate-version.outputs.version-fortag }}
+      version-branchname:
+        description: "Current branch name"
+        value: ${{ jobs.generate-version.outputs.version-branchname }}
+      version-prefix:
+        description: "Tag prefix used for version tags"
+        value: ${{ jobs.generate-version.outputs.version-prefix }}
+      version-outputtxt:
+        description: "Path to generated txt file (if created)"
+        value: ${{ jobs.generate-version.outputs.version-outputtxt }}
+      version-outputprops:
+        description: "Path to generated props file (if created)"
+        value: ${{ jobs.generate-version.outputs.version-outputprops }}
+      version-outputjson:
+        description: "Path to generated JSON file (if created)"
+        value: ${{ jobs.generate-version.outputs.version-outputjson }}
+      version-tag-exists:
+        description: "Whether a tag already exists for this version"
+        value: ${{ jobs.generate-version.outputs.version-tag-exists }}
+      version-latest-tag:
+        description: "Latest tag found for this major.minor combination"
+        value: ${{ jobs.generate-version.outputs.version-latest-tag }}
+
+jobs:
+  generate-version:
+    name: "🔢 Generate Version"
+    runs-on: ubuntu-latest
+
+    outputs:
+      version-major: ${{ steps.version.outputs.VERSION_MAJOR }}
+      version-minor: ${{ steps.version.outputs.VERSION_MINOR }}
+      version-patch: ${{ steps.version.outputs.VERSION_PATCH }}
+      version-suffix: ${{ steps.version.outputs.VERSION_SUFFIX }}
+      version-revision: ${{ steps.version.outputs.VERSION_REVISION }}
+      version-isprerelease: ${{ steps.version.outputs.VERSION_ISPRERELEASE }}
+      version-buildid: ${{ steps.version.outputs.VERSION_BUILDID }}
+      version-core: ${{ steps.version.outputs.VERSION_CORE }}
+      version-extension: ${{ steps.version.outputs.VERSION_EXTENSION }}
+      version-full: ${{ steps.version.outputs.VERSION_FULL }}
+      version-assembly: ${{ steps.version.outputs.VERSION_ASSEMBLY }}
+      version-fortag: ${{ steps.version.outputs.VERSION_FORTAG }}
+      version-branchname: ${{ steps.version.outputs.VERSION_BRANCHNAME }}
+      version-prefix: ${{ steps.version.outputs.VERSION_PREFIX }}
+      version-outputtxt: ${{ steps.version.outputs.VERSION_OUTPUTTXT }}
+      version-outputprops: ${{ steps.version.outputs.VERSION_OUTPUTPROPS }}
+      version-outputjson: ${{ steps.version.outputs.VERSION_OUTPUTJSON }}
+      version-tag-exists: ${{ steps.version.outputs.VERSION_TAG_EXISTS }}
+      version-latest-tag: ${{ steps.version.outputs.VERSION_LATEST_TAG }}
+
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: ${{ inputs.fetch-depth }}
+          token: ${{ github.token }}
+
+      - name: "🔢 Generate version"
+        id: version
+        uses: framinosona/github_actions/generate-version@main
+        with:
+          config-file: ${{ inputs.config-file }}
+          major: ${{ inputs.major }}
+          minor: ${{ inputs.minor }}
+          main-branch: ${{ inputs.main-branch || github.event.repository.default_branch }}
+          build-id: ${{ inputs.build-id || github.run_number }}
+          tag-prefix: ${{ inputs.tag-prefix }}
+          branch-suffix-max-length: ${{ inputs.branch-suffix-max-length }}
+          output-txt: ${{ inputs.output-txt }}
+          output-props: ${{ inputs.output-props }}
+          output-json: ${{ inputs.output-json }}
+          fetch-depth: ${{ inputs.fetch-depth }}
+          show-summary: ${{ inputs.show-summary }}
+          dry-run: ${{ inputs.dry-run }}
+
+      - name: "📄 Display version information"
+        shell: bash
+        run: |
+          echo "::group::📊 Generated Version Information"
+          echo "🎯 Core Version: ${{ steps.version.outputs.VERSION_CORE }}"
+          echo "🔗 Full Version: ${{ steps.version.outputs.VERSION_FULL }}"
+          echo "📚 Assembly Version: ${{ steps.version.outputs.VERSION_ASSEMBLY }}"
+          echo "🏷️ For Tag: ${{ steps.version.outputs.VERSION_FORTAG }}"
+          echo "🌿 Branch: ${{ steps.version.outputs.VERSION_BRANCHNAME }}"
+          echo "🚧 Is Prerelease: ${{ steps.version.outputs.VERSION_ISPRERELEASE }}"
+          echo "🏷️ Tag Exists: ${{ steps.version.outputs.VERSION_TAG_EXISTS }}"
+
+          if [ "${{ steps.version.outputs.VERSION_LATEST_TAG }}" != "" ]; then
+            echo "📋 Latest Tag: ${{ steps.version.outputs.VERSION_LATEST_TAG }}"
+          fi
+
+          echo "::endgroup::"
+
+      - name: "📤 Upload version artifacts"
+        if: ${{ inputs.upload-artifacts && !inputs.dry-run }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.artifact-name }}
+          retention-days: ${{ inputs.artifact-retention-days }}
+          path: |
+            ${{ inputs.output-txt }}
+            ${{ inputs.output-json }}
+            ${{ inputs.output-props }}
+          if-no-files-found: warn
