@@ -1,121 +1,120 @@
-name: '🚀 Github > Create Release'
-description: 'Creates GitHub releases using GitHub CLI'
-author: 'Francois Raminosona'
+name: "🚀 Create GitHub Release"
+description: "Creates GitHub releases using GitHub CLI"
+author: "Francois Raminosona"
 
 inputs:
+  # Common parameters
+  show-summary:
+    description: "Whether to show the action summary"
+    required: false
+    default: "false"
+
+  # GitHub CLI specific parameters
   tag:
-    description: 'Git tag for the release (if not provided, will be auto-generated or use existing tag)'
+    description: "Git tag for the release (if not provided, will be auto-generated)"
     required: false
-    default: ''
+    default: ""
+  assets:
+    description: "Newline-separated list of asset file paths to upload to the release"
+    required: false
+    default: ""
   title:
-    description: 'Release title'
+    description: "Release title"
     required: false
-    default: ''
+    default: ""
   notes:
-    description: 'Release notes content'
+    description: "Release notes content"
     required: false
-    default: ''
+    default: ""
   notes-file:
-    description: 'Path to file containing release notes'
+    description: "Path to file containing release notes"
     required: false
-    default: ''
+    default: ""
   notes-from-tag:
-    description: 'Use tag annotation or commit message as release notes'
+    description: "Use tag annotation or commit message as release notes"
     required: false
-    default: 'false'
+    default: "false"
   notes-start-tag:
-    description: 'Tag to use as starting point for generating release notes'
+    description: "Tag to use as starting point for generating release notes"
     required: false
-    default: ''
+    default: ""
   generate-notes:
-    description: 'Automatically generate title and notes via GitHub Release Notes API'
+    description: "Automatically generate title and notes via GitHub Release Notes API"
     required: false
-    default: 'false'
+    default: "false"
   draft:
-    description: 'Save the release as a draft instead of publishing it'
+    description: "Save the release as a draft instead of publishing it"
     required: false
-    default: 'false'
+    default: "false"
   prerelease:
-    description: 'Mark the release as a prerelease'
+    description: "Mark the release as a prerelease"
     required: false
-    default: 'false'
+    default: "false"
   latest:
-    description: 'Mark this release as "Latest" (true/false/auto)'
+    description: "Mark this release as 'Latest' (true/false/auto)"
     required: false
-    default: 'auto'
+    default: "auto"
   target:
-    description: 'Target branch or full commit SHA for automatic tag creation'
+    description: "Target branch or full commit SHA for automatic tag creation"
     required: false
-    default: ''
+    default: ""
   verify-tag:
-    description: 'Abort if the git tag does not already exist in the remote repository'
+    description: "Abort if the git tag does not already exist in the remote repository"
     required: false
-    default: 'false'
+    default: "false"
   discussion-category:
-    description: 'Start a discussion in the specified category'
+    description: "Start a discussion in the specified category"
     required: false
-    default: ''
+    default: ""
   fail-on-no-commits:
-    description: 'Fail if there are no commits since the last release'
+    description: "Fail if there are no commits since the last release"
     required: false
-    default: 'false'
+    default: "false"
   repo:
-    description: 'Target repository in OWNER/REPO format (defaults to current repository)'
+    description: "Target repository in OWNER/REPO format (defaults to current repository)"
     required: false
-    default: ''
+    default: ""
   github-token:
-    description: 'GitHub token for authentication'
+    description: "GitHub token for authentication"
     required: false
     default: ${{ github.token }}
-  show-summary:
-    description: 'Whether to show the action summary'
-    required: false
-    default: 'false'
 
 outputs:
   release-id:
-    description: 'ID of the created release'
-    value: ${{ steps.create.outputs.release-id }}
+    description: "ID of the created release"
+    value: ${{ steps.execute.outputs.release-id }}
   release-url:
-    description: 'URL of the created release'
-    value: ${{ steps.create.outputs.release-url }}
+    description: "URL of the created release"
+    value: ${{ steps.execute.outputs.release-url }}
   release-tag:
-    description: 'Tag of the created release'
-    value: ${{ steps.create.outputs.release-tag }}
+    description: "Tag of the created release"
+    value: ${{ steps.execute.outputs.release-tag }}
   release-name:
-    description: 'Name/title of the created release'
-    value: ${{ steps.create.outputs.release-name }}
+    description: "Name/title of the created release"
+    value: ${{ steps.execute.outputs.release-name }}
   upload-url:
-    description: 'Upload URL for the release'
-    value: ${{ steps.create.outputs.upload-url }}
+    description: "Upload URL for the release"
+    value: ${{ steps.execute.outputs.upload-url }}
 
 runs:
   using: "composite"
   steps:
-    - name: "✅ Validate inputs"
+
+    - name: "🔒 Mask sensitive data"
       shell: bash
       run: |
-        echo "::group::🔍 GitHub Release Creation Input Validation"
-        echo "::debug::Validating inputs for GitHub release creation"
-
         # Mask sensitive data FIRST
         if [ -n "${{ inputs.github-token }}" ]; then
           echo "::add-mask::${{ inputs.github-token }}"
         fi
 
-        # Validate that either notes, notes-file, notes-from-tag, or generate-notes is provided
-        if [ -z "${{ inputs.notes }}" ] && [ -z "${{ inputs.notes-file }}" ] && [ "${{ inputs.notes-from-tag }}" != "true" ] && [ "${{ inputs.generate-notes }}" != "true" ]; then
-          echo "::warning::No release notes specified. Consider using notes, notes-file, notes-from-tag, or generate-notes"
-        fi
+        echo "::debug::Masked sensitive inputs"
 
-        # Validate notes-file exists if provided
-        if [ -n "${{ inputs.notes-file }}" ] && [ ! -f "${{ inputs.notes-file }}" ]; then
-          echo "::error::Notes file not found: ${{ inputs.notes-file }}"
-          exit 1
-        fi
-
-        # Validate boolean inputs
-        for param in notes-from-tag generate-notes draft prerelease verify-tag fail-on-no-commits; do
+    - name: "✅ Validate input : booleans"
+      shell: bash
+      run: |
+        echo "::debug::Validating boolean inputs..."
+        for param in notes-from-tag generate-notes draft prerelease verify-tag fail-on-no-commits show-summary; do
           case $param in
             notes-from-tag) value="${{ inputs.notes-from-tag }}" ;;
             generate-notes) value="${{ inputs.generate-notes }}" ;;
@@ -123,6 +122,7 @@ runs:
             prerelease) value="${{ inputs.prerelease }}" ;;
             verify-tag) value="${{ inputs.verify-tag }}" ;;
             fail-on-no-commits) value="${{ inputs.fail-on-no-commits }}" ;;
+            show-summary) value="${{ inputs.show-summary }}" ;;
           esac
           if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
             echo "::error::Parameter $param must be 'true' or 'false', got: $value"
@@ -130,139 +130,215 @@ runs:
           fi
         done
 
-        # Validate latest input
-        if [ -n "${{ inputs.latest }}" ]; then
-          case "${{ inputs.latest }}" in
-            true|false|auto) ;;
-            *) echo "::error::latest must be 'true', 'false', or 'auto'"; exit 1 ;;
-          esac
-        fi
+        echo "✅ Boolean inputs validation completed successfully"
 
-        # Validate repository format if provided
-        if [ -n "${{ inputs.repo }}" ]; then
-          if ! [[ "${{ inputs.repo }}" =~ ^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$ ]]; then
-                        echo "::error::Invalid repository format. Must be OWNER/REPO"
-            exit 1
-          fi
-        fi
 
-        # Validate tag format if provided
-        if [ -n "${{ inputs.tag }}" ]; then
-          if [[ "${{ inputs.tag }}" =~ [[:space:]] ]]; then
-            echo "::error::Tag name cannot contain spaces: ${{ inputs.tag }}"
-            exit 1
-          fi
-        fi
-
-        echo "::notice::Input validation completed successfully"
-        echo "::endgroup::"
-
-    - name: "🔧 Setup GitHub CLI"
+    - name: "✅ Validate input : latest"
+      if: ${{ inputs.latest != '' && inputs.latest != 'auto' }}
       shell: bash
       run: |
-        echo "🔧 Setting up GitHub CLI..."
+        echo "::debug::Validating latest input: ${{ inputs.latest }}"
 
+        case "${{ inputs.latest }}" in
+          true|false|auto) ;;
+          *) echo "::error::latest must be 'true', 'false', or 'auto'"; exit 1 ;;
+        esac
+
+        echo "✅ Latest parameter validation completed successfully"
+
+    - name: "✅ Validate input : notes-file"
+      if: ${{ inputs.notes-file != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating notes-file input: ${{ inputs.notes-file }}"
+
+        if [ ! -f "${{ inputs.notes-file }}" ]; then
+          echo "::error file=${{ inputs.notes-file }}::Notes file not found: ${{ inputs.notes-file }}"
+          exit 1
+        fi
+
+        echo "✅ Notes file validation completed successfully"
+
+    - name: "✅ Validate input : repo"
+      if: ${{ inputs.repo != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating repo input: ${{ inputs.repo }}"
+
+        if ! [[ "${{ inputs.repo }}" =~ ^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$ ]]; then
+          echo "::error::Invalid repository format. Must be OWNER/REPO"
+          exit 1
+        fi
+
+        echo "✅ Repository format validation completed successfully"
+
+    - name: "✅ Validate input : tag"
+      if: ${{ inputs.tag != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating tag input: ${{ inputs.tag }}"
+
+        if [[ "${{ inputs.tag }}" =~ [[:space:]] ]]; then
+          echo "::error::Tag name cannot contain spaces"
+          exit 1
+        fi
+
+        echo "✅ Tag format validation completed successfully"
+
+    - name: "✅ Validate input : discussion-category"
+      if: ${{ inputs.discussion-category != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating discussion-category input: ${{ inputs.discussion-category }}"
+
+        # Discussion category should be alphanumeric with hyphens and spaces allowed
+        if ! [[ "${{ inputs.discussion-category }}" =~ ^[a-zA-Z0-9\ \-]+$ ]]; then
+          echo "::error::Discussion category contains invalid characters. Use alphanumeric, spaces, and hyphens only"
+          exit 1
+        fi
+
+        echo "✅ Discussion category validation completed successfully"
+
+    - name: "✅ Validate input : notes sources"
+      shell: bash
+      run: |
+        echo "::debug::Validating notes source configuration..."
+
+        # Count how many notes sources are provided
+        NOTES_COUNT=0
+        [ -n "${{ inputs.notes }}" ] && NOTES_COUNT=$((NOTES_COUNT + 1))
+        [ -n "${{ inputs.notes-file }}" ] && NOTES_COUNT=$((NOTES_COUNT + 1))
+        [ "${{ inputs.notes-from-tag }}" = "true" ] && NOTES_COUNT=$((NOTES_COUNT + 1))
+        [ "${{ inputs.generate-notes }}" = "true" ] && NOTES_COUNT=$((NOTES_COUNT + 1))
+
+        if [ $NOTES_COUNT -gt 1 ]; then
+          echo "::error::Multiple notes sources specified. Use only one of: notes, notes-file, notes-from-tag, or generate-notes"
+          exit 1
+        elif [ $NOTES_COUNT -eq 0 ]; then
+          echo "::warning::No release notes specified. Consider using notes, notes-file, notes-from-tag, or generate-notes"
+        fi
+
+        echo "✅ Notes sources validation completed successfully"
+
+    - name: "⚙️ Setup GitHub CLI"
+      shell: bash
+      run: |
+        echo "::debug::Setting up GitHub CLI authentication..."
 
         # Authenticate with GitHub CLI
-        gh auth login --with-token <<< "${{ inputs.github-token }}"
+        echo "${{ inputs.github-token }}" | gh auth login --with-token
 
         # Verify authentication
         if gh auth status >/dev/null 2>&1; then
-          echo "✅ GitHub CLI authentication successful"
+          echo "::debug::GitHub CLI authentication verified"
+          echo "✅ GitHub CLI setup completed successfully"
         else
           echo "::error::GitHub CLI authentication failed"
           exit 1
         fi
 
-    - name: "🚀 Create GitHub release"
-      id: create
+    - name: "🏗️ Build argument list"
+      id: build-args
       shell: bash
       run: |
-        echo "🚀 Creating GitHub release..."
+        echo "::debug::Building argument list for GitHub release creation..."
 
-        # Build command arguments array
-        COMMAND_ARGS=("release" "create")
+        # Start with base command
+        ARGUMENTS="release create"
 
         # Add tag if provided
         if [ -n "${{ inputs.tag }}" ]; then
-          COMMAND_ARGS+=("${{ inputs.tag }}")
-          echo "🏷️ Using tag: ${{ inputs.tag }}"
+          ARGUMENTS="$ARGUMENTS '${{ inputs.tag }}'"
+        fi
+
+        # Add asset files if provided
+        if [ -n "${{ inputs.assets }}" ]; then
+          while IFS= read -r asset_file; do
+            # Skip empty lines
+            [ -z "$asset_file" ] && continue
+            ARGUMENTS="$ARGUMENTS '$asset_file'"
+          done <<< "${{ inputs.assets }}"
         fi
 
         # Add repository if provided
         if [ -n "${{ inputs.repo }}" ]; then
-          COMMAND_ARGS+=("--repo" "${{ inputs.repo }}")
-          echo "📁 Target repository: ${{ inputs.repo }}"
+          ARGUMENTS="$ARGUMENTS --repo '${{ inputs.repo }}'"
         fi
 
         # Add title if provided
         if [ -n "${{ inputs.title }}" ]; then
-          COMMAND_ARGS+=("--title" "${{ inputs.title }}")
-          echo "📝 Title: ${{ inputs.title }}"
+          ARGUMENTS="$ARGUMENTS --title '${{ inputs.title }}'"
         fi
 
         # Add notes options (mutually exclusive)
         if [ -n "${{ inputs.notes }}" ]; then
-          COMMAND_ARGS+=("--notes" "${{ inputs.notes }}")
-          echo "📄 Using provided notes"
+          ARGUMENTS="$ARGUMENTS --notes '${{ inputs.notes }}'"
         elif [ -n "${{ inputs.notes-file }}" ]; then
-          COMMAND_ARGS+=("--notes-file" "${{ inputs.notes-file }}")
-          echo "📄 Using notes from file: ${{ inputs.notes-file }}"
+          ARGUMENTS="$ARGUMENTS --notes-file '${{ inputs.notes-file }}'"
         elif [ "${{ inputs.notes-from-tag }}" = "true" ]; then
-          COMMAND_ARGS+=("--notes-from-tag")
-          echo "📄 Using notes from tag annotation"
+          ARGUMENTS="$ARGUMENTS --notes-from-tag"
         elif [ "${{ inputs.generate-notes }}" = "true" ]; then
-          COMMAND_ARGS+=("--generate-notes")
-          echo "📄 Auto-generating notes via GitHub API"
+          ARGUMENTS="$ARGUMENTS --generate-notes"
         fi
 
         # Add notes start tag if provided
         if [ -n "${{ inputs.notes-start-tag }}" ]; then
-          COMMAND_ARGS+=("--notes-start-tag" "${{ inputs.notes-start-tag }}")
-          echo "📍 Notes start tag: ${{ inputs.notes-start-tag }}"
+          ARGUMENTS="$ARGUMENTS --notes-start-tag '${{ inputs.notes-start-tag }}'"
         fi
 
         # Add boolean flags
-        [ "${{ inputs.draft }}" = "true" ] && COMMAND_ARGS+=("--draft") && echo "📋 Creating as draft"
-        [ "${{ inputs.prerelease }}" = "true" ] && COMMAND_ARGS+=("--prerelease") && echo "🚧 Marking as prerelease"
-        [ "${{ inputs.verify-tag }}" = "true" ] && COMMAND_ARGS+=("--verify-tag") && echo "✅ Verifying tag exists"
-        [ "${{ inputs.fail-on-no-commits }}" = "true" ] && COMMAND_ARGS+=("--fail-on-no-commits") && echo "::debug::Checking for new commits"
+        for param in draft prerelease verify-tag fail-on-no-commits; do
+          case $param in
+            draft) value="${{ inputs.draft }}" ;;
+            prerelease) value="${{ inputs.prerelease }}" ;;
+            verify-tag) value="${{ inputs.verify-tag }}" ;;
+            fail-on-no-commits) value="${{ inputs.fail-on-no-commits }}" ;;
+          esac
+          if [ "$value" = "true" ]; then
+            ARGUMENTS="$ARGUMENTS --${param}"
+          fi
+        done
 
         # Add latest flag
         if [ "${{ inputs.latest }}" = "true" ]; then
-          COMMAND_ARGS+=("--latest")
-          echo "⭐ Marking as latest release"
+          ARGUMENTS="$ARGUMENTS --latest"
         elif [ "${{ inputs.latest }}" = "false" ]; then
-          COMMAND_ARGS+=("--latest=false")
-          echo "📋 Not marking as latest release"
+          ARGUMENTS="$ARGUMENTS --latest=false"
         fi
 
         # Add target if provided
         if [ -n "${{ inputs.target }}" ]; then
-          COMMAND_ARGS+=("--target" "${{ inputs.target }}")
-          echo "🎯 Target: ${{ inputs.target }}"
+          ARGUMENTS="$ARGUMENTS --target '${{ inputs.target }}'"
         fi
 
         # Add discussion category if provided
         if [ -n "${{ inputs.discussion-category }}" ]; then
-          COMMAND_ARGS+=("--discussion-category" "${{ inputs.discussion-category }}")
-          echo "💬 Discussion category: ${{ inputs.discussion-category }}"
+          ARGUMENTS="$ARGUMENTS --discussion-category '${{ inputs.discussion-category }}'"
         fi
 
-        # Create full command for logging (without token)
-        DISPLAY_COMMAND="gh ${COMMAND_ARGS[*]}"
-        echo "📋 Executing: $DISPLAY_COMMAND"
+        # Trim leading space
+        ARGUMENTS="${ARGUMENTS# }"
+
+        echo "arguments=$ARGUMENTS" >> $GITHUB_OUTPUT
+        echo "::debug::Argument list built successfully: $ARGUMENTS"
+        echo "✅ Argument list built successfully"
+
+    - name: "🚀 Execute GitHub release creation"
+      id: execute
+      shell: bash
+      run: |
+        echo "::debug::Executing GitHub release creation..."
+        echo "🚀 Creating GitHub release..."
 
         # Execute GitHub CLI command and capture output
-        if RELEASE_OUTPUT=$(gh "${COMMAND_ARGS[@]}" 2>&1); then
-          echo "✅ Release created successfully"
+        if RELEASE_OUTPUT=$(eval "gh ${{ steps.build-args.outputs.arguments }}" 2>&1); then
+          echo "::debug::Release creation command executed successfully"
           echo "$RELEASE_OUTPUT"
 
-          # Extract release information from output or API
+          # Extract release information from output
           RELEASE_URL=$(echo "$RELEASE_OUTPUT" | grep -o 'https://github.com/[^/]*/[^/]*/releases/tag/[^[:space:]]*' | head -1)
 
           if [ -n "$RELEASE_URL" ]; then
-            echo "🔗 Release URL: $RELEASE_URL"
             echo "release-url=$RELEASE_URL" >> $GITHUB_OUTPUT
 
             # Extract tag from URL
@@ -270,67 +346,77 @@ runs:
             echo "release-tag=$RELEASE_TAG" >> $GITHUB_OUTPUT
 
             # Get additional release information via API
+            REPO_PARAM=""
             if [ -n "${{ inputs.repo }}" ]; then
               REPO_PARAM="--repo ${{ inputs.repo }}"
-            else
-              REPO_PARAM=""
             fi
 
             # Get release info from GitHub API
             if RELEASE_INFO=$(gh api repos/{owner}/{repo}/releases/tags/$RELEASE_TAG $REPO_PARAM 2>/dev/null); then
-              RELEASE_ID=$(echo "$RELEASE_INFO" | jq -r '.id // empty')
-              RELEASE_NAME=$(echo "$RELEASE_INFO" | jq -r '.name // empty')
-              UPLOAD_URL=$(echo "$RELEASE_INFO" | jq -r '.upload_url // empty' | sed 's/{?name,label}//')
+              RELEASE_ID=$(echo "$RELEASE_INFO" | jq -r '.id // "unknown"')
+              RELEASE_NAME=$(echo "$RELEASE_INFO" | jq -r '.name // "unknown"')
+              UPLOAD_URL=$(echo "$RELEASE_INFO" | jq -r '.upload_url // "unknown"' | sed 's/{?name,label}//')
 
-              echo "release-id=${RELEASE_ID:-unknown}" >> $GITHUB_OUTPUT
-              echo "release-name=${RELEASE_NAME:-unknown}" >> $GITHUB_OUTPUT
-              echo "upload-url=${UPLOAD_URL:-unknown}" >> $GITHUB_OUTPUT
+              echo "release-id=$RELEASE_ID" >> $GITHUB_OUTPUT
+              echo "release-name=$RELEASE_NAME" >> $GITHUB_OUTPUT
+              echo "upload-url=$UPLOAD_URL" >> $GITHUB_OUTPUT
+            else
+              echo "release-id=unknown" >> $GITHUB_OUTPUT
+              echo "release-name=unknown" >> $GITHUB_OUTPUT
+              echo "upload-url=unknown" >> $GITHUB_OUTPUT
             fi
+          else
+            echo "::warning::Could not extract release URL from output"
+            echo "release-url=unknown" >> $GITHUB_OUTPUT
+            echo "release-tag=${{ inputs.tag }}" >> $GITHUB_OUTPUT
+            echo "release-id=unknown" >> $GITHUB_OUTPUT
+            echo "release-name=unknown" >> $GITHUB_OUTPUT
+            echo "upload-url=unknown" >> $GITHUB_OUTPUT
           fi
 
-          echo "🏷️ Release tag: ${RELEASE_TAG:-${{ inputs.tag }}}"
-
+          echo "✅ GitHub release created successfully"
         else
-          echo "::error::Release creation failed"
-          echo "$RELEASE_OUTPUT"
+          echo "::error title=Release creation failed::$RELEASE_OUTPUT"
           exit 1
         fi
 
-    - name: "📊 Verify release"
+    - name: "✅ Verify release creation"
       id: verify
       shell: bash
       run: |
         echo "::debug::Verifying release creation..."
 
-        RELEASE_TAG="${{ steps.create.outputs.release-tag }}"
+        RELEASE_TAG="${{ steps.execute.outputs.release-tag }}"
         if [ -z "$RELEASE_TAG" ]; then
           RELEASE_TAG="${{ inputs.tag }}"
         fi
 
         if [ -n "$RELEASE_TAG" ]; then
           # Verify release exists
+          REPO_PARAM=""
           if [ -n "${{ inputs.repo }}" ]; then
             REPO_PARAM="--repo ${{ inputs.repo }}"
-          else
-            REPO_PARAM=""
           fi
 
           if gh release view "$RELEASE_TAG" $REPO_PARAM >/dev/null 2>&1; then
-            echo "✅ Release verified successfully"
+            echo "::debug::Release found: $RELEASE_TAG"
 
-            # Get release details
-            RELEASE_DETAILS=$(gh release view "$RELEASE_TAG" $REPO_PARAM --json id,name,tagName,url,isDraft,isPrerelease)
+            # Get release details for verification
+            RELEASE_DETAILS=$(gh release view "$RELEASE_TAG" $REPO_PARAM --json id,name,tagName,url,isDraft,isPrerelease 2>/dev/null || echo '{}')
 
-            DRAFT_STATUS=$(echo "$RELEASE_DETAILS" | jq -r '.isDraft')
-            PRERELEASE_STATUS=$(echo "$RELEASE_DETAILS" | jq -r '.isPrerelease')
+            if [ "$RELEASE_DETAILS" != "{}" ]; then
+              DRAFT_STATUS=$(echo "$RELEASE_DETAILS" | jq -r '.isDraft // "unknown"')
+              PRERELEASE_STATUS=$(echo "$RELEASE_DETAILS" | jq -r '.isPrerelease // "unknown"')
 
-            echo "📋 Release Status:"
-            echo "  🏷️ Tag: $RELEASE_TAG"
-            echo "  📋 Draft: $DRAFT_STATUS"
-            echo "  🚧 Prerelease: $PRERELEASE_STATUS"
+              echo "::debug::Release Status:"
+              echo "::debug::  🏷️ Tag: $RELEASE_TAG"
+              echo "::debug::  📋 Draft: $DRAFT_STATUS"
+              echo "::debug::  🚧 Prerelease: $PRERELEASE_STATUS"
+            fi
 
+            echo "✅ Release verification completed successfully"
           else
-            echo "::error::Release verification failed - release not found"
+            echo "::error::Release verification failed - release not found: $RELEASE_TAG"
             exit 1
           fi
         else
@@ -342,12 +428,13 @@ runs:
       shell: bash
       run: |
         cat >> $GITHUB_STEP_SUMMARY << 'EOF'
-        <details><summary>Expand for details - 📊 GitHub Release Creation Summary</summary>
+        <details><summary>🚀 GitHub Release : ${{ inputs.tag || 'auto-generated' }}</summary>
 
         ## 🔧 Input Parameters
         | Parameter | Value |
         |-----------|-------|
         | 🏷️ Tag | `${{ inputs.tag || 'auto-generated' }}` |
+        | 📦 Assets | `${{ inputs.assets || 'none' }}` |
         | 📝 Title | `${{ inputs.title || 'auto-generated' }}` |
         | 📋 Draft | `${{ inputs.draft }}` |
         | 🚧 Prerelease | `${{ inputs.prerelease }}` |
@@ -357,33 +444,127 @@ runs:
 
         ## 📤 Release Results
         | Metric | Value |
-        |--------|-------|
-        | 🆔 Release ID | `${{ steps.create.outputs.release-id }}` |
-        | 🔗 Release URL | `${{ steps.create.outputs.release-url }}` |
-        | 🏷️ Release Tag | `${{ steps.create.outputs.release-tag }}` |
-        | 📝 Release Name | `${{ steps.create.outputs.release-name }}` |
-        | 🔗 Upload URL | `${{ steps.create.outputs.upload-url }}` |
+        |--------|---------|
+        | 🆔 Release ID | `${{ steps.execute.outputs.release-id }}` |
+        | 🔗 Release URL | `${{ steps.execute.outputs.release-url }}` |
+        | 🏷️ Release Tag | `${{ steps.execute.outputs.release-tag }}` |
+        | 📝 Release Name | `${{ steps.execute.outputs.release-name }}` |
+        | 🔗 Upload URL | `${{ steps.execute.outputs.upload-url }}` |
 
         ## ⚙️ Release Configuration
         | Option | Status |
-        |--------|--------|
+        |--------|---------|
         | 📄 Generate Notes | `${{ inputs.generate-notes }}` |
         | 📄 Notes from Tag | `${{ inputs.notes-from-tag }}` |
         | ✅ Verify Tag | `${{ inputs.verify-tag }}` |
         | 🔍 Fail on No Commits | `${{ inputs.fail-on-no-commits }}` |
         | 💬 Discussion Category | `${{ inputs.discussion-category || 'none' }}` |
 
-        ## 🔧 Process Details
+        ## ⚙️ Process Details
         | Step | Status |
-        |------|--------|
+        |------|---------|
         | ✅ Input Validation | `✅ Completed` |
-        | 🔧 GitHub CLI Setup | `✅ Completed` |
-        | 🚀 Release Creation | `${{ steps.create.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | 🏗️ Argument Building | `${{ steps.build-args.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | ⚙️ GitHub CLI Setup | `✅ Completed` |
+        | 🚀 Release Creation | `${{ steps.execute.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
         | 🔍 Release Verification | `${{ steps.verify.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
 
         </details>
         EOF
 
 branding:
-  icon: 'tag'
-  color: 'blue'
+  icon: "tag"
+  color: "blue"
+
+# gh release create --help
+# Create a new GitHub Release for a repository.
+
+# A list of asset files may be given to upload to the new release. To define a
+# display label for an asset, append text starting with `#` after the file name.
+
+# If a matching git tag does not yet exist, one will automatically get created
+# from the latest state of the default branch.
+# Use `--target` to point to a different branch or commit for the automatic tag creation.
+# Use `--verify-tag` to abort the release if the tag doesn't already exist.
+# To fetch the new tag locally after the release, do `git fetch --tags origin`.
+
+# To create a release from an annotated git tag, first create one locally with
+# git, push the tag to GitHub, then run this command.
+# Use `--notes-from-tag` to get the release notes from the annotated git tag.
+# If the tag is not annotated, the commit message will be used instead.
+
+# Use `--generate-notes` to automatically generate notes using GitHub Release Notes API.
+# When using automatically generated release notes, a release title will also be automatically
+# generated unless a title was explicitly passed. Additional release notes can be prepended to
+# automatically generated notes by using the `--notes` flag.
+
+# By default, the release is created even if there are no new commits since the last release.
+# This may result in the same or duplicate release which may not be desirable in some cases.
+# Use `--fail-on-no-commits` to fail if no new commits are available. This flag has no
+# effect if there are no existing releases or this is the very first release.
+
+
+# USAGE
+#   gh release create [<tag>] [<filename>... | <pattern>...]
+
+# ALIASES
+#   gh release new
+
+# FLAGS
+#       --discussion-category string   Start a discussion in the specified category
+#   -d, --draft                        Save the release as a draft instead of publishing it
+#       --fail-on-no-commits           Fail if there are no commits since the last release (no impact on the first release)
+#       --generate-notes               Automatically generate title and notes for the release via GitHub Release Notes API
+#       --latest                       Mark this release as "Latest" (default [automatic based on date and version]). --latest=false to explicitly NOT set as latest
+#   -n, --notes string                 Release notes
+#   -F, --notes-file file              Read release notes from file (use "-" to read from standard input)
+#       --notes-from-tag               Fetch notes from the tag annotation or message of commit associated with tag
+#       --notes-start-tag string       Tag to use as the starting point for generating release notes
+#   -p, --prerelease                   Mark the release as a prerelease
+#       --target branch                Target branch or full commit SHA (default [main branch])
+#   -t, --title string                 Release title
+#       --verify-tag                   Abort in case the git tag doesn't already exist in the remote repository
+
+# INHERITED FLAGS
+#       --help                     Show help for command
+#   -R, --repo [HOST/]OWNER/REPO   Select another repository using the [HOST/]OWNER/REPO format
+
+# EXAMPLES
+#   # Interactively create a release
+#   $ gh release create
+
+#   # Interactively create a release from specific tag
+#   $ gh release create v1.2.3
+
+#   # Non-interactively create a release
+#   $ gh release create v1.2.3 --notes "bugfix release"
+
+#   # Use automatically generated via GitHub Release Notes API release notes
+#   $ gh release create v1.2.3 --generate-notes
+
+#   # Use release notes from a file
+#   $ gh release create v1.2.3 -F release-notes.md
+
+#   # Use tag annotation or associated commit message as notes
+#   $ gh release create v1.2.3 --notes-from-tag
+
+#   # Don't mark the release as latest
+#   $ gh release create v1.2.3 --latest=false
+
+#   # Upload all tarballs in a directory as release assets
+#   $ gh release create v1.2.3 ./dist/*.tgz
+
+#   # Upload a release asset with a display label
+#   $ gh release create v1.2.3 '/path/to/asset.zip#My display label'
+
+#   # Create a release and start a discussion
+#   $ gh release create v1.2.3 --discussion-category "General"
+
+#   # Create a release only if there are new commits available since the last release
+#   $ gh release create v1.2.3 --fail-on-no-commits
+
+# LEARN MORE
+#   Use `gh <command> <subcommand> --help` for more information about a command.
+#   Read the manual at https://cli.github.com/manual
+#   Learn about exit codes using `gh help exit-codes`
+#   Learn about accessibility experiences using `gh help accessibility`

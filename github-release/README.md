@@ -1,91 +1,205 @@
-# 🚀 GitHub Release Action
+# 🚀 GitHub Release Creation Action
 
-Create GitHub releases with assets using the GitHub CLI (`gh release create`).
+A comprehensive GitHub Action for creating GitHub releases with asset uploads using GitHub CLI with flexible configuration, multiple release note options, and advanced targeting capabilities.
 
-## Features
+## ✨ Features
 
-- 🚀 **Complete Release Management** - Create releases with full GitHub CLI feature support
-- 📦 **Asset Upload Support** - Upload files, directories, or glob patterns as release assets
-- 📝 **Flexible Release Notes** - Multiple options for release notes (manual, file, auto-generated, from tags)
+- 🚀 **Complete Release Management** - Full GitHub CLI feature support for release creation
+- 📦 **Advanced Asset Upload** - Upload files, directories, or glob patterns with validation
+- 📝 **Flexible Release Notes** - Manual, file-based, auto-generated, or tag-based release notes
 - 🎯 **Advanced Targeting** - Target specific branches, commits, or repositories
-- 🔧 **Draft & Prerelease Support** - Create drafts or mark releases as prereleases
-- 💬 **Discussion Integration** - Start discussions with releases
-- 📊 **Comprehensive Outputs** - Detailed release information for downstream actions
+- 🔧 **Draft & Prerelease Support** - Create drafts or mark releases as pre-releases
+- 💬 **Discussion Integration** - Automatically start discussions with releases
+- 📊 **Comprehensive Outputs** - Detailed release information and metrics
+- 🔍 **Asset Validation** - Automatic file existence and format validation
 
-## Usage
-
-### Basic Usage
+## 🚀 Basic Usage
 
 Create a simple release with a tag:
 
 ```yaml
-- name: Create Release
-  uses: ./github-release
+- name: "Create Release"
+  uses: framinosona/github_actions/github-release@main
   with:
-    tag: 'v1.0.0'
-    title: 'Version 1.0.0'
-    notes: 'Initial release with basic functionality'
+    tag: "v1.0.0"
+    title: "Version 1.0.0"
+    notes: "Initial release with basic functionality"
 ```
 
-### Advanced Usage with Assets
-
 ```yaml
-- name: Create Release with Assets
-  uses: ./github-release
+- name: "Create release with assets"
+  uses: framinosona/github_actions/github-release@main
   with:
-    tag: 'v1.2.3'
-    title: 'Version 1.2.3 - Bug Fixes'
-    generate-notes: 'true'
+    tag: "v1.2.3"
+    title: "Version 1.2.3 - Bug Fixes"
+    generate-notes: "true"
     assets: |
       dist/app-linux-x64.tar.gz
       dist/app-windows-x64.zip
       dist/app-macos-x64.dmg
-    prerelease: 'false'
-    latest: 'true'
 ```
-
-### Auto-Generated Release
 
 ```yaml
-- name: Auto-Generated Release
-  uses: ./github-release
+- name: "Auto-generated release"
+  uses: framinosona/github_actions/github-release@main
   with:
     tag: ${{ github.ref_name }}
-    generate-notes: 'true'
-    assets-dir: 'build/artifacts'
+    generate-notes: "true"
+    assets-dir: "build/artifacts"
 ```
 
-## Inputs
+## 🔧 Advanced Usage
 
-### Required Inputs
+Full configuration with all available options:
 
-None. All inputs are optional with sensible defaults.
+```yaml
+- name: "Advanced release creation"
+  uses: framinosona/github_actions/github-release@main
+  with:
+    tag: "v1.2.3"
+    title: "Release v1.2.3 - Major Update"
+    notes: |
+      ## What's New
+      - Enhanced performance
+      - New API endpoints
+      - Bug fixes and improvements
 
-### Optional Inputs
+      ## Breaking Changes
+      - Deprecated endpoints removed
+    assets: |
+      dist/app-linux-x64.tar.gz
+      dist/app-windows-x64.zip
+      dist/app-macos-x64.dmg
+      docs/user-guide.pdf
+    draft: "false"
+    pre-release: "false"
+    latest: "true"
+    target: "main"
+    verify-tag: "true"
+    discussion-category: "Announcements"
+    fail-on-no-commits: "false"
+    assets-dir: "build/artifacts"
+    repo: "myorg/myrepo"
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+    show-summary: "true"
+```
+
+## 🔐 Permissions Required
+
+This action requires appropriate repository permissions:
+
+```yaml
+permissions:
+  contents: write      # Required for creating releases
+  discussions: write   # Required if using discussion-category
+```
+
+## 🏗️ CI/CD Example
+
+Complete workflow for automated release creation:
+
+```yaml
+name: "Release Pipeline"
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  discussions: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: "🔧 Setup .NET"
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: "📦 Restore dependencies"
+        uses: framinosona/github_actions/dotnet@main
+        with:
+          command: "restore"
+
+      - name: "🔨 Build application"
+        uses: framinosona/github_actions/dotnet@main
+        with:
+          command: "build"
+          configuration: "Release"
+
+      - name: "📦 Create packages"
+        run: |
+          mkdir -p dist
+          # Linux build
+          dotnet publish -c Release -r linux-x64 --self-contained -o ./publish/linux-x64
+          tar -czf dist/app-linux-x64.tar.gz -C ./publish/linux-x64 .
+
+          # Windows build
+          dotnet publish -c Release -r win-x64 --self-contained -o ./publish/win-x64
+          cd ./publish/win-x64 && zip -r ../../dist/app-windows-x64.zip . && cd ../..
+
+          # macOS build
+          dotnet publish -c Release -r osx-x64 --self-contained -o ./publish/osx-x64
+          tar -czf dist/app-macos-x64.tar.gz -C ./publish/osx-x64 .
+
+      - name: "🚀 Create GitHub Release"
+        id: release
+        uses: framinosona/github_actions/github-release@main
+        with:
+          tag: ${{ github.ref_name }}
+          title: "Release ${{ github.ref_name }}"
+          generate-notes: "true"
+          assets: |
+            dist/app-linux-x64.tar.gz
+            dist/app-windows-x64.zip
+            dist/app-macos-x64.tar.gz
+          latest: "true"
+          discussion-category: "Announcements"
+          show-summary: "true"
+
+      - name: "📊 Report release info"
+        run: |
+          echo "Release created: ${{ steps.release.outputs.release-url }}"
+          echo "Assets uploaded: ${{ steps.release.outputs.assets-uploaded }}"
+          echo "Release ID: ${{ steps.release.outputs.release-id }}"
+```
+
+## 📋 Inputs
+
+### Optional Inputs (All inputs are optional with sensible defaults)
 
 | Input | Description | Default | Example |
 |-------|-------------|---------|---------|
-| `tag` | Git tag for the release | `''` | `v1.0.0` |
-| `title` | Release title | `''` | `Version 1.0.0` |
+| `tag` | Git tag for the release | `''` | `v1.0.0`, `2024.1.15` |
+| `title` | Release title | `''` | `Version 1.0.0`, `Weekly Release` |
 | `notes` | Release notes content | `''` | `Bug fixes and improvements` |
-| `notes-file` | Path to file containing release notes | `''` | `CHANGELOG.md` |
-| `notes-from-tag` | Use tag annotation as release notes | `false` | `true` |
+| `notes-file` | Path to file containing release notes | `''` | `CHANGELOG.md`, `RELEASE_NOTES.md` |
+| `notes-from-tag` | Use tag annotation as release notes | `false` | `true`, `false` |
 | `notes-start-tag` | Starting tag for generating notes | `''` | `v1.0.0` |
-| `generate-notes` | Auto-generate notes via GitHub API | `false` | `true` |
-| `draft` | Save as draft instead of publishing | `false` | `true` |
-| `prerelease` | Mark as prerelease | `false` | `true` |
-| `latest` | Mark as latest release | `auto` | `true`/`false`/`auto` |
-| `target` | Target branch or commit SHA | `''` | `main` |
-| `verify-tag` | Abort if tag doesn't exist remotely | `false` | `true` |
-| `discussion-category` | Start discussion in category | `''` | `General` |
-| `fail-on-no-commits` | Fail if no new commits since last release | `false` | `true` |
-| `assets` | Assets to upload (newline-separated) | `''` | `dist/*.zip` |
-| `assets-dir` | Directory containing assets | `''` | `build/dist` |
+| `generate-notes` | Auto-generate notes via GitHub API | `false` | `true`, `false` |
+| `draft` | Save as draft instead of publishing | `false` | `true`, `false` |
+| `pre-release` | Mark as pre-release | `false` | `true`, `false` |
+| `latest` | Mark as latest release | `auto` | `true`, `false`, `auto` |
+| `target` | Target branch or commit SHA | `''` | `main`, `develop`, `abc123` |
+| `verify-tag` | Abort if tag doesn't exist remotely | `false` | `true`, `false` |
+| `discussion-category` | Start discussion in category | `''` | `General`, `Announcements` |
+| `fail-on-no-commits` | Fail if no new commits since last release | `false` | `true`, `false` |
+| `assets` | Assets to upload (newline-separated) | `''` | `dist/*.zip`, `build/app.exe` |
+| `assets-dir` | Directory containing assets | `''` | `build/dist`, `artifacts` |
 | `repo` | Target repository (OWNER/REPO) | `''` | `myorg/myrepo` |
 | `github-token` | GitHub token for authentication | `${{ github.token }}` | `${{ secrets.GITHUB_TOKEN }}` |
 | `show-summary` | Show action summary | `true` | `false` |
 
-## Outputs
+## 📤 Outputs
 
 | Output | Description | Example |
 |--------|-------------|---------|
@@ -96,57 +210,57 @@ None. All inputs are optional with sensible defaults.
 | `assets-uploaded` | Number of assets uploaded | `3` |
 | `upload-url` | Upload URL for the release | `https://uploads.github.com/repos/...` |
 
-## Examples
+## 🔗 Related Actions
+
+| Action | Purpose | Repository |
+|--------|---------|------------|
+| 🔢 **generate-version** | Generate semantic versions | `framinosona/github_actions/generate-version` |
+| 🏷️ **git-tag** | Create and manage Git tags | `framinosona/github_actions/git-tag` |
+| 🚀 **dotnet** | Build .NET applications | `framinosona/github_actions/dotnet` |
+| 🎯 **generate-badge** | Generate release badges | `framinosona/github_actions/generate-badge` |
+
+## 💡 Examples
 
 ### Complete CI/CD Release Pipeline
 
 ```yaml
-name: Release
+- name: "Generate version"
+  id: version
+  uses: framinosona/github_actions/generate-version@main
+  with:
+    major: "1"
+    minor: "0"
 
-on:
-  push:
-    tags:
-      - 'v*'
+- name: "Create tag"
+  uses: framinosona/github_actions/git-tag@main
+  with:
+    tag: ${{ steps.version.outputs.version }}
+    prefix: "v"
+    message: "Release ${{ steps.version.outputs.version }}"
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
+- name: "Build application"
+  run: |
+    # Your build commands here
+    mkdir -p dist
+    echo "Built app" > dist/app.txt
 
-    - name: Build Application
-      run: |
-        # Your build commands here
-        mkdir -p dist
-        echo "Built app" > dist/app.txt
-        tar -czf dist/app-linux-x64.tar.gz dist/app.txt
-
-    - name: Create Release
-      id: release
-      uses: ./github-release
-      with:
-        tag: ${{ github.ref_name }}
-        title: 'Release ${{ github.ref_name }}'
-        generate-notes: 'true'
-        assets: |
-          dist/app-linux-x64.tar.gz
-          dist/*.zip
-        latest: 'true'
-
-    - name: Report Release
-      run: |
-        echo "Created release: ${{ steps.release.outputs.release-url }}"
-        echo "Uploaded ${{ steps.release.outputs.assets-uploaded }} assets"
+- name: "Create release"
+  uses: framinosona/github_actions/github-release@main
+  with:
+    tag: "v${{ steps.version.outputs.version }}"
+    title: "Release ${{ steps.version.outputs.version }}"
+    generate-notes: "true"
+    assets: "dist/*"
 ```
 
 ### Draft Release for Testing
 
 ```yaml
-- name: Create Draft Release
-  uses: ./github-release
+- name: "Create draft release"
+  uses: framinosona/github_actions/github-release@main
   with:
-    tag: 'v2.0.0-beta.1'
-    title: 'Beta Release 2.0.0'
+    tag: "v2.0.0-beta.1"
+    title: "Beta Release 2.0.0"
     notes: |
       🚧 **This is a beta release for testing purposes**
 
@@ -156,21 +270,21 @@ jobs:
 
       ## Breaking Changes
       - Changed API endpoint structure
-    draft: 'true'
-    prerelease: 'true'
-    assets-dir: 'beta-builds'
+    draft: "true"
+    pre-release: "true"
+    assets-dir: "beta-builds"
 ```
 
 ### Release with Discussion
 
 ```yaml
-- name: Release with Community Discussion
-  uses: ./github-release
+- name: "Release with community discussion"
+  uses: framinosona/github_actions/github-release@main
   with:
-    tag: 'v1.5.0'
-    title: 'Community Release v1.5.0'
-    generate-notes: 'true'
-    discussion-category: 'Announcements'
+    tag: "v1.5.0"
+    title: "Community Release v1.5.0"
+    generate-notes: "true"
+    discussion-category: "Announcements"
     assets: |
       binaries/*.tar.gz
       docs/user-guide.pdf
@@ -179,29 +293,29 @@ jobs:
 ### Conditional Release Creation
 
 ```yaml
-- name: Create Release on Main Branch
+- name: "Create release on main branch"
   if: github.ref == 'refs/heads/main'
-  uses: ./github-release
+  uses: framinosona/github_actions/github-release@main
   with:
-    tag: 'nightly-${{ github.run_number }}'
-    title: 'Nightly Build ${{ github.run_number }}'
-    notes: 'Automated nightly build from main branch'
-    prerelease: 'true'
-    latest: 'false'
-    fail-on-no-commits: 'true'
-    assets-dir: 'nightly-builds'
+    tag: "nightly-${{ github.run_number }}"
+    title: "Nightly Build ${{ github.run_number }}"
+    notes: "Automated nightly build from main branch"
+    pre-release: "true"
+    latest: "false"
+    fail-on-no-commits: "true"
+    assets-dir: "nightly-builds"
 ```
 
 ### Cross-Repository Release
 
 ```yaml
-- name: Create Release in Different Repository
-  uses: ./github-release
+- name: "Create release in different repository"
+  uses: framinosona/github_actions/github-release@main
   with:
-    repo: 'myorg/releases-repo'
-    tag: 'app-v${{ env.VERSION }}'
-    title: 'Application Release v${{ env.VERSION }}'
-    notes-file: 'RELEASE_NOTES.md'
+    repo: "myorg/releases-repo"
+    tag: "app-v${{ env.VERSION }}"
+    title: "Application Release v${{ env.VERSION }}"
+    notes-file: "RELEASE_NOTES.md"
     assets: |
       dist/app-linux.tar.gz
       dist/app-windows.zip
@@ -212,31 +326,99 @@ jobs:
 ### Release with Custom Notes from Tag
 
 ```yaml
-- name: Release from Annotated Tag
-  uses: ./github-release
+- name: "Release from annotated tag"
+  uses: framinosona/github_actions/github-release@main
   with:
     tag: ${{ github.ref_name }}
-    notes-from-tag: 'true'
-    verify-tag: 'true'  # Ensure tag exists before creating release
-    assets: 'dist/*'
+    notes-from-tag: "true"
+    verify-tag: "true"
+    assets: "dist/*"
 ```
 
-### Versioned Asset Upload
+## 📦 Asset Management
+
+### Asset Upload Formats
+
+The `assets` input supports multiple formats:
+
+#### Newline-Separated Format
 
 ```yaml
-- name: Create Release with Versioned Assets
-  uses: ./github-release
-  with:
-    tag: 'v${{ env.VERSION }}'
-    title: 'Release v${{ env.VERSION }}'
-    generate-notes: 'true'
-    assets: |
-      dist/myapp-v${{ env.VERSION }}-linux.tar.gz#Linux Binary
-      dist/myapp-v${{ env.VERSION }}-windows.zip#Windows Binary
-      dist/myapp-v${{ env.VERSION }}-macos.dmg#macOS Application
+assets: |
+  dist/app.zip
+  docs/user-guide.pdf
+  build/artifacts/installer.exe
 ```
 
-## Requirements
+#### YAML List Format
+
+```yaml
+assets: |
+  - dist/app.zip
+  - docs/user-guide.pdf
+  - "files with spaces.txt"
+  - build/artifacts/installer.exe
+```
+
+#### Single Line Format
+
+```yaml
+assets: "dist/*.zip"
+```
+
+#### Assets with Display Labels
+
+```yaml
+assets: |
+  dist/app-linux.tar.gz#Linux Application
+  dist/app-windows.zip#Windows Application
+  dist/app-macos.dmg#macOS Application
+```
+
+### Asset Features
+
+- ✅ **Automatic Format Detection** - Detects YAML list vs. newline-separated automatically
+- ✅ **Quoted File Support** - Handles files with spaces using quotes
+- ✅ **File Validation** - Validates that all specified files exist before upload
+- ✅ **Glob Pattern Support** - Use wildcards to match multiple files
+- ✅ **Display Labels** - Add custom labels for better asset presentation
+
+## 📝 Release Notes Options
+
+### 1. Manual Notes
+
+```yaml
+notes: |
+  ## What's Changed
+  - Fixed critical bug in authentication
+  - Added new API endpoints
+  - Improved performance by 25%
+
+  ## Breaking Changes
+  - Removed deprecated `/old-api` endpoint
+```
+
+### 2. Notes from File
+
+```yaml
+notes-file: "CHANGELOG.md"
+```
+
+### 3. Auto-Generated Notes
+
+```yaml
+generate-notes: "true"
+notes-start-tag: "v1.0.0"  # Optional: specify starting point
+```
+
+### 4. Notes from Tag Annotation
+
+```yaml
+notes-from-tag: "true"
+verify-tag: "true"
+```
+
+## 🖥️ Requirements
 
 ### Prerequisites
 
@@ -255,124 +437,62 @@ jobs:
 - ✅ macOS (macos-latest)
 - ✅ Windows (windows-latest)
 
-## Asset Management
-
-### Asset Upload Options
-
-1. **Individual Files:**
-   ```yaml
-   assets: |
-     dist/app.tar.gz
-     docs/manual.pdf
-     config/settings.json
-   ```
-
-2. **Glob Patterns:**
-   ```yaml
-   assets: |
-     dist/*.tar.gz
-     binaries/**/*.exe
-     docs/*.pdf
-   ```
-
-3. **Directory Upload:**
-   ```yaml
-   assets-dir: 'release-artifacts'
-   ```
-
-4. **Assets with Display Labels:**
-   ```yaml
-   assets: |
-     dist/app-linux.tar.gz#Linux Application
-     dist/app-windows.zip#Windows Application
-   ```
-
-### Asset Naming Best Practices
-
-- Use descriptive filenames with version numbers
-- Include platform/architecture in names
-- Use consistent naming conventions
-- Consider file size limitations (2GB per file)
-
-## Release Notes Options
-
-### 1. Manual Notes
-
-```yaml
-notes: |
-  ## What's Changed
-  - Fixed critical bug in authentication
-  - Added new API endpoints
-  - Improved performance by 25%
-
-  ## Breaking Changes
-  - Removed deprecated `/old-api` endpoint
-```
-
-### 2. Notes from File
-
-```yaml
-notes-file: 'CHANGELOG.md'
-```
-
-### 3. Auto-Generated Notes
-
-```yaml
-generate-notes: 'true'
-notes-start-tag: 'v1.0.0'  # Optional: specify starting point
-```
-
-### 4. Notes from Tag Annotation
-
-```yaml
-notes-from-tag: 'true'
-verify-tag: 'true'
-```
-
-## Troubleshooting
+## 🐛 Troubleshooting
 
 ### Common Issues
 
-#### ❌ Authentication Failed
+#### Authentication Failed
 
-```
-Error: GitHub CLI authentication failed
-```
+**Problem**: GitHub CLI authentication failed
 
 **Solutions:**
+
 1. Ensure `github-token` is properly set
 2. Check token permissions include `contents: write`
 3. Verify repository access rights
 
-#### ❌ Tag Already Exists
+```yaml
+permissions:
+  contents: write  # Required for creating releases
+  discussions: write  # Required if using discussion-category
+```
 
-```
-Error: tag already exists
-```
+#### Tag Already Exists
+
+**Problem**: tag already exists
 
 **Solutions:**
+
 1. Use `verify-tag: true` to check existing tags
 2. Choose a different tag name
 3. Delete existing tag if appropriate
 
-#### ❌ No Assets Found
+```yaml
+- name: "Check existing tags"
+  run: git tag --list | grep "v1.0.0" || echo "Tag not found"
+```
 
-```
-Warning: Asset not found
-```
+#### No Assets Found
+
+**Problem**: Asset files not found
 
 **Solutions:**
+
 1. Verify file paths are correct
 2. Check build artifacts were created
 3. Use absolute paths if relative paths fail
 
-#### ❌ Release Creation Failed
+```yaml
+- name: "List available files"
+  run: find . -name "*.zip" -o -name "*.tar.gz" | head -10
+```
 
-```
-Error: Release creation failed
-```
+#### Release Creation Failed
+
+**Problem**: Release creation failed
 
 **Solutions:**
+
 1. Check repository permissions
 2. Verify tag format is valid
 3. Ensure required fields are provided
@@ -382,12 +502,13 @@ Error: Release creation failed
 Enable debug output:
 
 ```yaml
-- name: Debug Release Creation
-  uses: ./github-release
+- name: "Debug release creation"
+  uses: framinosona/github_actions/github-release@main
   with:
-    tag: 'debug-v1.0.0'
-    title: 'Debug Release'
-    notes: 'Testing release creation'
+    tag: "debug-v1.0.0"
+    title: "Debug Release"
+    notes: "Testing release creation"
+    show-summary: "true"
   env:
     ACTIONS_STEP_DEBUG: true
 ```
@@ -397,20 +518,18 @@ Enable debug output:
 Verify release creation:
 
 ```yaml
-- name: Verify Release
+- name: "Verify release"
   run: |
     gh release view ${{ steps.release.outputs.release-tag }}
     gh release download ${{ steps.release.outputs.release-tag }} --dir ./downloads
 ```
 
-## Advanced Configuration
+## 🔧 Advanced Configuration
 
-### Release Workflows
-
-#### Automatic Releases on Tag Push
+### Automatic Releases on Tag Push
 
 ```yaml
-name: Auto Release
+name: "Auto Release"
 
 on:
   push:
@@ -421,29 +540,29 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Create Release
-      uses: ./github-release
-      with:
-        tag: ${{ github.ref_name }}
-        generate-notes: 'true'
-        assets-dir: 'dist'
+      - uses: actions/checkout@v4
+      - name: "Create release"
+        uses: framinosona/github_actions/github-release@main
+        with:
+          tag: ${{ github.ref_name }}
+          generate-notes: "true"
+          assets-dir: "dist"
 ```
 
-#### Manual Release Workflow
+### Manual Release Workflow
 
 ```yaml
-name: Manual Release
+name: "Manual Release"
 
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version'
+        description: "Release version"
         required: true
-        default: 'v1.0.0'
-      prerelease:
-        description: 'Mark as prerelease'
+        default: "v1.0.0"
+      pre-release:
+        description: "Mark as pre-release"
         type: boolean
         default: false
 
@@ -451,14 +570,14 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Create Release
-      uses: ./github-release
-      with:
-        tag: ${{ github.event.inputs.version }}
-        title: 'Release ${{ github.event.inputs.version }}'
-        generate-notes: 'true'
-        prerelease: ${{ github.event.inputs.prerelease }}
+      - uses: actions/checkout@v4
+      - name: "Create release"
+        uses: framinosona/github_actions/github-release@main
+        with:
+          tag: ${{ github.event.inputs.version }}
+          title: "Release ${{ github.event.inputs.version }}"
+          generate-notes: "true"
+          pre-release: ${{ github.event.inputs.pre-release }}
 ```
 
 ### Matrix Releases
@@ -475,59 +594,18 @@ strategy:
         asset: macos-x64
 
 steps:
-- name: Create Release Asset
-  uses: ./github-release
-  with:
-    tag: 'v1.0.0'
-    title: 'Multi-platform Release'
-    assets: 'dist/app-${{ matrix.asset }}.*'
+  - name: "Create platform release"
+    uses: framinosona/github_actions/github-release@main
+    with:
+      tag: "v1.0.0"
+      title: "Multi-platform Release"
+      assets: "dist/app-${{ matrix.asset }}.*"
 ```
 
-## Security Considerations
+## 📄 License
 
-### Token Permissions
+This action is part of the GitHub Actions collection by Francois Raminosona.
 
-Ensure your GitHub token has appropriate permissions:
+---
 
-```yaml
-permissions:
-  contents: write  # Required for creating releases
-  discussions: write  # Required if using discussion-category
-```
-
-### Sensitive Assets
-
-For private repositories or sensitive assets:
-
-```yaml
-- name: Secure Release
-  uses: ./github-release
-  with:
-    tag: 'private-v1.0.0'
-    title: 'Private Release'
-    notes: 'Internal release - do not distribute'
-    assets-dir: 'secure-build'
-    github-token: ${{ secrets.PRIVATE_RELEASE_TOKEN }}
-```
-
-## Contributing
-
-When contributing to this action:
-
-1. Follow the [Actions Guidelines](../.github/copilot-instructions.md)
-2. Test with various release configurations
-3. Ensure cross-platform compatibility
-4. Update documentation for new features
-5. Test with different asset types and sizes
-
-## License
-
-This action is distributed under the same license as the repository.
-
-## Support
-
-For issues related to:
-- **GitHub CLI:** Check [GitHub CLI Documentation](https://cli.github.com/manual/)
-- **GitHub Releases:** Check [GitHub Releases Documentation](https://docs.github.com/en/repositories/releasing-projects-on-github)
-- **Action bugs:** Create an issue in this repository
-- **GitHub Actions:** Check [GitHub Actions Documentation](https://docs.github.com/en/actions)
+> 💡 **Tip**: Use this action with our version generation and tagging actions for complete automated release workflows.
