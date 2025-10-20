@@ -8,14 +8,14 @@ A simple GitHub Action that displays directory tree structures for debugging pur
 
 ```yaml
 - name: Show directory structure
-  uses: laerdal-medical/scl-actions/debug-tree@main
+  uses: framinosona/github_actions/debug-tree@main
 ```
 
 ### With Custom Options
 
 ```yaml
 - name: Debug project structure
-  uses: laerdal-medical/scl-actions/debug-tree@main
+  uses: framinosona/github_actions/debug-tree@main
   with:
     path: "./src"
     depth: "2"
@@ -36,7 +36,7 @@ A simple GitHub Action that displays directory tree structures for debugging pur
 
 ```yaml
 - name: Show build directory
-  uses: laerdal-medical/scl-actions/debug-tree@main
+  uses: framinosona/github_actions/debug-tree@main
   with:
     path: "./dist"
     depth: "2"
@@ -46,7 +46,7 @@ A simple GitHub Action that displays directory tree structures for debugging pur
 
 ```yaml
 - name: Debug project structure
-  uses: laerdal-medical/scl-actions/debug-tree@main
+  uses: framinosona/github_actions/debug-tree@main
   with:
     path: "."
     depth: "3"

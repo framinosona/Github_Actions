@@ -18,21 +18,21 @@ Minimal configuration to get started:
 
 ```yaml
 - name: "Build project"
-  uses: Laerdal-Medical/scl-actions/dotnet@main
+  uses: framinosona/github_actions/dotnet@main
   with:
     command: "build"
 ```
 
 ```yaml
 - name: "Run tests"
-  uses: Laerdal-Medical/scl-actions/dotnet@main
+  uses: framinosona/github_actions/dotnet@main
   with:
     command: "test"
 ```
 
 ```yaml
 - name: "Restore packages"
-  uses: Laerdal-Medical/scl-actions/dotnet@main
+  uses: framinosona/github_actions/dotnet@main
   with:
     command: "restore"
 ```
@@ -43,7 +43,7 @@ Full configuration with all available options:
 
 ```yaml
 - name: "Advanced .NET build and publish"
-  uses: Laerdal-Medical/scl-actions/dotnet@main
+  uses: framinosona/github_actions/dotnet@main
   with:
     command: "publish"
     path: "./src/MyApp/MyApp.csproj"
@@ -106,13 +106,13 @@ jobs:
           dotnet-version: "8.0.x"
 
       - name: "📦 Restore dependencies"
-        uses: Laerdal-Medical/scl-actions/dotnet@main
+        uses: framinosona/github_actions/dotnet@main
         with:
           command: "restore"
           verbosity: "minimal"
 
       - name: "🏗️ Build solution"
-        uses: Laerdal-Medical/scl-actions/dotnet@main
+        uses: framinosona/github_actions/dotnet@main
         with:
           command: "build"
           configuration: "Release"
@@ -120,7 +120,7 @@ jobs:
           show-summary: "true"
 
       - name: "🧪 Run tests"
-        uses: Laerdal-Medical/scl-actions/dotnet@main
+        uses: framinosona/github_actions/dotnet@main
         with:
           command: "test"
           configuration: "Release"
@@ -129,7 +129,7 @@ jobs:
 
       - name: "🚀 Publish application"
         if: github.ref == 'refs/heads/main'
-        uses: Laerdal-Medical/scl-actions/dotnet@main
+        uses: framinosona/github_actions/dotnet@main
         with:
           command: "publish"
           path: "./src/WebApp/WebApp.csproj"
@@ -169,11 +169,11 @@ jobs:
 
 | Action | Purpose | Repository |
 |--------|---------|------------|
-| 🧪 **dotnet-test** | Enhanced .NET testing with coverage | `Laerdal-Medical/scl-actions/dotnet-test` |
-| 🔧 **dotnet-tool-install** | Install .NET tools | `Laerdal-Medical/scl-actions/dotnet-tool-install` |
-| 📦 **dotnet-nuget-upload** | Upload NuGet packages | `Laerdal-Medical/scl-actions/dotnet-nuget-upload` |
-| 📚 **dotnet-docfx-build** | Generate documentation | `Laerdal-Medical/scl-actions/dotnet-docfx-build` |
-| 🔍 **dotnet-cyclonedx** | Generate SBOM files | `Laerdal-Medical/scl-actions/dotnet-cyclonedx` |
+| 🧪 **dotnet-test** | Enhanced .NET testing with coverage | `framinosona/github_actions/dotnet-test` |
+| 🔧 **dotnet-tool-install** | Install .NET tools | `framinosona/github_actions/dotnet-tool-install` |
+| 📦 **dotnet-nuget-upload** | Upload NuGet packages | `framinosona/github_actions/dotnet-nuget-upload` |
+| 📚 **dotnet-docfx-build** | Generate documentation | `framinosona/github_actions/dotnet-docfx-build` |
+| 🔍 **dotnet-cyclonedx** | Generate SBOM files | `framinosona/github_actions/dotnet-cyclonedx` |
 
 ## 💡 Examples
 
@@ -181,13 +181,13 @@ jobs:
 
 ```yaml
 - name: "Build Debug"
-  uses: Laerdal-Medical/scl-actions/dotnet@main
+  uses: framinosona/github_actions/dotnet@main
   with:
     command: "build"
     configuration: "Debug"
 
 - name: "Build Release"
-  uses: Laerdal-Medical/scl-actions/dotnet@main
+  uses: framinosona/github_actions/dotnet@main
   with:
     command: "build"
     configuration: "Release"
@@ -202,7 +202,7 @@ strategy:
 
 steps:
   - name: "Test ${{ matrix.framework }}"
-    uses: Laerdal-Medical/scl-actions/dotnet@main
+    uses: framinosona/github_actions/dotnet@main
     with:
       command: "test"
       framework: ${{ matrix.framework }}
@@ -217,7 +217,7 @@ strategy:
 
 steps:
   - name: "Publish for ${{ matrix.runtime }}"
-    uses: Laerdal-Medical/scl-actions/dotnet@main
+    uses: framinosona/github_actions/dotnet@main
     with:
       command: "publish"
       runtime: ${{ matrix.runtime }}
@@ -228,7 +228,7 @@ steps:
 
 ```yaml
 - name: "Create NuGet package"
-  uses: Laerdal-Medical/scl-actions/dotnet@main
+  uses: framinosona/github_actions/dotnet@main
   with:
     command: "pack"
     path: "./src/MyLibrary/MyLibrary.csproj"
@@ -238,7 +238,7 @@ steps:
       --include-symbols
       --include-source
       /p:PackageVersion=1.0.0
-      /p:Authors="Laerdal Medical"
+      /p:Authors="Framinosona"
 ```
 
 ## 🔧 Command Support Matrix
@@ -310,7 +310,7 @@ arguments: |
 
 ## 📄 License
 
-This action is part of the Laerdal Medical GitHub Actions collection and follows the same license terms.
+This action is part of the GitHub Actions collection by Francois Raminosona.
 
 ---
 
