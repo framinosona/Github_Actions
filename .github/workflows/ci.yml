@@ -7,16 +7,6 @@ on:
     branches: [ main ]
   workflow_dispatch:
     inputs:
-      major:
-        description: 'Major version number'
-        required: true
-        default: '1'
-        type: string
-      minor:
-        description: 'Minor version number'
-        required: true
-        default: '0'
-        type: string
       force-release:
         description: 'Force create release even if no changes'
         required: false
@@ -24,8 +14,6 @@ on:
         type: boolean
 
 env:
-  MAJOR_VERSION: ${{ github.event.inputs.major || '1' }}
-  MINOR_VERSION: ${{ github.event.inputs.minor || '0' }}
   IS_MAIN_BRANCH: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
   FORCE_RELEASE: ${{ github.event.inputs.force-release == 'true' }}
 
@@ -39,13 +27,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-and-release:
-    name: '🏗️ Build and Release'
+  version:
+    uses: framinosona/github_actions/generate-version/workflow.yml@main
+    with:
+      config-file: "./.config/version.json"
+      output-txt: 'output/version/version.txt'
+      output-json: 'output/version/version.json'
+      output-props: 'output/version/version.props'
+      show-summary: true
+
+  build-documentation:
+    name: '🏗️ Build Documentation'
+    needs: [version]
     runs-on: ubuntu-latest
     outputs:
-      version-full: ${{ steps.version.outputs.VERSION_FULL }}
-      version-tag: ${{ steps.git-tag.outputs.tag-name }}
-      release-url: ${{ steps.release.outputs.release-url }}
       docfx-path: ${{ steps.docfx.outputs.output-path }}
       should-deploy-docs: ${{ env.IS_MAIN_BRANCH == 'true' || env.FORCE_RELEASE == 'true' }}
 
@@ -56,41 +51,6 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: '🔢 Generate Version'
-        id: version
-        uses: ./generate-version
-        with:
-          major: ${{ env.MAJOR_VERSION }}
-          minor: ${{ env.MINOR_VERSION }}
-          output-txt: 'output/version/version.txt'
-          output-json: 'output/version/version.json'
-          output-props: 'output/version/version.props'
-          show-summary: 'true'
-
-      - name: '📦 Upload Version Artifacts'
-        uses: actions/upload-artifact@v4
-        with:
-          name: version-files
-          path: output/version
-          retention-days: 7
-
-      - name: '🏷️ Generate Version Badge'
-        id: badge
-        uses: ./generate-badge
-        with:
-          label: 'CI'
-          message: ${{ steps.version.outputs.VERSION_FULL }}
-          logo: 'github'
-          output-file: 'output/badge/version-badge.svg'
-          show-summary: 'true'
-
-      - name: '📦 Upload Version Badge'
-        uses: actions/upload-artifact@v4
-        with:
-          name: version-badge
-          path: output/badge/version-badge.svg
-          retention-days: 7
-
       - name: '📚 Build Documentation'
         id: docfx
         uses: ./dotnet-docfx-build
@@ -98,103 +58,54 @@ jobs:
           output: 'output/docs/site'
           show-summary: 'true'
 
-      - name: '📁 Move badge to site assets'
-        shell: bash
-        run: |
-          # Copy badge to documentation assets if it exists
-          if [ -f "${{ steps.badge.outputs.output-file-path }}" ]; then
-            # Ensure target directory exists
-            mkdir -p "${{ steps.docfx.outputs.output-path }}"
-            cp "${{ steps.badge.outputs.output-file-path }}" "${{ steps.docfx.outputs.output-path }}/version-badge.svg"
-            echo "✅ Copied version-badge.svg to site assets"
-          else
-            echo "⚠️ Warning: Badge file not found at ${{ steps.badge.outputs.output-file-path }}"
-            echo "::warning::Badge file was not generated, skipping copy to site assets"
-          fi
-
       - name: '📤 Upload GitHub Pages Artifact'
         uses: actions/upload-pages-artifact@v3
         with:
           path: ${{ steps.docfx.outputs.output-path }}
 
-      - name: '🏷️ Create Git Tag'
-        id: git-tag
-        if: env.IS_MAIN_BRANCH == 'true' || env.FORCE_RELEASE == 'true'
-        uses: ./git-tag
-        with:
-          tag: ${{ steps.version.outputs.VERSION_FULL }}
-          message: 'Release ${{ steps.version.outputs.VERSION_FULL }}'
-          prefix: 'v'
-          fail-if-exists: 'false'
-          show-summary: 'true'
-
-      - name: '🚀 Create GitHub Release'
-        id: release
-        if: env.IS_MAIN_BRANCH == 'true' || env.FORCE_RELEASE == 'true'
-        uses: ./github-release
-        with:
-          tag: ${{ steps.git-tag.outputs.tag-name }}
-          title: 'Release ${{ steps.version.outputs.VERSION_FULL }}'
-          generate-notes: 'true'
-          prerelease: ${{ contains(steps.version.outputs.VERSION_FULL, '-') }}
-          show-summary: 'true'
-
-      - name: '📋 Workflow Summary'
-        shell: bash
-        run: |
-          cat >> $GITHUB_STEP_SUMMARY << 'EOF'
-          # 🚀 CI/CD Pipeline Summary
-
-          ## 📊 Build Results
-          | Component | Status | Details |
-          |-----------|--------|---------|
-          | 🔢 Version Generation | ✅ | `${{ steps.version.outputs.VERSION_FULL }}` |
-          | 🏷️ Git Tagging | ${{ steps.git-tag.outcome == 'success' && '✅' || (steps.git-tag.outcome == 'skipped' && '⏭️' || '❌') }} | `${{ steps.git-tag.outputs.tag-name || 'skipped' }}` |
-          | 🏷️ Badge Generation | ✅ | SVG file created |
-          | 🚀 GitHub Release | ${{ steps.release.outcome == 'success' && '✅' || (steps.release.outcome == 'skipped' && '⏭️' || '❌') }} | ${{ steps.release.outputs.release-url && format('[Release]({0})', steps.release.outputs.release-url) || 'skipped' }} |
-          | 📚 Documentation | ✅ | ${{ steps.docfx.outputs.files-count }} files generated |
-
-          ## 🔗 Quick Links
-          - 📦 **Version**: `${{ steps.version.outputs.VERSION_FULL }}`
-          - 🏷️ **Badge**: Available at `/version-badge.svg`
-          - 🌐 **Documentation**: Will be available at GitHub Pages after deployment
-          ${{ steps.release.outputs.release-url && format('- 🚀 **Release**: [View Release]({0})', steps.release.outputs.release-url) || '' }}
-
-          ## 📁 Generated Assets
-          - `version.txt` - Version information in key=value format
-          - `version.json` - Version information in JSON format
-          - `version-badge.svg` - Version badge in SVG format
-          - Documentation site in `${{ steps.docfx.outputs.output-path }}`
-          EOF
-
   deploy-pages:
     name: '🌐 Deploy to GitHub Pages'
-    if: needs.build-and-release.outputs.should-deploy-docs == 'true'
-    needs: build-and-release
+    if: needs.build-documentation.outputs.should-deploy-docs == 'true'
+    needs: [build-documentation]
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - name: '🌐 Deploy to GitHub Pages'
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: '📋 Deployment Summary'
-        shell: bash
-        run: |
-          cat >> $GITHUB_STEP_SUMMARY << 'EOF'
-          # 🌐 GitHub Pages Deployment
+  tag:
+    name: '🏷️ Tag Repository'
+    needs: [version]
+    runs-on: ubuntu-latest
 
-          ## 🚀 Deployment Results
-          | Component | Status | URL |
-          |-----------|--------|-----|
-          | 📚 Documentation Site | ✅ | [${{ steps.deployment.outputs.page_url }}](${{ steps.deployment.outputs.page_url }}) |
-          | 🏷️ Version Badge | ✅ | [${{ steps.deployment.outputs.page_url }}version-badge.svg](${{ steps.deployment.outputs.page_url }}version-badge.svg) |
+    steps:
+      - name: '📥 Checkout Repository'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-          ## 📋 Available Resources
-          - **Main Documentation**: [${{ steps.deployment.outputs.page_url }}](${{ steps.deployment.outputs.page_url }})
-          - **Version**: `${{ needs.build-and-release.outputs.version-full }}`
-          ${{ needs.build-and-release.outputs.release-url && format('- **Latest Release**: [View Release]({0})', needs.build-and-release.outputs.release-url) || '' }}
-          EOF
+      - name: '🏷️ Create Git Tag'
+        uses: ./git-tag
+        with:
+          tag: ${{ needs.version.outputs.version-full }}
+          message: 'Release ${{ needs.version.outputs.version-full }}'
+          prefix: 'v'
+          fail-if-exists: 'true'
+          show-summary: 'true'
+
+  github-release:
+    name: '🚀 Create GitHub Release'
+    needs: [tag, version, build-documentation]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: '🚀 Create GitHub Release'
+        uses: ./github-release
+        with:
+          tag: ${{ needs.tag.outputs.tag-name }}
+          title: 'Release ${{ needs.version.outputs.version-full }}'
+          generate-notes: 'true'
+          prerelease: ${{ needs.version.outputs.version-isprerelease }}
+          show-summary: 'true'
