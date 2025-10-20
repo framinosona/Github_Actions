@@ -1,0 +1,347 @@
+name: "📦 Pack .NET Project"
+description: "Pack .NET projects into NuGet packages with comprehensive configuration options"
+author: "Francois Raminosona"
+
+inputs:
+  # Arguments passed to dotnet
+  path:
+    description: "Path to the project file, solution file, or directory to operate on"
+    required: false
+    default: ""
+  arguments:
+    description: "Additional arguments to pass to the dotnet command"
+    required: false
+    default: ""
+  working-directory:
+    description: "Working directory for the command"
+    required: false
+    default: "."
+  verbosity:
+    description: "Force a specific verbosity level (overrides auto-detection)"
+    required: false
+    default: ""
+  nologo:
+    description: "Suppress the Microsoft logo and startup information"
+    required: false
+    default: "true"
+  no-restore:
+    description: "Skip automatic restore"
+    required: false
+    default: "false"
+  no-build:
+    description: "Skip building the project before packing"
+    required: false
+    default: "false"
+  configuration:
+    description: "Build configuration to use (e.g., 'Debug', 'Release')"
+    required: false
+    default: "Release"
+  output:
+    description: "Output directory to place built packages in"
+    required: false
+    default: ""
+  artifacts-path:
+    description: "The artifacts path. All output from the project, including build, publish, and pack output, will go in subfolders under the specified path."
+    required: false
+    default: ""
+  show-summary:
+    description: "Whether to show the action summary"
+    required: false
+    default: "false"
+
+  # Arguments unique to pack command
+  include-symbols:
+    description: "Include packages with symbols in addition to regular packages in output directory"
+    required: false
+    default: "false"
+  include-source:
+    description: "Include PDBs and source files. Source files go into the 'src' folder in the resulting nuget package"
+    required: false
+    default: "false"
+  serviceable:
+    description: "Set the serviceable flag in the package"
+    required: false
+    default: "false"
+  version-suffix:
+    description: "Set the value of the $(VersionSuffix) property to use when building the project"
+    required: false
+    default: ""
+  disable-build-servers:
+    description: "Force ignoring any persistent build servers"
+    required: false
+    default: "false"
+  use-current-runtime:
+    description: "Use current runtime as the target runtime"
+    required: false
+    default: "false"
+
+outputs:
+  exit-code:
+    description: "Exit code of the dotnet pack command"
+    value: ${{ steps.run-dotnet.outputs.exit-code }}
+  executed-command:
+    description: "The actual command that was executed"
+    value: ${{ steps.run-dotnet.outputs.executed-command }}
+  packages:
+    description: "Semicolon-separated list of generated package files"
+    value: ${{ steps.find-packages.outputs.packages }}
+  package-count:
+    description: "Number of packages generated"
+    value: ${{ steps.find-packages.outputs.package-count }}
+  output-directory:
+    description: "Directory where packages were generated"
+    value: ${{ steps.find-packages.outputs.output-directory }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: "✅ Validate input : booleans"
+      shell: bash
+      run: |
+        echo "::debug::Validating boolean inputs..."
+        for param in no-build no-restore include-symbols include-source serviceable disable-build-servers use-current-runtime show-summary; do
+          case $param in
+            no-build) value="${{ inputs.no-build }}" ;;
+            no-restore) value="${{ inputs.no-restore }}" ;;
+            include-symbols) value="${{ inputs.include-symbols }}" ;;
+            include-source) value="${{ inputs.include-source }}" ;;
+            serviceable) value="${{ inputs.serviceable }}" ;;
+            disable-build-servers) value="${{ inputs.disable-build-servers }}" ;;
+            use-current-runtime) value="${{ inputs.use-current-runtime }}" ;;
+            show-summary) value="${{ inputs.show-summary }}" ;;
+          esac
+          if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
+            echo "::error::Parameter $param must be 'true' or 'false', got: $value"
+            exit 1
+          fi
+        done
+
+        echo "✅ Boolean inputs validation completed successfully"
+
+    - name: "✅ Validate input : output"
+      if: ${{ inputs.output != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating output directory input: ${{ inputs.output }}"
+
+        # Create output directory if it doesn't exist
+        if [ ! -d "${{ inputs.output }}" ]; then
+          echo "::debug::Creating output directory: ${{ inputs.output }}"
+          mkdir -p "${{ inputs.output }}"
+        fi
+
+        # Check if directory is writable
+        if [ ! -w "${{ inputs.output }}" ]; then
+          echo "::error::Output directory is not writable: ${{ inputs.output }}"
+          exit 1
+        fi
+
+        echo "✅ Output directory validation completed successfully"
+
+    - name: "✅ Validate input : artifacts-path"
+      if: ${{ inputs.artifacts-path != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating artifacts-path input: ${{ inputs.artifacts-path }}"
+
+        # Create artifacts path if it doesn't exist
+        if [ ! -d "${{ inputs.artifacts-path }}" ]; then
+          echo "::debug::Creating artifacts path: ${{ inputs.artifacts-path }}"
+          mkdir -p "${{ inputs.artifacts-path }}"
+        fi
+
+        # Check if directory is writable
+        if [ ! -w "${{ inputs.artifacts-path }}" ]; then
+          echo "::error::Artifacts path is not writable: ${{ inputs.artifacts-path }}"
+          exit 1
+        fi
+
+        echo "✅ Artifacts path validation completed successfully"
+
+    - name: "✅ Validate input : version-suffix"
+      if: ${{ inputs.version-suffix != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating version-suffix input: ${{ inputs.version-suffix }}"
+
+        # Version suffix should not contain spaces or special characters that could break versioning
+        if [[ "${{ inputs.version-suffix }}" =~ [[:space:]] ]]; then
+          echo "::error::Version suffix cannot contain spaces: ${{ inputs.version-suffix }}"
+          exit 1
+        fi
+
+        # Version suffix should start with alphanumeric character
+        if [[ ! "${{ inputs.version-suffix }}" =~ ^[a-zA-Z0-9] ]]; then
+          echo "::error::Version suffix should start with alphanumeric character: ${{ inputs.version-suffix }}"
+          exit 1
+        fi
+
+        echo "✅ Version suffix validation completed successfully"
+
+    - name: "🏗️ Build argument list"
+      id: build-args
+      shell: bash
+      run: |
+        echo "::debug::Building argument list..."
+
+        # Start with base arguments
+        ARGUMENTS=""
+
+        # Boolean flags
+        for param in include-symbols include-source serviceable disable-build-servers use-current-runtime; do
+          case $param in
+            include-symbols) value="${{ inputs.include-symbols }}" ;;
+            include-source) value="${{ inputs.include-source }}" ;;
+            serviceable) value="${{ inputs.serviceable }}" ;;
+            disable-build-servers) value="${{ inputs.disable-build-servers }}" ;;
+            use-current-runtime) value="${{ inputs.use-current-runtime }}" ;;
+          esac
+          if [ "$value" = "true" ]; then
+            case $param in
+              use-current-runtime) ARGUMENTS="$ARGUMENTS --ucr" ;;
+              *) ARGUMENTS="$ARGUMENTS --$param" ;;
+            esac
+          fi
+        done
+
+        # Key-value options
+        for param in output artifacts-path version-suffix; do
+          case $param in
+            output) value="${{ inputs.output }}" ;;
+            artifacts-path) value="${{ inputs.artifacts-path }}" ;;
+            version-suffix) value="${{ inputs.version-suffix }}" ;;
+          esac
+          if [ -n "$value" ]; then
+            ARGUMENTS="$ARGUMENTS --$param '$value'"
+          fi
+        done
+
+        ARGUMENTS="$ARGUMENTS ${{ inputs.arguments }}"
+
+        # Trim leading space
+        ARGUMENTS="${ARGUMENTS# }"
+
+        # Output the final argument list
+        echo "arguments=$ARGUMENTS" >> $GITHUB_OUTPUT
+
+        echo "✅ Argument list built successfully: $ARGUMENTS"
+
+    - name: "📦 Run .NET pack"
+      id: run-dotnet
+      uses: "laerdal-medical/scl-actions/dotnet@main"
+      with:
+        command: "pack"
+        path: ${{ inputs.path }}
+        arguments: ${{ steps.build-args.outputs.arguments }}
+        working-directory: ${{ inputs.working-directory }}
+        verbosity: ${{ inputs.verbosity }}
+        nologo: ${{ inputs.nologo }}
+        no-restore: ${{ inputs.no-restore }}
+        no-build: ${{ inputs.no-build }}
+        configuration: ${{ inputs.configuration }}
+        show-summary: "false"  # We handle our own summary
+
+    - name: "🔍 Find generated packages"
+      id: find-packages
+      shell: bash
+      run: |
+        echo "::debug::Searching for generated NuGet packages..."
+
+        # Determine the search directory based on inputs
+        SEARCH_DIR="${{ inputs.working-directory }}"
+        if [ -n "${{ inputs.output }}" ]; then
+          SEARCH_DIR="${{ inputs.output }}"
+        elif [ -n "${{ inputs.artifacts-path }}" ]; then
+          SEARCH_DIR="${{ inputs.artifacts-path }}"
+        fi
+
+        echo "::debug::Searching in directory: $SEARCH_DIR"
+
+        # Find all .nupkg files (including symbol packages)
+        PACKAGES=""
+        PACKAGE_COUNT=0
+
+        if [ -d "$SEARCH_DIR" ]; then
+          # Use find to locate .nupkg files recursively
+          while IFS= read -r -d '' package; do
+            if [ -z "$PACKAGES" ]; then
+              PACKAGES="$package"
+            else
+              PACKAGES="$PACKAGES;$package"
+            fi
+            PACKAGE_COUNT=$((PACKAGE_COUNT + 1))
+            echo "📦 Found package: $package"
+          done < <(find "$SEARCH_DIR" -name "*.nupkg" -type f -print0 2>/dev/null)
+        fi
+
+        # Set outputs
+        echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
+        echo "package-count=$PACKAGE_COUNT" >> $GITHUB_OUTPUT
+        echo "output-directory=$SEARCH_DIR" >> $GITHUB_OUTPUT
+
+        if [ $PACKAGE_COUNT -eq 0 ]; then
+          echo "::warning::No NuGet packages found in $SEARCH_DIR"
+        else
+          echo "✅ Found $PACKAGE_COUNT NuGet package(s)"
+        fi
+
+    - name: "📊 Action Summary"
+      if: always() && inputs.show-summary == 'true'
+      shell: bash
+      run: |
+        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+        <details><summary>📦 .NET Pack : ${{ steps.find-packages.outputs.package-count }} package(s)</summary>
+
+        ## 🔧 Input Parameters
+        | Parameter | Value |
+        |-----------|-------|
+        | 📁 Project/Solution | `${{ inputs.path || 'current directory' }}` |
+        | 🏗️ Configuration | `${{ inputs.configuration }}` |
+        | 📂 Output Directory | `${{ inputs.output || 'default' }}` |
+        | 🎯 Artifacts Path | `${{ inputs.artifacts-path || 'none' }}` |
+        | 🔢 Version Suffix | `${{ inputs.version-suffix || 'none' }}` |
+        | 🚫 No Build | `${{ inputs.no-build }}` |
+        | 🚫 No Restore | `${{ inputs.no-restore }}` |
+        | 🔍 Include Symbols | `${{ inputs.include-symbols }}` |
+        | 📝 Include Source | `${{ inputs.include-source }}` |
+        | ⚙️ Serviceable | `${{ inputs.serviceable }}` |
+        | 🏃 Use Current Runtime | `${{ inputs.use-current-runtime }}` |
+        | 🚫 Disable Build Servers | `${{ inputs.disable-build-servers }}` |
+
+        ## 📦 Generated Packages
+        | Metric | Value |
+        |--------|-------|
+        | 📊 Package Count | `${{ steps.find-packages.outputs.package-count }}` |
+        | 📂 Output Directory | `${{ steps.find-packages.outputs.output-directory }}` |
+        | ✅ Exit Code | `${{ steps.run-dotnet.outputs.exit-code }}` |
+
+        ## 📋 Package List
+        EOF
+
+        # Add package list to summary
+        if [ -n "${{ steps.find-packages.outputs.packages }}" ]; then
+          IFS=';' read -ra PACKAGES <<< "${{ steps.find-packages.outputs.packages }}"
+          for package in "${PACKAGES[@]}"; do
+            package_name=$(basename "$package")
+            echo "| 📦 | \`$package_name\` |" >> $GITHUB_STEP_SUMMARY
+          done
+        else
+          echo "| ⚠️ | No packages generated |" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+
+        ## ⚙️ Process Details
+        | Step | Status |
+        |------|--------|
+        | ✅ Input Validation | `✅ Completed` |
+        | 🏗️ Argument Building | `${{ steps.build-args.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | 📦 Pack Execution | `${{ steps.run-dotnet.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | 🔍 Package Discovery | `${{ steps.find-packages.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+
+        </details>
+        EOF
+
+branding:
+  icon: "package"
+  color: "blue"
