@@ -1,10 +1,25 @@
-name: "📦 .NET > Upload NuGet Package"
+name: "📦 Upload NuGet Package"
 description: "Uploads a NuGet package to a specified feed using dotnet nuget push"
-author: 'Francois Raminosona'
+author: "Francois Raminosona"
 
 inputs:
+  # Arguments passed to dotnet
+  working-directory:
+    description: "Working directory for the push operation"
+    required: false
+    default: "."
+  verbosity:
+    description: "Verbosity level (quiet, minimal, normal, detailed, diagnostic)"
+    required: false
+    default: ""
+  show-summary:
+    description: "Whether to show the action summary"
+    required: false
+    default: "false"
+
+  # Arguments unique to command
   package-path:
-    description: "Path to the NuGet package file (.nupkg or .snupkg) to upload"
+    description: "Path to the NuGet package file (.nupkg or .snupkg) or a wildcard pattern (e.g., 'bin/Release/*.nupkg')"
     required: true
   source:
     description: "NuGet server URL or source name to push to"
@@ -38,43 +53,22 @@ inputs:
     description: "Force English output for consistent parsing"
     required: false
     default: "true"
-  working-directory:
-    description: "Working directory for the push operation"
-    required: false
-    default: "."
-  verbosity:
-    description: "Verbosity level (quiet, minimal, normal, detailed, diagnostic)"
-    required: false
-    default: ""
-  show-summary:
-    description: 'Whether to show the action summary'
-    required: false
-    default: 'false'
 
 outputs:
   exit-code:
     description: "Exit code of the nuget push command"
-    value: ${{ steps.push-package.outputs.exit-code }}
+    value: ${{ steps.run-dotnet.outputs.exit-code }}
   executed-command:
     description: "The actual command that was executed"
-    value: ${{ steps.push-package.outputs.executed-command }}
-  package-name:
-    description: "Name of the package that was uploaded"
-    value: ${{ steps.extract-info.outputs.package-name }}
-  package-version:
-    description: "Version of the package that was uploaded"
-    value: ${{ steps.extract-info.outputs.package-version }}
+    value: ${{ steps.run-dotnet.outputs.executed-command }}
 
 runs:
   using: "composite"
   steps:
-    - name: "✅ Validate inputs"
+    - name: "🔒 Mask sensitive data"
       shell: bash
       run: |
-        echo "::group::🔍 NuGet Package Upload Validation"
-        echo "::debug::Validating inputs for NuGet package upload"
-
-        # Mask sensitive data
+        # Mask sensitive data FIRST
         if [ -n "${{ inputs.api-key }}" ]; then
           echo "::add-mask::${{ inputs.api-key }}"
         fi
@@ -82,49 +76,46 @@ runs:
           echo "::add-mask::${{ inputs.symbol-api-key }}"
         fi
 
+        echo "✅ Masked sensitive inputs"
+
+    - name: "✅ Validate input : booleans"
+      shell: bash
+      run: |
+        echo "::debug::Validating boolean inputs"
+
+        for param in skip-duplicate no-symbols force-english-output; do
+          case $param in
+            skip-duplicate) value="${{ inputs.skip-duplicate }}" ;;
+            no-symbols) value="${{ inputs.no-symbols }}" ;;
+            force-english-output) value="${{ inputs.force-english-output }}" ;;
+          esac
+          if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
+            echo "::error::Parameter $param must be 'true' or 'false', got: $value"
+            exit 1
+          fi
+        done
+
+        echo "::debug::Boolean inputs validation completed successfully"
+
+
+    - name: "✅ Validate input : package-path"
+      shell: bash
+      run: |
+        echo "::debug::Validating package-path input: ${{ inputs.package-path }}"
+
         # Validate package path is not empty
         if [ -z "${{ inputs.package-path }}" ]; then
           echo "::error::Package path cannot be empty"
           exit 1
         fi
 
-        # Validate package file exists
-        if [ ! -f "${{ inputs.package-path }}" ]; then
-          echo "::error file=${{ inputs.package-path }}::Package file not found: ${{ inputs.package-path }}"
-          exit 1
-        fi
+        echo "::debug::Package path validation completed successfully"
 
-        # Validate package file extension
-        case "${{ inputs.package-path }}" in
-          *.nupkg|*.snupkg) ;;
-          *) echo "::error file=${{ inputs.package-path }}::Package file must have .nupkg or .snupkg extension: ${{ inputs.package-path }}"; exit 1 ;;
-        esac
+    - name: "✅ Validate input : timeout"
+      shell: bash
+      run: |
+        echo "::debug::Validating timeout input: ${{ inputs.timeout }}"
 
-        # Validate working directory exists
-        if [ ! -d "${{ inputs.working-directory }}" ]; then
-          echo "::error::Working directory does not exist: ${{ inputs.working-directory }}"
-          exit 1
-        fi
-
-        # Validate skip-duplicate flag
-        case "${{ inputs.skip-duplicate }}" in
-          true|false) ;;
-          *) echo "::error::Skip duplicate flag must be 'true' or 'false', got: ${{ inputs.skip-duplicate }}"; exit 1 ;;
-        esac
-
-        # Validate no-symbols flag
-        case "${{ inputs.no-symbols }}" in
-          true|false) ;;
-          *) echo "::error::No symbols flag must be 'true' or 'false', got: ${{ inputs.no-symbols }}"; exit 1 ;;
-        esac
-
-        # Validate force-english-output flag
-        case "${{ inputs.force-english-output }}" in
-          true|false) ;;
-          *) echo "::error::Force English output flag must be 'true' or 'false', got: ${{ inputs.force-english-output }}"; exit 1 ;;
-        esac
-
-        # Validate timeout is a positive number
         if [ -n "${{ inputs.timeout }}" ]; then
           if ! [[ "${{ inputs.timeout }}" =~ ^[0-9]+$ ]]; then
             echo "::error::Timeout must be a positive number: ${{ inputs.timeout }}"
@@ -132,109 +123,71 @@ runs:
           fi
         fi
 
-        # Validate verbosity level if specified
-        if [ -n "${{ inputs.verbosity }}" ]; then
-          case "${{ inputs.verbosity }}" in
-            quiet|minimal|normal|detailed|diagnostic) ;;
-            *) echo "::error::Invalid verbosity level: ${{ inputs.verbosity }}. Must be one of: quiet, minimal, normal, detailed, diagnostic"; exit 1 ;;
-          esac
-        fi
+        echo "::debug::Timeout validation completed successfully"
 
-        echo "✅ Input validation completed successfully"
-        echo "::endgroup::"
-
-    - name: "📋 Extract package information"
-      id: extract-info
-      shell: bash
-      run: |
-        echo "::debug::Extracting package information..."
-
-        PACKAGE_FILE="${{ inputs.package-path }}"
-        PACKAGE_NAME="unknown"
-        PACKAGE_VERSION="unknown"
-
-        # Extract package name and version from filename
-        # Standard NuGet package naming: PackageName.Version.nupkg
-        BASENAME=$(basename "$PACKAGE_FILE" .nupkg)
-        BASENAME=$(basename "$BASENAME" .snupkg)
-
-        # Try to extract version (last part after final dot before potential prerelease)
-        if [[ "$BASENAME" =~ ^(.+)\.([0-9]+\.[0-9]+\.[0-9]+.*)$ ]]; then
-          PACKAGE_NAME="${BASH_REMATCH[1]}"
-          PACKAGE_VERSION="${BASH_REMATCH[2]}"
-          echo "✅ Extracted package: $PACKAGE_NAME version $PACKAGE_VERSION"
-        else
-          echo "::warning::Could not parse package name and version from filename: $BASENAME"
-          PACKAGE_NAME="$BASENAME"
-        fi
-
-        echo "package-name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
-        echo "package-version=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
-
-    - name: "🔧 Build arguments"
+    - name: "🏗️ Build argument list"
       id: build-args
       shell: bash
       run: |
-        echo "🔧 Building dotnet arguments..."
+        echo "::debug::Building argument list for NuGet package upload"
 
         # Start with base arguments
-        ARGS="push '${{ inputs.package-path }}'"
+        ARGUMENTS="push '${{ inputs.package-path }}'"
 
-        # Add conditional arguments
-        if [ -n "${{ inputs.source }}" ]; then
-          ARGS="$ARGS --source '${{ inputs.source }}'"
-        fi
+        # Key-value options
+        for param in source api-key symbol-source symbol-api-key; do
+          case $param in
+            source) value="${{ inputs.source }}" ;;
+            api-key) value="${{ inputs.api-key }}" ;;
+            symbol-source) value="${{ inputs.symbol-source }}" ;;
+            symbol-api-key) value="${{ inputs.symbol-api-key }}" ;;
+          esac
+          if [ -n "$value" ]; then
+            ARGUMENTS="$ARGUMENTS --$param '$value'"
+          fi
+        done
 
-        if [ -n "${{ inputs.api-key }}" ]; then
-          ARGS="$ARGS --api-key '${{ inputs.api-key }}'"
-        fi
-
-        if [ -n "${{ inputs.symbol-source }}" ]; then
-          ARGS="$ARGS --symbol-source '${{ inputs.symbol-source }}'"
-        fi
-
-        if [ -n "${{ inputs.symbol-api-key }}" ]; then
-          ARGS="$ARGS --symbol-api-key '${{ inputs.symbol-api-key }}'"
-        fi
-
+        # Timeout (only if different from default)
         if [ "${{ inputs.timeout }}" != "300" ]; then
-          ARGS="$ARGS --timeout ${{ inputs.timeout }}"
+          ARGUMENTS="$ARGUMENTS --timeout ${{ inputs.timeout }}"
         fi
 
-        if [ "${{ inputs.skip-duplicate }}" = "true" ]; then
-          ARGS="$ARGS --skip-duplicate"
-        fi
+        # Boolean flags
+        for param in skip-duplicate no-symbols force-english-output; do
+          case $param in
+            skip-duplicate) value="${{ inputs.skip-duplicate }}" ;;
+            no-symbols) value="${{ inputs.no-symbols }}" ;;
+            force-english-output) value="${{ inputs.force-english-output }}" ;;
+          esac
+          if [ "$value" = "true" ]; then
+            ARGUMENTS="$ARGUMENTS --${param}"
+          fi
+        done
 
-        if [ "${{ inputs.no-symbols }}" = "true" ]; then
-          ARGS="$ARGS --no-symbols"
-        fi
+        # Trim leading space
+        ARGUMENTS="${ARGUMENTS# }"
 
-        if [ "${{ inputs.force-english-output }}" = "true" ]; then
-          ARGS="$ARGS --force-english-output"
-        fi
+        echo "arguments=$ARGUMENTS" >> $GITHUB_OUTPUT
+        echo "::debug::Argument list built successfully: $ARGUMENTS"
 
-        echo "📋 Generated arguments: $ARGS"
-
-        # Output the arguments string
-        echo "arguments=$ARGS" >> $GITHUB_OUTPUT
-
-    - name: "📦 Push NuGet package"
-      id: push-package
-      uses: ./dotnet
+    - name: "🔄 Execute NuGet package upload"
+      id: run-dotnet
+      uses: "framinosona/github_actions/dotnet@main"
       with:
         command: "nuget"
         arguments: ${{ steps.build-args.outputs.arguments }}
         working-directory: ${{ inputs.working-directory }}
-        force-verbosity: ${{ inputs.verbosity }}
+        verbosity: ${{ inputs.verbosity }}
+        show-summary: ${{ inputs.show-summary }}
 
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash
       run: |
         cat >> $GITHUB_STEP_SUMMARY << 'EOF'
-        <details><summary>Expand for details - 📊 NuGet Package Upload Summary</summary>
+        <details><summary>📦 NuGet Upload : ${{ inputs.package-path }}</summary>
 
-        ## 🔧 Input Parameters
+        ## 🔧 NuGet Upload Specific Parameters
         | Parameter | Value |
         |-----------|-------|
         | 📦 Package Path | `${{ inputs.package-path }}` |
@@ -243,20 +196,7 @@ runs:
         | 🔣 Symbol Source | `${{ inputs.symbol-source || 'none' }}` |
         | 🔑 Symbol API Key | `${{ inputs.symbol-api-key != '' && '***configured***' || 'not provided' }}` |
         | ⏱️ Timeout | `${{ inputs.timeout }}s` |
-        | 📁 Working Directory | `${{ inputs.working-directory }}` |
-
-        ## 📤 Upload Results
-        | Metric | Value |
-        |--------|-------|
-        | ✅ Exit Code | `${{ steps.push-package.outputs.exit-code }}` |
-        | 📦 Package Name | `${{ steps.extract-info.outputs.package-name }}` |
-        | 🏷️ Package Version | `${{ steps.extract-info.outputs.package-version }}` |
-        | 🚀 Executed Command | `${{ steps.push-package.outputs.executed-command }}` |
-
-        ## ⚙️ Upload Options
-        | Option | Status |
-        |--------|--------|
-        | 🚫 Skip Duplicate | `${{ inputs.skip-duplicate }}` |
+        | � Skip Duplicate | `${{ inputs.skip-duplicate }}` |
         | 🚫 No Symbols | `${{ inputs.no-symbols }}` |
         | 🌍 Force English | `${{ inputs.force-english-output }}` |
 
@@ -264,12 +204,38 @@ runs:
         | Step | Status |
         |------|--------|
         | ✅ Input Validation | `✅ Completed` |
-        | 📋 Package Info Extraction | `${{ steps.extract-info.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
-        | 📦 Package Upload | `${{ steps.push-package.outputs.exit-code == '0' && '✅ Completed' || '❌ Failed' }}` |
+        | 🔨 Argument Building | `${{ steps.build-args.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | ⚙️ Base Action Execution | `${{ steps.run-dotnet.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+
+        ## 📤 Execution Results
+        | Metric | Value |
+        |--------|-------|
+        | ✅ Exit Code | `${{ steps.run-dotnet.outputs.exit-code }}` |
+        | 🔄 Executed Command | `${{ steps.run-dotnet.outputs.executed-command }}` |
 
         </details>
         EOF
 
 branding:
-  icon: 'upload'
-  color: 'blue'
+  icon: "upload"
+  color: "blue"
+
+# Usage: dotnet nuget push [arguments] [options]
+
+# Arguments:
+#   [root]  Specify the path to the package and your API key to push the package to the server.
+
+# Options:
+#   -h|--help                      Show help information
+#   --force-english-output         Forces the application to run using an invariant, English-based culture.
+#   -s|--source <source>           Package source (URL, UNC/folder path or package source name) to use. Defaults to DefaultPushSource if specified in NuGet.Config.
+#   -ss|--symbol-source <source>   Symbol server URL to use.
+#   -t|--timeout <timeout>         Timeout for pushing to a server in seconds. Defaults to 300 seconds (5 minutes).
+#   -k|--api-key <apiKey>          The API key for the server.
+#   -sk|--symbol-api-key <apiKey>  The API key for the symbol server.
+#   -d|--disable-buffering         Disable buffering when pushing to an HTTP(S) server to decrease memory usage.
+#   -n|--no-symbols                If a symbols package exists, it will not be pushed to a symbols server.
+#   --no-service-endpoint          Does not append "api/v2/package" to the source URL.
+#   --interactive                  Allow the command to block and require manual action for operations like authentication.
+#   --skip-duplicate               If a package and version already exists, skip it and continue with the next package in the push, if any.
+#   --configfile                   The NuGet configuration file. If specified, only the settings from this file will be used. If not specified, the hierarchy of configuration files from the current directory will be used. For more information, see https://docs.microsoft.com/nuget/consume-packages/configuring-nuget-behavior.
