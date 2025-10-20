@@ -228,7 +228,7 @@ runs:
 
     - name: "📦 Run .NET pack"
       id: run-dotnet
-      uses: "laerdal-medical/scl-actions/dotnet@main"
+      uses: "framinosona/github_actions/dotnet@main"
       with:
         command: "pack"
         path: ${{ inputs.path }}
