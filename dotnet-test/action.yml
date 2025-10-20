@@ -1,0 +1,513 @@
+name: "🧪 Run .NET Tests"
+description: "Run .NET tests with comprehensive configuration options including filtering, logging, and blame analysis"
+author: "Francois Raminosona"
+
+inputs:
+  # Arguments passed to dotnet
+  path:
+    description: "Path to the project file, solution file, or directory to operate on"
+    required: false
+    default: ""
+  arguments:
+    description: "Additional arguments to pass to the dotnet command"
+    required: false
+    default: ""
+  working-directory:
+    description: "Working directory for the command"
+    required: false
+    default: "."
+  verbosity:
+    description: "Force a specific verbosity level (overrides auto-detection)"
+    required: false
+    default: ""
+  nologo:
+    description: "Suppress the Microsoft logo and startup information"
+    required: false
+    default: "true"
+  no-restore:
+    description: "Skip automatic restore"
+    required: false
+    default: "false"
+  no-build:
+    description: "Skip building the project before running"
+    required: false
+    default: "false"
+  configuration:
+    description: "Build configuration to use (e.g., 'Debug', 'Release')"
+    required: false
+    default: "Release"
+  framework:
+    description: "Target framework (e.g., 'net8.0', 'net6.0')"
+    required: false
+    default: ""
+  runtime:
+    description: "Target runtime (e.g., 'win-x64', 'linux-x64', 'osx-arm64')"
+    required: false
+    default: ""
+  arch:
+    description: "Target architecture (e.g., 'x64', 'arm64')"
+    required: false
+    default: ""
+  artifacts-path:
+    description: "The artifacts path. All output from the project, including build, publish, and pack output, will go in subfolders under the specified path."
+    required: false
+    default: ""
+  #output: # not used for tests, use --results-directory or --artifacts-path instead
+  #  description: "Output directory path"
+  #  required: false
+  #  default: ""
+  show-summary:
+    description: "Whether to show the action summary"
+    required: false
+    default: "false"
+
+  # Arguments unique to command
+  settings:
+    description: "Path to the test settings file (.runsettings)"
+    required: false
+    default: ""
+  filter:
+    description: "Test filter expression to run specific tests (e.g., 'Priority=1' or 'FullyQualifiedName~UnitTest')"
+    required: false
+    default: ""
+  logger:
+    description: "Test result logger configuration (e.g., 'trx', 'trx;LogFileName=TestResults.trx', 'console;verbosity=detailed')"
+    required: false
+    default: ""
+  results-directory:
+    description: "Directory where test results will be placed"
+    required: false
+    default: ""
+  collect:
+    description: "Data collector for the test run (e.g., 'XPlat Code Coverage', 'Code Coverage')"
+    required: false
+    default: ""
+  test-adapter-path:
+    description: "Path to custom test adapters"
+    required: false
+    default: ""
+  diag:
+    description: "Path to diagnostic log file for verbose logging"
+    required: false
+    default: ""
+  list-tests:
+    description: "List discovered tests instead of running them"
+    required: false
+    default: "false"
+  blame:
+    description: "Run tests in blame mode to isolate problematic tests"
+    required: false
+    default: "false"
+  blame-crash:
+    description: "Collect crash dump when test host exits unexpectedly"
+    required: false
+    default: "false"
+  blame-crash-dump-type:
+    description: "Type of crash dump to collect (full, mini)"
+    required: false
+    default: "full"
+  blame-crash-collect-always:
+    description: "Collect crash dump on expected and unexpected test host exit"
+    required: false
+    default: "false"
+  blame-hang:
+    description: "Collect hang dump when test exceeds timeout"
+    required: false
+    default: "false"
+  blame-hang-dump-type:
+    description: "Type of hang dump to collect (full, mini, none)"
+    required: false
+    default: "full"
+  blame-hang-timeout:
+    description: "Timeout for hang detection (e.g., '1h', '90m', '5400s')"
+    required: false
+    default: "1h"
+  disable-build-servers:
+    description: "Force ignoring any persistent build servers"
+    required: false
+    default: "false"
+  os:
+    description: "Target operating system"
+    required: false
+    default: ""
+
+outputs:
+  exit-code:
+    description: "Exit code of the dotnet test command"
+    value: ${{ steps.run-dotnet.outputs.exit-code }}
+  executed-command:
+    description: "The actual command that was executed"
+    value: ${{ steps.run-dotnet.outputs.executed-command }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: "✅ Validate input : booleans"
+      shell: bash
+      run: |
+        echo "::debug::Validating boolean inputs"
+
+        for param in list-tests blame blame-crash blame-crash-collect-always blame-hang no-build no-restore disable-build-servers; do
+          case $param in
+            list-tests) value="${{ inputs.list-tests }}" ;;
+            blame) value="${{ inputs.blame }}" ;;
+            blame-crash) value="${{ inputs.blame-crash }}" ;;
+            blame-crash-collect-always) value="${{ inputs.blame-crash-collect-always }}" ;;
+            blame-hang) value="${{ inputs.blame-hang }}" ;;
+            no-build) value="${{ inputs.no-build }}" ;;
+            no-restore) value="${{ inputs.no-restore }}" ;;
+            disable-build-servers) value="${{ inputs.disable-build-servers }}" ;;
+          esac
+          if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
+            echo "::error::Parameter $param must be 'true' or 'false', got: $value"
+            exit 1
+          fi
+        done
+
+        echo "✅ Boolean inputs validation completed successfully"
+
+    - name: "✅ Validate input : settings"
+      if: ${{ inputs.settings != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating settings input: ${{ inputs.settings }}"
+
+        if [ ! -f "${{ inputs.settings }}" ]; then
+          echo "::error file=${{ inputs.settings }}::Test settings file does not exist: ${{ inputs.settings }}"
+          exit 1
+        fi
+
+        echo "✅ Settings validation completed successfully"
+
+    - name: "✅ Validate input : filter"
+      if: ${{ inputs.filter != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating filter input: ${{ inputs.filter }}"
+
+        # Basic validation for common mistakes (e.g., unbalanced quotes)
+        if [[ "${{ inputs.filter }}" =~ [\"\'].*[\"\'] ]]; then
+          echo "::error::Filter expression contains unbalanced quotes: ${{ inputs.filter }}"
+          exit 1
+        fi
+
+        echo "✅ Filter validation completed successfully"
+
+    - name: "✅ Validate input : logger"
+      if: ${{ inputs.logger != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating logger input: ${{ inputs.logger }}"
+
+        # Basic validation for common mistakes (e.g., unbalanced semicolons)
+        if [[ "${{ inputs.logger }}" =~ ;; ]]; then
+          echo "::error::Logger configuration contains consecutive semicolons: ${{ inputs.logger }}"
+          exit 1
+        fi
+
+        echo "✅ Logger validation completed successfully"
+
+    - name: "✅ Validate input : collect"
+      if: ${{ inputs.collect != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating collect input: ${{ inputs.collect }}"
+
+        # Basic validation for common mistakes (e.g., unbalanced quotes)
+        if [[ "${{ inputs.collect }}" =~ [\"\'].*[\"\'] ]]; then
+          echo "::error::Collect configuration contains unbalanced quotes: ${{ inputs.collect }}"
+          exit 1
+        fi
+
+        echo "✅ Collect validation completed successfully"
+
+    - name: "✅ Validate input : blame-crash-dump-type"
+      if: ${{ inputs.blame-crash-dump-type != '' && inputs.blame-crash-dump-type != 'full' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating blame-crash-dump-type input: ${{ inputs.blame-crash-dump-type }}"
+
+        case "${{ inputs.blame-crash-dump-type }}" in
+          full|mini) ;;
+          *) echo "::error::Invalid blame-crash-dump-type '${{ inputs.blame-crash-dump-type }}'. Must be 'full' or 'mini'"; exit 1 ;;
+        esac
+
+        echo "✅ blame-crash-dump-type validation completed successfully"
+
+    - name: "✅ Validate input : blame-hang-dump-type"
+      if: ${{ inputs.blame-hang-dump-type != '' && inputs.blame-hang-dump-type != 'full' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating blame-hang-dump-type input: ${{ inputs.blame-hang-dump-type }}"
+
+        case "${{ inputs.blame-hang-dump-type }}" in
+          full|mini|none) ;;
+          *) echo "::error::Invalid blame-hang-dump-type '${{ inputs.blame-hang-dump-type }}'. Must be 'full', 'mini', or 'none'"; exit 1 ;;
+        esac
+
+        echo "✅ blame-hang-dump-type validation completed successfully"
+
+    - name: "✅ Validate input : blame-hang-timeout"
+      if: ${{ inputs.blame-hang == 'true' && inputs.blame-hang-timeout != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating blame-hang-timeout input: ${{ inputs.blame-hang-timeout }}"
+
+        if ! [[ "${{ inputs.blame-hang-timeout }}" =~ ^[0-9]+(\.[0-9]+)?(ms|s|m|h)?$ ]]; then
+          echo "::error::Invalid blame-hang-timeout format '${{ inputs.blame-hang-timeout }}'. Use format like '1h', '90m', '5400s', or '5400000ms'"
+          exit 1
+        fi
+
+        echo "✅ blame-hang-timeout validation completed successfully"
+
+    - name: "✅ Validate input : test-adapter-path"
+      if: ${{ inputs.test-adapter-path != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating test-adapter-path input: ${{ inputs.test-adapter-path }}"
+
+        if [ ! -d "${{ inputs.test-adapter-path }}" ]; then
+          echo "::error file=${{ inputs.test-adapter-path }}::Test adapter path directory not found: ${{ inputs.test-adapter-path }}"
+          exit 1
+        fi
+
+        echo "✅ Test adapter path validation completed successfully"
+
+    - name: "✅ Validate input : diag"
+      if: ${{ inputs.diag != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating diag input: ${{ inputs.diag }}"
+
+        # Check if parent directory exists for the diagnostic log file
+        DIAG_DIR=$(dirname "${{ inputs.diag }}")
+        if [ ! -d "$DIAG_DIR" ]; then
+          echo "::error::Directory for diagnostic log file does not exist: $DIAG_DIR"
+          exit 1
+        fi
+
+        echo "✅ Diagnostic log path validation completed successfully"
+
+    - name: "🏗️ Build argument list"
+      id: build-args
+      shell: bash
+      run: |
+        echo "::debug::Building argument list..."
+
+        # Start with base arguments
+        ARGUMENTS=""
+
+        # Boolean flags
+        for param in list-tests disable-build-servers; do
+          case $param in
+            list-tests) value="${{ inputs.list-tests }}" ;;
+            disable-build-servers) value="${{ inputs.disable-build-servers }}" ;;
+          esac
+          if [ "$value" == "true" ] ; then
+            ARGUMENTS="$ARGUMENTS --${param}"
+          fi
+        done
+
+        # Add data collector
+        if [ -n "${{ inputs.collect }}" ]; then
+          ARGUMENTS="$ARGUMENTS --collect '${{ inputs.collect }}'"
+        fi
+
+        # Key-value options
+        for param in collect results-directory; do
+          case $param in
+            collect) value="${{ inputs.collect }}" ;;
+            results-directory) value="${{ inputs.results-directory }}" ;;
+          esac
+          if [ -n "$value" ] ; then
+            ARGUMENTS="$ARGUMENTS --$param '$value'"
+          fi
+        done
+
+        # Add blame mode
+        if [ "${{ inputs.blame }}" = "true" ]; then
+          ARGUMENTS="$ARGUMENTS --blame"
+        fi
+
+        if [ "${{ inputs.blame-crash }}" = "true" ]; then
+          ARGUMENTS="$ARGUMENTS --blame-crash"
+
+          if [ "${{ inputs.blame-crash-dump-type }}" != "full" ]; then
+            ARGUMENTS="$ARGUMENTS --blame-crash-dump-type '${{ inputs.blame-crash-dump-type }}'"
+          fi
+
+          if [ "${{ inputs.blame-crash-collect-always }}" = "true" ]; then
+            ARGUMENTS="$ARGUMENTS --blame-crash-collect-always"
+          fi
+        fi
+
+        if [ "${{ inputs.blame-hang }}" = "true" ]; then
+          ARGUMENTS="$ARGUMENTS --blame-hang"
+
+          if [ "${{ inputs.blame-hang-dump-type }}" != "full" ]; then
+            ARGUMENTS="$ARGUMENTS --blame-hang-dump-type '${{ inputs.blame-hang-dump-type }}'"
+          fi
+
+          if [ "${{ inputs.blame-hang-timeout }}" != "1h" ]; then
+            ARGUMENTS="$ARGUMENTS --blame-hang-timeout '${{ inputs.blame-hang-timeout }}'"
+          fi
+        fi
+
+        ARGUMENTS="$ARGUMENTS ${{ inputs.arguments }}"
+
+        # Trim leading space
+        ARGUMENTS="${ARGUMENTS# }"
+
+        # Output the final argument list
+        echo "arguments=$ARGUMENTS" >> $GITHUB_OUTPUT
+
+        echo "✅ Partial argument list built successfully: $ARGUMENTS"
+
+    - name: "🧪 Run .NET tests"
+      id: run-dotnet
+      uses: "framinosona/github_actions/dotnet@main"
+      with:
+        command: "test"
+        path: ${{ inputs.path }}
+        arguments: ${{ steps.build-args.outputs.arguments }}
+        working-directory: ${{ inputs.working-directory }}
+        verbosity: ${{ inputs.verbosity }}
+        nologo: ${{ inputs.nologo }}
+        no-restore: ${{ inputs.no-restore }}
+        no-build: ${{ inputs.no-build }}
+        configuration: ${{ inputs.configuration }}
+        framework: ${{ inputs.framework }}
+        runtime: ${{ inputs.runtime }}
+        arch: ${{ inputs.arch }}
+        artifacts-path: ${{ inputs.artifacts-path }}
+        show-summary: ${{ inputs.show-summary }}
+
+    - name: "📊 Action Summary"
+      if: always() && inputs.show-summary == 'true'
+      shell: bash
+      run: |
+        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+        <details><summary>🧪 .NET Test</summary>
+
+        ## 🔧 Input Parameters
+        | Parameter | Value |
+        |-----------|-------|
+        | 📝 Settings | `${{ inputs.settings }}` |
+        | 🔍 Filter | `${{ inputs.filter || 'none' }}` |
+        | 📊 Logger | `${{ inputs.logger || 'default' }}` |
+        | 📁 Result Directory | `${{ inputs.results-directory }}` |
+        | 📝 Collecting | `${{ inputs.collect }}` |
+        | 📁 Test adapter path | `${{ inputs.test-adapter-path }}` |
+        | 📝 Diagnostic Log | `${{ inputs.diag || 'none' }}` |
+        | 📋 List Tests Only | `${{ inputs.list-tests }}` |
+        | 🔍 Blame Mode | `${{ inputs.blame }}` |
+        | 💥 Crash Collection | `${{ inputs.blame-crash }}` |
+        | 💥 Crash Dump Type | `${{ inputs.blame-crash-dump-type }}` |
+        | 💥 Crash Collect Always | `${{ inputs.blame-crash-collect-always }}` |
+        | ⏱️ Hang Detection | `${{ inputs.blame-hang }}` |
+        | ⏱️ Hang Dump Type | `${{ inputs.blame-hang-dump-type }}` |
+        | ⏱️ Hang Timeout | `${{ inputs.blame-hang-timeout }}` |
+        |  Target OS | `${{ inputs.os || 'default' }}` |
+
+        ## ⚙️ Process Details
+        | Step | Status |
+        |------|--------|
+        | ✅ Exit Code | `${{ steps.run-dotnet.outputs.exit-code }}` |
+        | 🔧 Argument Building | `${{ steps.build-args.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | 📊 Execution | `${{ steps.run-dotnet.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+
+        </details>
+        EOF
+
+branding:
+  icon: "check-circle"
+  color: "blue"
+
+# dotnet test --help
+# Description:
+#   .NET Test Driver
+
+# Usage:
+#   dotnet test [options] [[--] <additional arguments>...]]
+
+# Options:
+#   --settings <SETTINGS_FILE>       The settings file to use when running tests.
+#   --list-tests                     List the discovered tests instead of running the tests.
+#   --environment <NAME="VALUE">     Sets the value of an environment variable.
+#                                        Creates the variable if it does not exist, overrides if it does.
+#                                        This will force the tests to be run in an isolated process.
+#                                        This argument can be specified multiple times to provide multiple variables.
+
+#                                        Examples:
+#                                        -e VARIABLE=abc
+#                                        -e VARIABLE="value with spaces"
+#                                        -e VARIABLE="value;seperated with;semicolons"
+#                                        -e VAR1=abc -e VAR2=def -e VAR3=ghi
+#   --filter <EXPRESSION>                Run tests that match the given expression.
+#                                                                                Examples:
+#                                                                                Run tests with priority set to 1: --filter "Priority = 1"
+#                                                                                Run a test with the specified full name: --filter "FullyQualifiedName=Namespace.ClassName.MethodName"
+#                                                                                Run tests that contain the specified name: --filter "FullyQualifiedName~Namespace.Class"
+#                                                                                See https://aka.ms/vstest-filtering for more information on filtering support.
+#   --test-adapter-path <ADAPTER_PATH>   The path to the custom adapters to use for the test run.
+#   --logger <LOGGER>                     The logger to use for test results.
+#                                                                                Examples:
+#                                                                                Log in trx format using a unique file name: --logger trx
+#                                                                                Log in trx format using the specified file name: --logger "trx;LogFileName=<TestResults.trx>"
+#                                                                                See https://aka.ms/vstest-report for more information on logger arguments.
+#   --output <OUTPUT_DIR>                 The output directory to place built artifacts in.
+#   --artifacts-path <ARTIFACTS_DIR>      The artifacts path. All output from the project, including build, publish, and pack output, will go in subfolders under the specified path.
+#   --diag <LOG_FILE>                     Enable verbose logging to the specified file.
+#   --no-build                            Do not build the project before testing. Implies --no-restore.
+#   --results-directory <RESULTS_DIR>     The directory where the test results will be placed.
+#                                        The specified directory will be created if it does not exist.
+#   --collect <DATA_COLLECTOR_NAME>       The friendly name of the data collector to use for the test run.
+#                                                                                More info here: https://aka.ms/vstest-collect
+#   --blame                               Runs the tests in blame mode. This option is helpful in isolating problematic tests that cause the test host to crash or hang, but it does not create a memory dump by default.
+
+#                                        When a crash is detected, it creates an sequence file in TestResults/guid/guid_Sequence.xml that captures the order of tests that were run before the crash.
+
+#                                        Based on the additional settings, hang dump or crash dump can also be collected.
+
+#                                        Example:
+#                                          Timeout the test run when test takes more than the default timeout of 1 hour, and collect crash dump when the test host exits unexpectedly.
+#                                          (Crash dumps require additional setup, see below.)
+#                                          dotnet test --blame-hang --blame-crash
+#                                        Example:
+#                                          Timeout the test run when a test takes more than 20 minutes and collect hang dump.
+#                                          dotnet test --blame-hang-timeout 20min
+#   --blame-crash                        Runs the tests in blame mode and collects a crash dump when the test host exits unexpectedly. This option depends on the version of .NET used, the type of error, and the operating system.
+
+#                                        For exceptions in managed code, a dump will be automatically collected on .NET 5.0 and later versions. It will generate a dump for testhost or any child process that also ran on .NET 5.0 and crashed. Crashes in
+#                                        native code will not generate a dump. This option works on Windows, macOS, and Linux.
+
+#                                        Crash dumps in native code, or when targetting .NET Framework, or .NET Core 3.1 and earlier versions, can only be collected on Windows, by using Procdump. A directory that contains procdump.exe and procdump64.exe
+#                                        must be in the PATH or PROCDUMP_PATH environment variable.
+
+#                                        The tools can be downloaded here: https://docs.microsoft.com/sysinternals/downloads/procdump
+
+#                                        To collect a crash dump from a native application running on .NET 5.0 or later, the usage of Procdump can be forced by setting the VSTEST_DUMP_FORCEPROCDUMP environment variable to 1.
+
+#                                        Implies --blame.
+#   --blame-crash-dump-type <DUMP_TYPE>  The type of crash dump to be collected. Supported values are full (default) and mini. Implies --blame-crash.
+#   --blame-crash-collect-always         Enables collecting crash dump on expected as well as unexpected testhost exit.
+#   --blame-hang                         Run the tests in blame mode and enables collecting hang dump when test exceeds the given timeout. Implies --blame-hang.
+#   --blame-hang-dump-type <DUMP_TYPE>   The type of crash dump to be collected. The supported values are full (default), mini, and none. When 'none' is used then test host is terminated on timeout, but no dump is collected. Implies --blame-hang.
+#   --blame-hang-timeout <TIMESPAN>      Per-test timeout, after which hang dump is triggered and the testhost process is terminated. Default is 1h.
+#                                        The timeout value is specified in the following format: 1.5h / 90m / 5400s / 5400000ms. When no unit is used (e.g. 5400000), the value is assumed to be in milliseconds.
+#                                        When used together with data driven tests, the timeout behavior depends on the test adapter used. For xUnit, NUnit and MSTest 2.2.4+ the timeout is renewed after every test case,
+#                                        For MSTest before 2.2.4, the timeout is used for all testcases.
+#   --nologo                             Run test(s), without displaying Microsoft Testplatform banner
+#   --configuration <CONFIGURATION>  The configuration to use for running tests. The default for most projects is 'Debug'.
+#   --framework <FRAMEWORK>          The target framework to run tests for. The target framework must also be specified in the project file.
+#   --runtime <RUNTIME_IDENTIFIER>   The target runtime to test for.
+#   --no-restore                         Do not restore the project before building.
+#   --interactive                        Allows the command to stop and wait for user input or action (for example to complete authentication).
+#   --verbosity <LEVEL>              Set the MSBuild verbosity level. Allowed values are q[uiet], m[inimal], n[ormal], d[etailed], and diag[nostic].
+#   --arch <ARCH>                    The target architecture.
+#   --os <OS>                        The target operating system.
+#   --disable-build-servers          Force the command to ignore any persistent build servers.
+#   -?, -h, --help                   Show command line help.
+
+# Additional Arguments:
+#   Arguments passed to the application that is being run.
