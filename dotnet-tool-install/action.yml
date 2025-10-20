@@ -1,12 +1,39 @@
-name: "🔧 .NET > Install Tool"
+name: "🔧 Install .NET Tool"
 description: "Installs a .NET global or local tool with automatic tool manifest creation"
-author: 'Francois Raminosona'
+author: "Francois Raminosona"
 
 inputs:
+  # Arguments passed to dotnet
+  working-directory:
+    description: "Working directory for the installation (only relevant for local tools)"
+    required: false
+    default: "."
+  framework:
+    description: "Target framework for the tool"
+    required: false
+    default: ""
+  verbosity:
+    description: "Verbosity level (quiet, minimal, normal, detailed, diagnostic)"
+    required: false
+    default: ""
+  arch:
+    description: "Target architecture (e.g., 'x64', 'arm64')"
+    required: false
+    default: ""
+  arguments:
+    description: "Additional arguments to pass to the dotnet command"
+    required: false
+    default: ""
+  show-summary:
+    description: "Whether to show the action summary"
+    required: false
+    default: "false"
+
+  # Arguments unique to command
   tool-name:
     description: "Name of the .NET tool to install (e.g., 'dotnet-ef', 'dotnet-outdated')"
     required: true
-  tool-version:
+  version:
     description: "Specific version of the tool to install (optional, uses latest if not specified)"
     required: false
     default: ""
@@ -18,10 +45,30 @@ inputs:
     description: "Include prerelease versions when searching for the tool"
     required: false
     default: "false"
-  working-directory:
-    description: "Working directory for the installation (only relevant for local tools)"
+  disable-parallel:
+    description: "Disable parallel restore (only relevant for local tools)"
     required: false
-    default: "."
+    default: "false"
+  ignore-failed-sources:
+    description: "Ignore failed sources (only relevant for local tools)"
+    required: false
+    default: "false"
+  no-http-cache:
+    description: "Disable HTTP cache (only relevant for local tools)"
+    required: false
+    default: "false"
+  create-manifest-if-needed:
+    description: "Create a tool manifest if one does not exist (only relevant for local tools)"
+    required: false
+    default: "true"
+  allow-downgrade:
+    description: "Allow package downgrade when installing the tool"
+    required: false
+    default: "false"
+  allow-roll-forward:
+    description: "Allow the tool to roll forward to newer versions of the .NET runtime"
+    required: false
+    default: "false"
   tool-path:
     description: "Custom tool path for global tool installation"
     required: false
@@ -30,242 +77,300 @@ inputs:
     description: "Additional NuGet source to use when installing the tool"
     required: false
     default: ""
+  source:
+    description: "NuGet source to use when installing the tool (replaces all default sources)"
+    required: false
+    default: ""
   configfile:
     description: "NuGet configuration file to use"
     required: false
     default: ""
-  framework:
-    description: "Target framework for the tool"
+  tool-manifest:
+    description: "Path to the manifest file for local tools"
     required: false
     default: ""
-  verbosity:
-    description: "Verbosity level (quiet, minimal, normal, detailed, diagnostic)"
-    required: false
-    default: ""
-  show-summary:
-    description: 'Whether to show the action summary'
-    required: false
-    default: 'false'
 
 outputs:
   exit-code:
     description: "Exit code of the tool installation command"
-    value: ${{ steps.install-tool.outputs.exit-code }}
+    value: ${{ steps.run-dotnet.outputs.exit-code }}
   executed-command:
     description: "The actual command that was executed"
-    value: ${{ steps.install-tool.outputs.executed-command }}
-  tool-manifest-created:
-    description: "Whether a new tool manifest was created"
-    value: ${{ steps.create-manifest.outputs.manifest-created }}
-  installed-version:
-    description: "The version of the tool that was installed"
-    value: ${{ steps.install-tool.outputs.installed-version }}
+    value: ${{ steps.run-dotnet.outputs.executed-command }}
 
 runs:
   using: "composite"
   steps:
-    - name: "✅ Validate inputs"
+
+    - name: "✅ Validate input : booleans"
       shell: bash
       run: |
-        echo "::group::🔍 .NET Tool Installation Input Validation"
-        echo "::debug::Validating inputs for .NET tool installation"
-
-        # Validate tool name is not empty
-        if [ -z "${{ inputs.tool-name }}" ]; then
-          echo "::error::Tool name cannot be empty"
-          exit 1
-        fi
-
-        # Validate working directory exists
-        if [ ! -d "${{ inputs.working-directory }}" ]; then
-          echo "::error::Working directory does not exist: ${{ inputs.working-directory }}"
-          exit 1
-        fi
-
-        # Validate global flag
-        case "${{ inputs.global }}" in
-          true|false) ;;
-          *) echo "::error::Global flag must be 'true' or 'false', got: ${{ inputs.global }}"; exit 1 ;;
-        esac
-
-        # Validate prerelease flag
-        case "${{ inputs.prerelease }}" in
-          true|false) ;;
-          *) echo "::error::Prerelease flag must be 'true' or 'false', got: ${{ inputs.prerelease }}"; exit 1 ;;
-        esac
-
-        # Validate verbosity level if specified
-        if [ -n "${{ inputs.verbosity }}" ]; then
-          case "${{ inputs.verbosity }}" in
-            quiet|minimal|normal|detailed|diagnostic) ;;
-            *) echo "::error::Invalid verbosity level: ${{ inputs.verbosity }}. Must be one of: quiet, minimal, normal, detailed, diagnostic"; exit 1 ;;
+        echo "::debug::Validating boolean inputs..."
+        for param in global prerelease disable-parallel ignore-failed-sources no-http-cache create-manifest-if-needed allow-downgrade allow-roll-forward; do
+          case $param in
+            global) value="${{ inputs.global }}" ;;
+            prerelease) value="${{ inputs.prerelease }}" ;;
+            disable-parallel) value="${{ inputs.disable-parallel }}" ;;
+            ignore-failed-sources) value="${{ inputs.ignore-failed-sources }}" ;;
+            no-http-cache) value="${{ inputs.no-http-cache }}" ;;
+            create-manifest-if-needed) value="${{ inputs.create-manifest-if-needed }}" ;;
+            allow-downgrade) value="${{ inputs.allow-downgrade }}" ;;
+            allow-roll-forward) value="${{ inputs.allow-roll-forward }}" ;;
           esac
+          if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
+            echo "::error::Parameter $param must be 'true' or 'false', got: $value"
+            exit 1
+          fi
+        done
+
+        echo "✅ Boolean inputs validation completed successfully"
+
+    - name: "✅ Validate input : tool-name"
+      shell: bash
+      run: |
+        echo "::debug::Validating tool name input: ${{ inputs.tool-name }}"
+
+        if [ -z "${{ inputs.tool-name }}" ]; then
+          echo "::error::Tool name is required"
+          exit 1
         fi
 
-        # Validate configfile exists if specified
-        if [ -n "${{ inputs.configfile }}" ] && [ ! -f "${{ inputs.configfile }}" ]; then
+        echo "✅ Tool name validation completed successfully"
+
+    - name: "✅ Validate input : version"
+      if: ${{ inputs.version != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating tool version input: ${{ inputs.version }}"
+
+        if ! [[ "${{ inputs.version }}" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?(-[A-Za-z0-9.-]+)?$ ]]; then
+          echo "::error::Tool version must be a valid semantic version (e.g., '1.2.3' or '1.2.3-beta')"
+          exit 1
+        fi
+
+        echo "✅ Tool version validation completed successfully"
+
+    - name: "✅ Validate input : configfile"
+      if: ${{ inputs.configfile != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating configfile input: ${{ inputs.configfile }}"
+
+        if [ ! -f "${{ inputs.configfile }}" ]; then
           echo "::error file=${{ inputs.configfile }}::Configuration file not found: ${{ inputs.configfile }}"
           exit 1
         fi
 
-        echo "::notice::Input validation completed successfully"
-        echo "::endgroup::"
+        echo "✅ Configfile validation completed successfully"
 
-    - name: "📝 Create tool manifest if needed"
-      id: create-manifest
+    - name: "✅ Validate input : tool-path"
+      if: ${{ inputs.tool-path != '' }}
       shell: bash
-      working-directory: ${{ inputs.working-directory }}
       run: |
-        echo "::group::📝 Creating Tool Manifest"
-        echo "::debug::Checking for tool manifest file"
+        echo "::debug::Validating tool-path input: ${{ inputs.tool-path }}"
 
-        MANIFEST_CREATED="false"
-
-        # Only check for manifest if installing as local tool
-        if [ "${{ inputs.global }}" = "false" ]; then
-          # Check if tool manifest exists, create if not
-          if [ ! -f .config/dotnet-tools.json ]; then
-            echo "::debug::Creating tool manifest"
-            dotnet new tool-manifest
-            if [ $? -eq 0 ]; then
-              MANIFEST_CREATED="true"
-              echo "::notice::Tool manifest created successfully"
-            else
-              echo "::error::Failed to create tool manifest"
-              exit 1
-            fi
-          else
-            echo "::debug::Tool manifest already exists"
-          fi
-        else
-          echo "::debug::Installing as global tool - no manifest needed"
+        # Check if parent directory exists (tool-path directory will be created if needed)
+        PARENT_DIR=$(dirname "${{ inputs.tool-path }}")
+        if [ ! -d "$PARENT_DIR" ]; then
+          echo "::error::Parent directory for tool path does not exist: $PARENT_DIR"
+          exit 1
         fi
 
-        echo "manifest-created=$MANIFEST_CREATED" >> $GITHUB_OUTPUT
-        echo "::endgroup::"
+        echo "✅ Tool path validation completed successfully"
 
-    - name: "🔧 Build arguments"
+    - name: "✅ Validate input : add-source"
+      if: ${{ inputs.add-source != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating add-source input: ${{ inputs.add-source }}"
+
+        if [[ ! "${{ inputs.add-source }}" =~ ^https?:// ]]; then
+          echo "::error::Additional source must be a valid URL starting with http:// or https://: ${{ inputs.add-source }}"
+          exit 1
+        fi
+
+        echo "✅ Add-source validation completed successfully"
+
+    - name: "✅ Validate input : source"
+      if: ${{ inputs.source != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating source input: ${{ inputs.source }}"
+
+        if [[ ! "${{ inputs.source }}" =~ ^https?:// ]]; then
+          echo "::error::Source must be a valid URL starting with http:// or https://: ${{ inputs.source }}"
+          exit 1
+        fi
+
+        echo "✅ Source validation completed successfully"
+
+    - name: "🏗️ Build argument list"
       id: build-args
       shell: bash
       run: |
-        echo "::group::🔧 Building Tool Installation Arguments"
-        echo "::debug::Building dotnet arguments for tool installation"
+        echo "::debug::Building argument list..."
 
         # Start with base arguments
-        ARGS="install '${{ inputs.tool-name }}'"
+        ARGUMENTS="install '${{ inputs.tool-name }}'"
 
-        # Add conditional arguments
-        if [ -n "${{ inputs.tool-version }}" ]; then
-          ARGS="$ARGS --version '${{ inputs.tool-version }}'"
+        # Boolean flags
+        for param in prerelease disable-parallel ignore-failed-sources no-http-cache create-manifest-if-needed allow-downgrade allow-roll-forward; do
+          case $param in
+            prerelease) value="${{ inputs.prerelease }}" ;;
+            disable-parallel) value="${{ inputs.disable-parallel }}" ;;
+            ignore-failed-sources) value="${{ inputs.ignore-failed-sources }}" ;;
+            no-http-cache) value="${{ inputs.no-http-cache }}" ;;
+            create-manifest-if-needed) value="${{ inputs.create-manifest-if-needed }}" ;;
+            allow-downgrade) value="${{ inputs.allow-downgrade }}" ;;
+            allow-roll-forward) value="${{ inputs.allow-roll-forward }}" ;;
+          esac
+          if [ "$value" = "true" ]; then
+            ARGUMENTS="$ARGUMENTS --${param}"
+          fi
+        done
+
+        if [ -n "${{ inputs.global }}" ]; then
+          if [ "${{ inputs.global }}" = "true" ]; then
+            ARGUMENTS="$ARGUMENTS --global"
+          else
+            ARGUMENTS="$ARGUMENTS --local"
+          fi
         fi
 
-        if [ "${{ inputs.global }}" = "true" ]; then
-          ARGS="$ARGS --global"
-        fi
+        # Key-value options
+        for param in version tool-path add-source source configfile tool-manifest framework; do
+          case $param in
+            version) value="${{ inputs.version }}" ;;
+            tool-path) value="${{ inputs.tool-path }}" ;;
+            add-source) value="${{ inputs.add-source }}" ;;
+            source) value="${{ inputs.source }}" ;;
+            configfile) value="${{ inputs.configfile }}" ;;
+            tool-manifest) value="${{ inputs.tool-manifest }}" ;;
+            framework) value="${{ inputs.framework }}" ;;
+          esac
+          if [ -n "$value" ]; then
+            ARGUMENTS="$ARGUMENTS --$param '$value'"
+          fi
+        done
 
-        if [ "${{ inputs.prerelease }}" = "true" ]; then
-          ARGS="$ARGS --prerelease"
-        fi
+        # Trim leading space
+        ARGUMENTS="${ARGUMENTS# }"
 
-        if [ -n "${{ inputs.tool-path }}" ]; then
-          ARGS="$ARGS --tool-path '${{ inputs.tool-path }}'"
-        fi
-
-        if [ -n "${{ inputs.add-source }}" ]; then
-          ARGS="$ARGS --add-source '${{ inputs.add-source }}'"
-        fi
-
-        if [ -n "${{ inputs.configfile }}" ]; then
-          ARGS="$ARGS --configfile '${{ inputs.configfile }}'"
-        fi
-
-        if [ -n "${{ inputs.framework }}" ]; then
-          ARGS="$ARGS --framework '${{ inputs.framework }}'"
-        fi
-
-        echo "::debug::Generated arguments: $ARGS"
-
-        # Output the arguments string
-        echo "arguments=$ARGS" >> $GITHUB_OUTPUT
-        echo "::endgroup::"
+        echo "arguments=$ARGUMENTS" >> $GITHUB_OUTPUT
+        echo "✅ Argument list built successfully: $ARGUMENTS"
 
     - name: "🔧 Install .NET tool"
-      id: install-tool
-      uses: ./dotnet
+      id: run-dotnet
+      uses: "framinosona/github_actions/dotnet@main"
       with:
         command: "tool"
-        arguments: ${{ steps.build-args.outputs.arguments }}
         working-directory: ${{ inputs.working-directory }}
-        force-verbosity: ${{ inputs.verbosity }}
+        framework: ${{ inputs.framework }}
+        verbosity: ${{ inputs.verbosity }}
+        arch: ${{ inputs.arch }}
+        arguments: ${{ steps.build-args.outputs.arguments }}
+        show-summary: ${{ inputs.show-summary }}
 
-    - name: "🔍 Extract installed version"
-      id: extract-version
+    - name: "✅ Check if tool is now installed"
+      id: check-installed
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       run: |
-        echo "::group::🔍 Extracting Tool Version"
-        echo "::debug::Extracting installed tool version information"
+        echo "::debug::Verifying installation of tool '${{ inputs.tool-name }}'..."
 
-        INSTALLED_VERSION="unknown"
-
-        # Try to get the installed version
-        if [ "${{ inputs.global }}" = "true" ]; then
-          # For global tools, list global tools
-          VERSION_OUTPUT=$(dotnet tool list --global | grep "${{ inputs.tool-name }}" | awk '{print $2}' || echo "")
+        if [ "${{ inputs.global }}" == "true" ]; then
+          if dotnet tool list -g | grep -iq "^${{ inputs.tool-name }} "; then
+            echo "✅ Tool '${{ inputs.tool-name }}' is now installed globally."
+            echo "has-been-installed=true" >> $GITHUB_OUTPUT
+          else
+            echo "::error::Tool '${{ inputs.tool-name }}' installation failed or tool not found globally."
+            echo "has-been-installed=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
         else
-          # For local tools, list local tools
-          VERSION_OUTPUT=$(dotnet tool list | grep "${{ inputs.tool-name }}" | awk '{print $2}' || echo "")
+          if dotnet tool list | grep -iq "^${{ inputs.tool-name }} "; then
+            echo "✅ Tool '${{ inputs.tool-name }}' is now installed locally."
+            echo "has-been-installed=true" >> $GITHUB_OUTPUT
+          else
+            echo "::error::Tool '${{ inputs.tool-name }}' installation failed or tool not found locally."
+            echo "has-been-installed=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
         fi
 
-        if [ -n "$VERSION_OUTPUT" ]; then
-          INSTALLED_VERSION="$VERSION_OUTPUT"
-          echo "::notice::Detected installed version: $INSTALLED_VERSION"
-        else
-          echo "::warning::Could not determine installed tool version"
-        fi
-
-        echo "installed-version=$INSTALLED_VERSION" >> $GITHUB_OUTPUT
-        echo "::endgroup::"
+        echo "✅ Tool '${{ inputs.tool-name }}' installed successfully"
 
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash
       run: |
         cat >> $GITHUB_STEP_SUMMARY << 'EOF'
-        <details><summary>Expand for details - 📊 .NET Tool Installation Summary</summary>
+        <details><summary>🔧 .NET Tool Install : ${{ inputs.tool-name }} ${{ inputs.version || 'latest' }}</summary>
 
         ## 🔧 Input Parameters
         | Parameter | Value |
         |-----------|-------|
         | 🔧 Tool Name | `${{ inputs.tool-name }}` |
-        | 📦 Tool Version | `${{ inputs.tool-version || 'latest' }}` |
+        | 📦 Tool Version | `${{ inputs.version || 'latest' }}` |
         | 🌍 Global Install | `${{ inputs.global }}` |
         | 🧪 Include Prerelease | `${{ inputs.prerelease }}` |
-        | 📁 Working Directory | `${{ inputs.working-directory }}` |
         | 🛤️ Tool Path | `${{ inputs.tool-path || 'default' }}` |
         | 🔗 Additional Source | `${{ inputs.add-source || 'none' }}` |
+        | 🔄 Replace Sources | `${{ inputs.source || 'none' }}` |
         | ⚙️ Config File | `${{ inputs.configfile || 'default' }}` |
-        | 🎯 Framework | `${{ inputs.framework || 'default' }}` |
-
-        ## 📤 Installation Results
-        | Metric | Value |
-        |--------|-------|
-        | ✅ Exit Code | `${{ steps.install-tool.outputs.exit-code }}` |
-        | 📦 Installed Version | `${{ steps.extract-version.outputs.installed-version }}` |
-        | 📝 Manifest Created | `${{ steps.create-manifest.outputs.manifest-created }}` |
-        | 🚀 Executed Command | `${{ steps.install-tool.outputs.executed-command }}` |
+        | 📄 Tool Manifest | `${{ inputs.tool-manifest || 'default' }}` |
+        | 📊 Allow Downgrade | `${{ inputs.allow-downgrade }}` |
+        | ➡️ Allow Roll Forward | `${{ inputs.allow-roll-forward }}` |
+        | 🛠️ Disable Parallel Restore | `${{ inputs.disable-parallel }}` |
+        | ⚠️ Ignore Failed Sources | `${{ inputs.ignore-failed-sources }}` |
+        | 🚫 No HTTP Cache | `${{ inputs.no-http-cache }}` |
+        | 🆕 Create Manifest If Needed | `${{ inputs.create-manifest-if-needed }}` |
 
         ## ⚙️ Process Details
         | Step | Status |
         |------|--------|
-        | ✅ Input Validation | `✅ Completed` |
-        | 📝 Manifest Creation | `${{ steps.create-manifest.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
-        | 🔧 Tool Installation | `${{ steps.install-tool.outputs.exit-code == '0' && '✅ Completed' || '❌ Failed' }}` |
-        | 🔍 Version Detection | `${{ steps.extract-version.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
-
+        | ✅ Exit Code | `${{ steps.run-dotnet.outputs.exit-code }}` |
+        | 🏗️ Argument Building | `${{ steps.build-args.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | 🔄 Tool Restore | `${{ steps.restore-tools.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | 📦 Installation | `${{ steps.install-tool.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | 📊 Execution | `${{ steps.run-dotnet.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | ✅ Verification | `${{ steps.check-installed.outputs.has-been-installed == 'true' && '✅ Installed' || '❌ Failed' }}` |
         </details>
         EOF
 
 branding:
-  icon: 'settings'
-  color: 'blue'
+  icon: "settings"
+  color: "blue"
+
+# dotnet tool install --help
+# Description:
+#   Install global or local tool. Local tools are added to manifest and restored.
+
+# Usage:
+#   dotnet tool install <packageId> [options]
+
+# Arguments:
+#   <PACKAGE_ID>  The NuGet Package Id of the tool to install.
+
+# Options:
+#   --global                 Install the tool for the current user.
+#   --local                      Install the tool and add to the local tool manifest (default).
+#   --tool-path <PATH>           The directory where the tool will be installed. The directory will be created if it does not exist.
+#   --version <VERSION>          The version of the tool package to install.
+#   --configfile <FILE>          The NuGet configuration file to use.
+#   --tool-manifest <PATH>       Path to the manifest file.
+#   --add-source <ADDSOURCE>     Add an additional NuGet package source to use during installation.
+#   --source <SOURCE>            Replace all NuGet package sources to use during installation with these.
+#   --framework <FRAMEWORK>      The target framework to install the tool for.
+#   --prerelease                 Include pre-release packages.
+#   --disable-parallel           Prevent restoring multiple projects in parallel.
+#   --ignore-failed-sources      Treat package source failures as warnings.
+#   --no-http-cache              Do not cache packages and http requests.
+#   --interactive                Allows the command to stop and wait for user input or action (for example to complete authentication).
+#   --verbosity <LEVEL>      Set the MSBuild verbosity level. Allowed values are q[uiet], m[inimal], n[ormal], d[etailed], and diag[nostic].
+#   --arch <arch>            The target architecture.
+#   --create-manifest-if-needed  Create a tool manifest if one isn't found during tool installation. For information on how manifests are located, see https://aka.ms/dotnet/tools/create-manifest-if-needed
+#   --allow-downgrade            Allow package downgrade when installing a .NET tool package.
+#   --allow-roll-forward         Allow a .NET tool to roll forward to newer versions of the .NET runtime if the runtime it targets isn't installed.
+#   -h, --help               Show command line help.
+
