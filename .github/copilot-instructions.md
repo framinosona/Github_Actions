@@ -223,16 +223,6 @@ if [ -n "${{ inputs.certificate-data }}" ]; then
 fi
 ```
 
-#### Migration Guide
-When updating existing actions:
-1. Replace all `echo "❌ Error:"` with `echo "::error::"`
-2. Replace all `echo "⚠️ Warning:"` with `echo "::warning::"`
-3. Replace all `echo "✅"` success messages with `echo "::notice::"`
-4. Replace debug echoes with `echo "::debug::"`
-5. Add `::group::` around major operation sections
-6. Add `::add-mask::` for all sensitive data
-7. Verify no sensitive data appears in logs after masking
-
 ### 🔧 Tool Management
 - **Reuse existing actions**: Use `./dotnet-tool-install` for .NET tools, `./dotnet` for .NET CLI commands
 - **Tool installation**: Check if tool exists before installing
