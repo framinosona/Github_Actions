@@ -314,7 +314,7 @@ runs:
         fi
 
         # Key-value options
-        for param in collect results-directory; do
+        for param in collect results-directory logger; do
           case $param in
             logger) value="${{ inputs.logger }}" ;;
             collect) value="${{ inputs.collect }}" ;;
