@@ -124,7 +124,7 @@ runs:
       run: |
         echo "::debug::Validating boolean inputs for DocFX documentation generation"
 
-        for param in verbose warningsAsErrors debug exportRawModel exportViewModel disableGitFeatures dryRun show-summary; do
+        for param in verbose warningsAsErrors debug exportRawModel exportViewModel disableGitFeatures dryRun; do
           case $param in
             verbose) value="${{ inputs.verbose }}" ;;
             warningsAsErrors) value="${{ inputs.warningsAsErrors }}" ;;
@@ -133,7 +133,6 @@ runs:
             exportViewModel) value="${{ inputs.exportViewModel }}" ;;
             disableGitFeatures) value="${{ inputs.disableGitFeatures }}" ;;
             dryRun) value="${{ inputs.dryRun }}" ;;
-            show-summary) value="${{ inputs.show-summary }}" ;;
           esac
           if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
             echo "::error::Parameter $param must be 'true' or 'false', got: $value"

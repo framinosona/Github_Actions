@@ -78,11 +78,10 @@ runs:
       run: |
         echo "::debug::Validating boolean inputs for DocFX PDF generation"
 
-        for param in verbose warningsAsErrors show-summary; do
+        for param in verbose warningsAsErrors; do
           case $param in
             verbose) value="${{ inputs.verbose }}" ;;
             warningsAsErrors) value="${{ inputs.warningsAsErrors }}" ;;
-            show-summary) value="${{ inputs.show-summary }}" ;;
           esac
           if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
             echo "::error::Parameter $param must be 'true' or 'false', got: $value"

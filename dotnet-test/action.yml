@@ -147,15 +147,13 @@ runs:
       run: |
         echo "::debug::Validating boolean inputs"
 
-        for param in list-tests blame blame-crash blame-crash-collect-always blame-hang no-build no-restore disable-build-servers; do
+        for param in list-tests blame blame-crash blame-crash-collect-always blame-hang disable-build-servers; do
           case $param in
             list-tests) value="${{ inputs.list-tests }}" ;;
             blame) value="${{ inputs.blame }}" ;;
             blame-crash) value="${{ inputs.blame-crash }}" ;;
             blame-crash-collect-always) value="${{ inputs.blame-crash-collect-always }}" ;;
             blame-hang) value="${{ inputs.blame-hang }}" ;;
-            no-build) value="${{ inputs.no-build }}" ;;
-            no-restore) value="${{ inputs.no-restore }}" ;;
             disable-build-servers) value="${{ inputs.disable-build-servers }}" ;;
           esac
           if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then

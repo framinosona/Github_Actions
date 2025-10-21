@@ -122,7 +122,7 @@ runs:
       run: |
         echo "::debug::Validating boolean inputs for DocFX metadata generation"
 
-        for param in verbose warningsAsErrors shouldSkipMarkup disableGitFeatures disableDefaultFilter noRestore useClrTypeNames show-summary; do
+        for param in verbose warningsAsErrors shouldSkipMarkup disableGitFeatures disableDefaultFilter noRestore useClrTypeNames; do
           case $param in
             verbose) value="${{ inputs.verbose }}" ;;
             warningsAsErrors) value="${{ inputs.warningsAsErrors }}" ;;
@@ -131,7 +131,6 @@ runs:
             disableDefaultFilter) value="${{ inputs.disableDefaultFilter }}" ;;
             noRestore) value="${{ inputs.noRestore }}" ;;
             useClrTypeNames) value="${{ inputs.useClrTypeNames }}" ;;
-            show-summary) value="${{ inputs.show-summary }}" ;;
           esac
           if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
             echo "::error::Parameter $param must be 'true' or 'false', got: $value"

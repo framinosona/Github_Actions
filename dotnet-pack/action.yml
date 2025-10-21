@@ -99,16 +99,13 @@ runs:
       shell: bash
       run: |
         echo "::debug::Validating boolean inputs..."
-        for param in no-build no-restore include-symbols include-source serviceable disable-build-servers use-current-runtime show-summary; do
+        for param in include-symbols include-source serviceable disable-build-servers use-current-runtime; do
           case $param in
-            no-build) value="${{ inputs.no-build }}" ;;
-            no-restore) value="${{ inputs.no-restore }}" ;;
             include-symbols) value="${{ inputs.include-symbols }}" ;;
             include-source) value="${{ inputs.include-source }}" ;;
             serviceable) value="${{ inputs.serviceable }}" ;;
             disable-build-servers) value="${{ inputs.disable-build-servers }}" ;;
             use-current-runtime) value="${{ inputs.use-current-runtime }}" ;;
-            show-summary) value="${{ inputs.show-summary }}" ;;
           esac
           if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
             echo "::error::Parameter $param must be 'true' or 'false', got: $value"
@@ -117,46 +114,6 @@ runs:
         done
 
         echo "✅ Boolean inputs validation completed successfully"
-
-    - name: "✅ Validate input : output"
-      if: ${{ inputs.output != '' }}
-      shell: bash
-      run: |
-        echo "::debug::Validating output directory input: ${{ inputs.output }}"
-
-        # Create output directory if it doesn't exist
-        if [ ! -d "${{ inputs.output }}" ]; then
-          echo "::debug::Creating output directory: ${{ inputs.output }}"
-          mkdir -p "${{ inputs.output }}"
-        fi
-
-        # Check if directory is writable
-        if [ ! -w "${{ inputs.output }}" ]; then
-          echo "::error::Output directory is not writable: ${{ inputs.output }}"
-          exit 1
-        fi
-
-        echo "✅ Output directory validation completed successfully"
-
-    - name: "✅ Validate input : artifacts-path"
-      if: ${{ inputs.artifacts-path != '' }}
-      shell: bash
-      run: |
-        echo "::debug::Validating artifacts-path input: ${{ inputs.artifacts-path }}"
-
-        # Create artifacts path if it doesn't exist
-        if [ ! -d "${{ inputs.artifacts-path }}" ]; then
-          echo "::debug::Creating artifacts path: ${{ inputs.artifacts-path }}"
-          mkdir -p "${{ inputs.artifacts-path }}"
-        fi
-
-        # Check if directory is writable
-        if [ ! -w "${{ inputs.artifacts-path }}" ]; then
-          echo "::error::Artifacts path is not writable: ${{ inputs.artifacts-path }}"
-          exit 1
-        fi
-
-        echo "✅ Artifacts path validation completed successfully"
 
     - name: "✅ Validate input : version-suffix"
       if: ${{ inputs.version-suffix != '' }}
@@ -205,10 +162,8 @@ runs:
         done
 
         # Key-value options
-        for param in output artifacts-path version-suffix; do
+        for param in version-suffix; do
           case $param in
-            output) value="${{ inputs.output }}" ;;
-            artifacts-path) value="${{ inputs.artifacts-path }}" ;;
             version-suffix) value="${{ inputs.version-suffix }}" ;;
           esac
           if [ -n "$value" ]; then
@@ -232,6 +187,8 @@ runs:
       with:
         command: "pack"
         path: ${{ inputs.path }}
+        artifacts-path: ${{ inputs.artifacts-path }}
+        output: ${{ inputs.output }}
         arguments: ${{ steps.build-args.outputs.arguments }}
         working-directory: ${{ inputs.working-directory }}
         verbosity: ${{ inputs.verbosity }}
@@ -239,7 +196,7 @@ runs:
         no-restore: ${{ inputs.no-restore }}
         no-build: ${{ inputs.no-build }}
         configuration: ${{ inputs.configuration }}
-        show-summary: "false"  # We handle our own summary
+        show-summary: ${{ inputs.show-summary }}
 
     - name: "🔍 Find generated packages"
       id: find-packages
@@ -295,13 +252,7 @@ runs:
         ## 🔧 Input Parameters
         | Parameter | Value |
         |-----------|-------|
-        | 📁 Project/Solution | `${{ inputs.path || 'current directory' }}` |
-        | 🏗️ Configuration | `${{ inputs.configuration }}` |
-        | 📂 Output Directory | `${{ inputs.output || 'default' }}` |
-        | 🎯 Artifacts Path | `${{ inputs.artifacts-path || 'none' }}` |
         | 🔢 Version Suffix | `${{ inputs.version-suffix || 'none' }}` |
-        | 🚫 No Build | `${{ inputs.no-build }}` |
-        | 🚫 No Restore | `${{ inputs.no-restore }}` |
         | 🔍 Include Symbols | `${{ inputs.include-symbols }}` |
         | 📝 Include Source | `${{ inputs.include-source }}` |
         | ⚙️ Serviceable | `${{ inputs.serviceable }}` |

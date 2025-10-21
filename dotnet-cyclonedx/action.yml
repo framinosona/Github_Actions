@@ -190,19 +190,6 @@ runs:
 
         echo "✅ Boolean inputs validation completed successfully"
 
-    - name: "✅ Validate input : path"
-      if: ${{ inputs.path != '' }}
-      shell: bash
-      run: |
-        echo "::debug::Validating path input: ${{ inputs.path }}"
-
-        if [ ! -e "${{ inputs.path }}" ]; then
-          echo "::error file=${{ inputs.path }}::Specified path does not exist: ${{ inputs.path }}"
-          exit 1
-        fi
-
-        echo "✅ Path validation completed successfully"
-
     - name: "✅ Validate input : output-format"
       shell: bash
       run: |
@@ -439,10 +426,6 @@ runs:
         ## 🔧 CycloneDX Specific Parameters
         | Parameter | Value |
         |-----------|-------|
-        | 📍 Path | `${{ inputs.path || 'current directory' }}` |
-        | 🎯 Framework | `${{ inputs.framework || 'all aggregated' }}` |
-        | 🖥️ Runtime | `${{ inputs.runtime || 'all aggregated' }}` |
-        | 📁 Output Directory | `${{ inputs.output || 'current directory' }}` |
         | 📄 Filename | `${{ inputs.filename || 'auto-generated' }}` |
         | 📋 Output Format | `${{ inputs.output-format }}` |
         | 🚫 Exclude Dev Dependencies | `${{ inputs.exclude-dev }}` |
