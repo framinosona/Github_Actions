@@ -316,6 +316,7 @@ runs:
         # Key-value options
         for param in collect results-directory; do
           case $param in
+            logger) value="${{ inputs.logger }}" ;;
             collect) value="${{ inputs.collect }}" ;;
             results-directory) value="${{ inputs.results-directory }}" ;;
           esac
