@@ -28,9 +28,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  setup-test-files:
-    name: '📁 Setup Test Files'
-    runs-on: ubuntu-latest
+  test-cross-platform:
+    name: '${{ matrix.icon }} Test on ${{ matrix.platform }}'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            platform: 'Linux'
+            icon: '🐧'
+          - os: windows-latest
+            platform: 'Windows'
+            icon: '🪟'
+          - os: macos-latest
+            platform: 'macOS'
+            icon: '🍎'
     steps:
       - name: '📥 Checkout Repository'
         uses: actions/checkout@v5
@@ -61,41 +75,6 @@ jobs:
           find test-paths -type f | sort
 
           echo "::endgroup::"
-
-      - name: '📤 Upload Test Files'
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-file-structure
-          path: test-paths/
-          retention-days: 1
-
-  test-cross-platform:
-    name: '${{ matrix.icon }} Test on ${{ matrix.platform }}'
-    needs: [setup-test-files]
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        include:
-          - os: ubuntu-latest
-            platform: 'Linux'
-            icon: '🐧'
-          - os: windows-latest
-            platform: 'Windows'
-            icon: '🪟'
-          - os: macos-latest
-            platform: 'macOS'
-            icon: '🍎'
-    steps:
-      - name: '📥 Checkout Repository'
-        uses: actions/checkout@v5
-
-      - name: '📥 Download Test Files'
-        uses: actions/download-artifact@v4
-        with:
-          name: test-file-structure
-          path: test-paths/
 
       - name: '🧪 Test Simple Relative Path (File)'
         id: test-simple-file
