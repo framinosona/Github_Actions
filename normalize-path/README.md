@@ -5,8 +5,10 @@ Normalizes file paths according to the runner OS and provides both relative and 
 ## Features
 
 - 📁 Cross-platform path normalization using Node.js built-in `path` module
+- 🔄 Automatic path separator conversion (converts `\` to `/` on Unix, `/` to `\` on Windows)
 - 🎯 Provides both normalized and absolute path outputs
 - ✅ Checks path existence on filesystem
+- 🌟 Supports wildcard patterns (`*`, `**`, `?`) - checks parent directory existence
 - 🛡️ Validates input paths and warns about potential issues
 - 📊 Optional detailed summary output
 - 🔧 Works with relative and absolute paths
@@ -165,19 +167,40 @@ Normalizes file paths according to the runner OS and provides both relative and 
     mkdir -p "${{ steps.build.outputs.absolute }}"
 ```
 
+### Example 5: Wildcard pattern support
+
+```yaml
+- name: Normalize wildcard path
+  id: wildcard
+  uses: ./normalize-path
+  with:
+    path: 'src/**/*.js'
+
+- name: Process matched files
+  if: steps.wildcard.outputs.exists == 'true'
+  run: |
+    # Parent directory exists, can use wildcard pattern
+    echo "Processing files matching: ${{ steps.wildcard.outputs.normalized }}"
+    # Use with tools that support wildcards (e.g., find, glob)
+```
+
 ## Platform Behavior
 
+The action automatically normalizes path separators to match the current platform.
+
 ### Windows
-- Converts forward slashes to backslashes (`/` → `\`)
+- Converts all path separators (forward slashes `/`) to backslashes (`\`)
 - Handles drive letters correctly (`C:\`, `D:\`)
 - Warns about reserved characters (`<>:"|?*`)
 - Example: `src/utils/../lib/index.js` → `src\lib\index.js`
+- Example: `src\utils\..\lib` → `src\lib`
 
 ### Linux/macOS
-- Maintains forward slashes (`/`)
+- Converts all path separators (backslashes `\`) to forward slashes (`/`)
 - Resolves symbolic links in absolute paths
 - Handles case-sensitive filesystems
 - Example: `src/utils/../lib/index.js` → `src/lib/index.js`
+- Example: `src\utils\..\lib` → `src/lib/index.js`
 
 ### Cross-Platform Examples
 
