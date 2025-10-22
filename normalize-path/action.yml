@@ -69,7 +69,12 @@ runs:
           warning: (message) => console.log(`::warning::${message}`),
           startGroup: (name) => console.log(`::group::${name}`),
           endGroup: () => console.log('::endgroup::'),
-          setOutput: (name, value) => console.log(`${name}=${value}`)
+          setOutput: (name, value) => {
+            const outputFile = process.env.GITHUB_OUTPUT;
+            if (outputFile) {
+              fs.appendFileSync(outputFile, `${name}=${value}\n`, 'utf8');
+            }
+          }
         };
 
         try {
