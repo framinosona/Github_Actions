@@ -356,7 +356,7 @@ jobs:
         shell: bash
         run: |
           echo "::group::🔍 Windows Test Results"
-          EXPECTED="/p:Configuration=Release /p:Platform=\"Any CPU\" /p:OutputPath=C:\\Build\\Output /verbosity:minimal"
+          EXPECTED='/p:Configuration=Release /p:Platform="Any CPU" /p:OutputPath=C:\Build\Output /verbosity:minimal'
           ACTUAL="${{ steps.test-windows-args.outputs.normalized-arguments }}"
           COUNT="${{ steps.test-windows-args.outputs.argument-count }}"
 
@@ -394,7 +394,7 @@ jobs:
         shell: bash
         run: |
           echo "::group::🔍 PowerShell Test Results"
-          EXPECTED="-Configuration Release -Platform \"Any CPU\" -OutputPath \"C:\\Build\\Output\" -Verbosity minimal"
+          EXPECTED='-Configuration Release -Platform "Any CPU" -OutputPath "C:\Build\Output" -Verbosity minimal'
           ACTUAL="${{ steps.test-powershell.outputs.normalized-arguments }}"
           COUNT="${{ steps.test-powershell.outputs.argument-count }}"
 
