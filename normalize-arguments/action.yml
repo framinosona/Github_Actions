@@ -99,31 +99,46 @@ runs:
 
           # Check if this line contains multiple space-separated arguments
           # If the separator is a space and the line contains spaces, split it
+          # But be careful not to split quoted arguments
           if [ "$SEPARATOR" = " " ] && [[ "$line" == *" "* ]]; then
-            echo "::debug::Detected space-separated arguments in line: $line"
-            # Split the line into individual arguments
-            IFS=' ' read -ra ARGS <<< "$line"
-            for arg in "${ARGS[@]}"; do
-              # Trim each argument
-              if [ "$TRIM_EMPTY" = "true" ]; then
-                arg=$(echo "$arg" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-              fi
-              
-              # Skip empty arguments
-              if [ -z "$arg" ]; then
-                continue
-              fi
-              
-              # Add the argument
+            # Check if the line contains quotes - if so, treat as single argument
+            if [[ "$line" == *"\""* ]] || [[ "$line" == *"'"* ]]; then
+              echo "::debug::Line contains quotes, treating as single argument: $line"
+              # Add the line as a single argument
               if [ -z "$NORMALIZED_ARGS" ]; then
-                NORMALIZED_ARGS="$arg"
+                NORMALIZED_ARGS="$line"
               else
-                NORMALIZED_ARGS="${NORMALIZED_ARGS}${SEPARATOR}${arg}"
+                NORMALIZED_ARGS="${NORMALIZED_ARGS}${SEPARATOR}${line}"
               fi
-              
+
               ARG_COUNT=$((ARG_COUNT + 1))
-              echo "::debug::Added argument $ARG_COUNT: $arg"
-            done
+              echo "::debug::Added argument $ARG_COUNT: $line"
+            else
+              echo "::debug::Detected space-separated arguments in line: $line"
+              # Split the line into individual arguments
+              IFS=' ' read -ra ARGS <<< "$line"
+              for arg in "${ARGS[@]}"; do
+                # Trim each argument
+                if [ "$TRIM_EMPTY" = "true" ]; then
+                  arg=$(echo "$arg" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+                fi
+
+                # Skip empty arguments
+                if [ -z "$arg" ]; then
+                  continue
+                fi
+
+                # Add the argument
+                if [ -z "$NORMALIZED_ARGS" ]; then
+                  NORMALIZED_ARGS="$arg"
+                else
+                  NORMALIZED_ARGS="${NORMALIZED_ARGS}${SEPARATOR}${arg}"
+                fi
+
+                ARG_COUNT=$((ARG_COUNT + 1))
+                echo "::debug::Added argument $ARG_COUNT: $arg"
+              done
+            fi
           else
             # Add the line as a single argument
             if [ -z "$NORMALIZED_ARGS" ]; then
