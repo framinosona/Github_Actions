@@ -97,15 +97,44 @@ runs:
             continue
           fi
 
-          # Add the line as an argument
-          if [ -z "$NORMALIZED_ARGS" ]; then
-            NORMALIZED_ARGS="$line"
+          # Check if this line contains multiple space-separated arguments
+          # If the separator is a space and the line contains spaces, split it
+          if [ "$SEPARATOR" = " " ] && [[ "$line" == *" "* ]]; then
+            echo "::debug::Detected space-separated arguments in line: $line"
+            # Split the line into individual arguments
+            IFS=' ' read -ra ARGS <<< "$line"
+            for arg in "${ARGS[@]}"; do
+              # Trim each argument
+              if [ "$TRIM_EMPTY" = "true" ]; then
+                arg=$(echo "$arg" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+              fi
+              
+              # Skip empty arguments
+              if [ -z "$arg" ]; then
+                continue
+              fi
+              
+              # Add the argument
+              if [ -z "$NORMALIZED_ARGS" ]; then
+                NORMALIZED_ARGS="$arg"
+              else
+                NORMALIZED_ARGS="${NORMALIZED_ARGS}${SEPARATOR}${arg}"
+              fi
+              
+              ARG_COUNT=$((ARG_COUNT + 1))
+              echo "::debug::Added argument $ARG_COUNT: $arg"
+            done
           else
-            NORMALIZED_ARGS="${NORMALIZED_ARGS}${SEPARATOR}${line}"
-          fi
+            # Add the line as a single argument
+            if [ -z "$NORMALIZED_ARGS" ]; then
+              NORMALIZED_ARGS="$line"
+            else
+              NORMALIZED_ARGS="${NORMALIZED_ARGS}${SEPARATOR}${line}"
+            fi
 
-          ARG_COUNT=$((ARG_COUNT + 1))
-          echo "::debug::Added argument $ARG_COUNT: $line"
+            ARG_COUNT=$((ARG_COUNT + 1))
+            echo "::debug::Added argument $ARG_COUNT: $line"
+          fi
 
         done < /tmp/input_arguments.txt
 
