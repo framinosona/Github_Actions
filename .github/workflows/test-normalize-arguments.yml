@@ -92,7 +92,6 @@ jobs:
         with:
           arguments: '--verbose --configuration Release --no-restore'
           separator: ' '
-          trim-empty: 'true'
           show-summary: ${{ env.SHOW_SUMMARY }}
 
       - name: '✅ Verify Single-line Results'
@@ -101,21 +100,14 @@ jobs:
           echo "::group::🔍 Single-line Test Results"
           EXPECTED="--verbose --configuration Release --no-restore"
           ACTUAL="${{ steps.test-single-line.outputs.normalized-arguments }}"
-          COUNT="${{ steps.test-single-line.outputs.argument-count }}"
           IS_EMPTY="${{ steps.test-single-line.outputs.is-empty }}"
 
           echo "Expected: $EXPECTED"
           echo "Actual: $ACTUAL"
-          echo "Count: $COUNT"
           echo "Is Empty: $IS_EMPTY"
 
           if [ "$ACTUAL" != "$EXPECTED" ]; then
             echo "::error::Single-line test failed. Expected '$EXPECTED', got '$ACTUAL'"
-            exit 1
-          fi
-
-          if [ "$COUNT" != "3" ]; then
-            echo "::error::Single-line count test failed. Expected '3', got '$COUNT'"
             exit 1
           fi
 
@@ -139,7 +131,6 @@ jobs:
             --output
             ./bin/Release
           separator: ' '
-          trim-empty: 'true'
           show-summary: ${{ env.SHOW_SUMMARY }}
 
       - name: '✅ Verify Multi-line Results'
@@ -148,21 +139,14 @@ jobs:
           echo "::group::🔍 Multi-line Test Results"
           EXPECTED="--verbose --configuration Release --no-restore --output ./bin/Release"
           ACTUAL="${{ steps.test-multiline.outputs.normalized-arguments }}"
-          COUNT="${{ steps.test-multiline.outputs.argument-count }}"
           IS_EMPTY="${{ steps.test-multiline.outputs.is-empty }}"
 
           echo "Expected: $EXPECTED"
           echo "Actual: $ACTUAL"
-          echo "Count: $COUNT"
           echo "Is Empty: $IS_EMPTY"
 
           if [ "$ACTUAL" != "$EXPECTED" ]; then
             echo "::error::Multi-line test failed. Expected '$EXPECTED', got '$ACTUAL'"
-            exit 1
-          fi
-
-          if [ "$COUNT" != "6" ]; then
-            echo "::error::Multi-line count test failed. Expected '6', got '$COUNT'"
             exit 1
           fi
 
@@ -185,7 +169,6 @@ jobs:
             --output ./bin/Release
             --framework net8.0
           separator: ' '
-          trim-empty: 'true'
           show-summary: ${{ env.SHOW_SUMMARY }}
 
       - name: '✅ Verify Folded Results'
@@ -194,21 +177,14 @@ jobs:
           echo "::group::🔍 Folded Test Results"
           EXPECTED="--verbose --configuration Release --no-restore --output ./bin/Release --framework net8.0"
           ACTUAL="${{ steps.test-folded.outputs.normalized-arguments }}"
-          COUNT="${{ steps.test-folded.outputs.argument-count }}"
           IS_EMPTY="${{ steps.test-folded.outputs.is-empty }}"
 
           echo "Expected: $EXPECTED"
           echo "Actual: $ACTUAL"
-          echo "Count: $COUNT"
           echo "Is Empty: $IS_EMPTY"
 
           if [ "$ACTUAL" != "$EXPECTED" ]; then
             echo "::error::Folded test failed. Expected '$EXPECTED', got '$ACTUAL'"
-            exit 1
-          fi
-
-          if [ "$COUNT" != "1" ]; then
-            echo "::error::Folded count test failed. Expected '1', got '$COUNT'"
             exit 1
           fi
 
@@ -229,7 +205,6 @@ jobs:
             arg2
             arg3
           separator: ','
-          trim-empty: 'true'
           show-summary: ${{ env.SHOW_SUMMARY }}
 
       - name: '✅ Verify Separator Results'
@@ -238,19 +213,12 @@ jobs:
           echo "::group::🔍 Separator Test Results"
           EXPECTED="arg1,arg2,arg3"
           ACTUAL="${{ steps.test-separator.outputs.normalized-arguments }}"
-          COUNT="${{ steps.test-separator.outputs.argument-count }}"
 
           echo "Expected: $EXPECTED"
           echo "Actual: $ACTUAL"
-          echo "Count: $COUNT"
 
           if [ "$ACTUAL" != "$EXPECTED" ]; then
             echo "::error::Separator test failed. Expected '$EXPECTED', got '$ACTUAL'"
-            exit 1
-          fi
-
-          if [ "$COUNT" != "3" ]; then
-            echo "::error::Separator count test failed. Expected '3', got '$COUNT'"
             exit 1
           fi
 
@@ -266,7 +234,6 @@ jobs:
 
 
           separator: ' '
-          trim-empty: 'true'
           show-summary: ${{ env.SHOW_SUMMARY }}
 
       - name: '✅ Verify Empty Results'
@@ -274,20 +241,13 @@ jobs:
         run: |
           echo "::group::🔍 Empty Test Results"
           ACTUAL="${{ steps.test-empty.outputs.normalized-arguments }}"
-          COUNT="${{ steps.test-empty.outputs.argument-count }}"
           IS_EMPTY="${{ steps.test-empty.outputs.is-empty }}"
 
           echo "Actual: '$ACTUAL'"
-          echo "Count: $COUNT"
           echo "Is Empty: $IS_EMPTY"
 
           if [ -n "$ACTUAL" ]; then
             echo "::error::Empty test failed. Expected empty string, got '$ACTUAL'"
-            exit 1
-          fi
-
-          if [ "$COUNT" != "0" ]; then
-            echo "::error::Empty count test failed. Expected '0', got '$COUNT'"
             exit 1
           fi
 
@@ -299,35 +259,34 @@ jobs:
           echo "::notice::✅ Empty test passed successfully"
           echo "::endgroup::"
 
-      - name: '🧪 Test Trim Empty Disabled'
-        id: test-no-trim
+      - name: '🧪 Test Null/Missing Arguments'
+        id: test-null
         uses: ./normalize-arguments
         with:
-          arguments: |
-            arg1
-
-            arg2
           separator: ' '
-          trim-empty: 'false'
           show-summary: ${{ env.SHOW_SUMMARY }}
 
-      - name: '✅ Verify No-Trim Results'
+      - name: '✅ Verify Null Results'
         shell: bash
         run: |
-          echo "::group::🔍 No-Trim Test Results"
-          ACTUAL="${{ steps.test-no-trim.outputs.normalized-arguments }}"
-          COUNT="${{ steps.test-no-trim.outputs.argument-count }}"
+          echo "::group::🔍 Null Arguments Test Results"
+          ACTUAL="${{ steps.test-null.outputs.normalized-arguments }}"
+          IS_EMPTY="${{ steps.test-null.outputs.is-empty }}"
 
           echo "Actual: '$ACTUAL'"
-          echo "Count: $COUNT"
+          echo "Is Empty: $IS_EMPTY"
 
-          # Should contain arg1, empty line, arg2
-          if [ "$COUNT" != "3" ]; then
-            echo "::error::No-trim count test failed. Expected '3', got '$COUNT'"
+          if [ -n "$ACTUAL" ]; then
+            echo "::error::Null test failed. Expected empty string, got '$ACTUAL'"
             exit 1
           fi
 
-          echo "::notice::✅ No-trim test passed successfully"
+          if [ "$IS_EMPTY" != "true" ]; then
+            echo "::error::Null flag test failed. Expected 'true', got '$IS_EMPTY'"
+            exit 1
+          fi
+
+          echo "::notice::✅ Null test passed successfully"
           echo "::endgroup::"
 
   test-windows:
@@ -349,7 +308,6 @@ jobs:
             /p:OutputPath=C:\Build\Output
             /verbosity:minimal
           separator: ' '
-          trim-empty: 'true'
           show-summary: ${{ env.SHOW_SUMMARY }}
 
       - name: '✅ Verify Windows Results'
@@ -358,19 +316,12 @@ jobs:
           echo "::group::🔍 Windows Test Results"
           EXPECTED='/p:Configuration=Release /p:Platform="Any CPU" /p:OutputPath=C:\Build\Output /verbosity:minimal'
           ACTUAL="${{ steps.test-windows-args.outputs.normalized-arguments }}"
-          COUNT="${{ steps.test-windows-args.outputs.argument-count }}"
 
           echo "Expected: $EXPECTED"
           echo "Actual: $ACTUAL"
-          echo "Count: $COUNT"
 
           if [ "$ACTUAL" != "$EXPECTED" ]; then
             echo "::error::Windows test failed. Expected '$EXPECTED', got '$ACTUAL'"
-            exit 1
-          fi
-
-          if [ "$COUNT" != "4" ]; then
-            echo "::error::Windows count test failed. Expected '4', got '$COUNT'"
             exit 1
           fi
 
@@ -387,7 +338,6 @@ jobs:
             -OutputPath "C:\Build\Output"
             -Verbosity minimal
           separator: ' '
-          trim-empty: 'true'
           show-summary: ${{ env.SHOW_SUMMARY }}
 
       - name: '✅ Verify PowerShell Results'
@@ -396,19 +346,12 @@ jobs:
           echo "::group::🔍 PowerShell Test Results"
           EXPECTED='-Configuration Release -Platform "Any CPU" -OutputPath "C:\Build\Output" -Verbosity minimal'
           ACTUAL="${{ steps.test-powershell.outputs.normalized-arguments }}"
-          COUNT="${{ steps.test-powershell.outputs.argument-count }}"
 
           echo "Expected: $EXPECTED"
           echo "Actual: $ACTUAL"
-          echo "Count: $COUNT"
 
           if [ "$ACTUAL" != "$EXPECTED" ]; then
             echo "::error::PowerShell test failed. Expected '$EXPECTED', got '$ACTUAL'"
-            exit 1
-          fi
-
-          if [ "$COUNT" != "1" ]; then
-            echo "::error::PowerShell count test failed. Expected '1', got '$COUNT'"
             exit 1
           fi
 
@@ -438,7 +381,6 @@ jobs:
             --output
             /Users/runner/build
           separator: ' '
-          trim-empty: 'true'
           show-summary: ${{ env.SHOW_SUMMARY }}
 
       - name: '✅ Verify macOS Results'
@@ -447,19 +389,12 @@ jobs:
           echo "::group::🔍 macOS Test Results"
           EXPECTED="--configuration Release --runtime osx-x64 --self-contained true --output /Users/runner/build"
           ACTUAL="${{ steps.test-macos-args.outputs.normalized-arguments }}"
-          COUNT="${{ steps.test-macos-args.outputs.argument-count }}"
 
           echo "Expected: $EXPECTED"
           echo "Actual: $ACTUAL"
-          echo "Count: $COUNT"
 
           if [ "$ACTUAL" != "$EXPECTED" ]; then
             echo "::error::macOS test failed. Expected '$EXPECTED', got '$ACTUAL'"
-            exit 1
-          fi
-
-          if [ "$COUNT" != "8" ]; then
-            echo "::error::macOS count test failed. Expected '8', got '$COUNT'"
             exit 1
           fi
 
@@ -476,7 +411,6 @@ jobs:
             -o ~/build
             --self-contained
           separator: ' '
-          trim-empty: 'true'
           show-summary: ${{ env.SHOW_SUMMARY }}
 
       - name: '✅ Verify Unix Results'
@@ -485,19 +419,12 @@ jobs:
           echo "::group::🔍 Unix Test Results"
           EXPECTED="-c Release -r osx-arm64 -o ~/build --self-contained"
           ACTUAL="${{ steps.test-unix.outputs.normalized-arguments }}"
-          COUNT="${{ steps.test-unix.outputs.argument-count }}"
 
           echo "Expected: $EXPECTED"
           echo "Actual: $ACTUAL"
-          echo "Count: $COUNT"
 
           if [ "$ACTUAL" != "$EXPECTED" ]; then
             echo "::error::Unix test failed. Expected '$EXPECTED', got '$ACTUAL'"
-            exit 1
-          fi
-
-          if [ "$COUNT" != "1" ]; then
-            echo "::error::Unix count test failed. Expected '1', got '$COUNT'"
             exit 1
           fi
 
@@ -525,7 +452,6 @@ jobs:
             --verbosity
             minimal
           separator: ' '
-          trim-empty: 'true'
           show-summary: ${{ env.SHOW_SUMMARY }}
 
       - name: '🔧 Execute dotnet command (dry run)'
@@ -558,7 +484,6 @@ jobs:
             /p:PublishSingleFile=true
             /p:PublishTrimmed=true
           separator: ' '
-          trim-empty: 'true'
           show-summary: ${{ env.SHOW_SUMMARY }}
 
       - name: '🔧 Execute complex build (dry run)'
@@ -569,12 +494,18 @@ jobs:
           echo "Generated arguments: $BUILD_ARGS"
           echo "Would execute: dotnet publish $BUILD_ARGS"
 
-          # Verify all arguments are present
-          EXPECTED_COUNT="${{ steps.test-complex.outputs.argument-count }}"
-          if [ "$EXPECTED_COUNT" -eq "7" ]; then
-            echo "::notice::✅ Complex integration test passed - All $EXPECTED_COUNT arguments present"
+          # Verify all expected arguments are present
+          if [[ "$BUILD_ARGS" == *"--configuration Release"* ]] && \
+             [[ "$BUILD_ARGS" == *"--runtime linux-x64"* ]] && \
+             [[ "$BUILD_ARGS" == *"--self-contained true"* ]] && \
+             [[ "$BUILD_ARGS" == *"--output ./dist/linux-x64"* ]] && \
+             [[ "$BUILD_ARGS" == *"--verbosity normal"* ]] && \
+             [[ "$BUILD_ARGS" == *"/p:PublishSingleFile=true"* ]] && \
+             [[ "$BUILD_ARGS" == *"/p:PublishTrimmed=true"* ]]; then
+            echo "::notice::✅ Complex integration test passed - All expected arguments present"
           else
-            echo "::error::Complex integration test failed - Expected 7 arguments, got $EXPECTED_COUNT"
+            echo "::error::Complex integration test failed - Missing expected arguments"
+            echo "::error::Got: $BUILD_ARGS"
             exit 1
           fi
           echo "::endgroup::"
@@ -604,22 +535,21 @@ jobs:
           - **Multi-line arguments (|)**: Literal block scalar with newlines
           - **Folded arguments (>)**: Folded block scalar (spaces between words)
           - **Custom separators**: Using comma, space, and other delimiters
-          - **Empty handling**: Blank inputs and whitespace trimming
+          - **Empty handling**: Blank inputs and automatic sanitization
           - **Platform-specific**: Windows paths, PowerShell, Unix-style args
           - **Integration**: Real dotnet command scenarios
 
           ## 🎯 Key Features Tested
           - ✅ Input validation and error handling
-          - ✅ Argument counting and empty detection
-          - ✅ Whitespace trimming configuration
+          - ✅ Empty result detection
+          - ✅ Automatic whitespace trimming and sanitization
           - ✅ Custom separator support
           - ✅ Cross-platform compatibility
           - ✅ YAML scalar type handling (|, >, plain)
           - ✅ Output format consistency
 
           ## 📤 Action Outputs Verified
-          - `normalized-arguments`: Properly formatted argument string
-          - `argument-count`: Accurate count of processed arguments
+          - `normalized-arguments`: Properly formatted single-line string
           - `is-empty`: Correct empty state detection
 
           ---
