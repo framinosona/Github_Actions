@@ -83,20 +83,45 @@ runs:
             process.exit(1);
           }
 
-          // Normalize the path
-          const normalized = path.normalize(inputPath);
+          // Convert all path separators to the platform-appropriate separator
+          // On Windows, path.sep is '\', on Unix it's '/'
+          let cleanedPath = inputPath;
+          
+          // Normalize path separators: replace all backslashes and forward slashes
+          // with the platform-specific separator
+          if (path.sep === '/') {
+            // On Unix-like systems, convert backslashes to forward slashes
+            cleanedPath = inputPath.replace(/\\/g, '/');
+          } else {
+            // On Windows, convert forward slashes to backslashes
+            cleanedPath = inputPath.replace(/\//g, '\\');
+          }
+          
+          core.debug(`Path after separator normalization: ${cleanedPath}`);
+
+          // Normalize the path (resolve . and .. segments)
+          const normalized = path.normalize(cleanedPath);
           core.debug(`Normalized path: ${normalized}`);
 
           // Get absolute path
           const absolute = path.resolve(normalized);
           core.debug(`Absolute path: ${absolute}`);
 
-          // Check if path exists
+          // Check if path exists (handles wildcards gracefully)
           let exists = false;
           try {
-            fs.accessSync(absolute);
-            exists = true;
-            core.info('Path exists on filesystem');
+            // For paths with wildcards, check if parent directory exists
+            if (absolute.includes('*') || absolute.includes('?')) {
+              core.debug('Path contains wildcards, checking parent directory');
+              const parentDir = path.dirname(absolute);
+              fs.accessSync(parentDir);
+              exists = true;
+              core.info('Parent directory exists (path contains wildcards)');
+            } else {
+              fs.accessSync(absolute);
+              exists = true;
+              core.info('Path exists on filesystem');
+            }
           } catch (e) {
             exists = false;
             core.warning('Path does not exist on filesystem');
