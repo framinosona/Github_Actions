@@ -4,11 +4,13 @@ on:
   push:
     branches: [ main ]
     paths-ignore:
-      - '.github/workflows/test-*.yml'
+      - '.github/workflows/test-normalize-arguments.yml'
+      - '.github/workflows/test-normalize-path.yml'
   pull_request:
     branches: [ main ]
     paths-ignore:
-      - '.github/workflows/test-*.yml'
+      - '.github/workflows/test-normalize-arguments.yml'
+      - '.github/workflows/test-normalize-path.yml'
   workflow_dispatch:
 
 env:
