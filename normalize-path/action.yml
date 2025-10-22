@@ -1,0 +1,157 @@
+name: '📁 Normalize Path'
+description: 'Normalizes a file path according to the runner OS and provides both relative and absolute formats'
+author: 'Francois Raminosona'
+
+inputs:
+  path:
+    description: 'Path to normalize (can be relative or absolute)'
+    required: true
+  show-summary:
+    description: 'Whether to show the action summary'
+    required: false
+    default: 'false'
+
+outputs:
+  normalized:
+    description: 'Normalized path adjusted for the current OS'
+    value: ${{ steps.normalize-path.outputs.normalized }}
+  absolute:
+    description: 'Absolute path resolved from the normalized path'
+    value: ${{ steps.normalize-path.outputs.absolute }}
+  exists:
+    description: 'Whether the normalized path exists on the filesystem'
+    value: ${{ steps.normalize-path.outputs.exists }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: "✅ Validate inputs"
+      shell: bash
+      run: |
+        echo "::group::🔍 Input Validation"
+        echo "::debug::Validating inputs for path normalization"
+
+        # Validate required parameters
+        if [ -z "${{ inputs.path }}" ]; then
+          echo "::error::Path parameter cannot be empty"
+          exit 1
+        fi
+
+        # Check for potentially dangerous paths
+        if [[ "${{ inputs.path }}" == *".."* ]]; then
+          echo "::warning::Path contains parent directory references (..), ensure this is intentional"
+        fi
+
+        # Check for reserved characters on Windows
+        if [[ "${{ runner.os }}" == "Windows" ]]; then
+          if [[ "${{ inputs.path }}" =~ [<>:\"|?*] ]]; then
+            echo "::warning::Path contains characters that may be invalid on Windows"
+          fi
+        fi
+
+        echo "::notice::Input validation completed successfully"
+        echo "::debug::Path to normalize: ${{ inputs.path }}"
+        echo "::endgroup::"
+
+    - name: "🔧 Normalize path"
+      id: normalize-path
+      shell: node {0}
+      run: |
+        const path = require('path');
+        const fs = require('fs');
+
+        // GitHub Actions workflow commands for Node.js
+        const core = {
+          info: (message) => console.log(`::notice::${message}`),
+          debug: (message) => console.log(`::debug::${message}`),
+          error: (message) => console.log(`::error::${message}`),
+          warning: (message) => console.log(`::warning::${message}`),
+          startGroup: (name) => console.log(`::group::${name}`),
+          endGroup: () => console.log('::endgroup::'),
+          setOutput: (name, value) => console.log(`${name}=${value}`)
+        };
+
+        try {
+          core.startGroup('🚀 Normalizing path');
+
+          const inputPath = process.env.INPUT_PATH;
+          core.debug(`Processing path normalization for: ${inputPath}`);
+
+          if (!inputPath) {
+            core.error('No path provided');
+            process.exit(1);
+          }
+
+          // Normalize the path
+          const normalized = path.normalize(inputPath);
+          core.debug(`Normalized path: ${normalized}`);
+
+          // Get absolute path
+          const absolute = path.resolve(normalized);
+          core.debug(`Absolute path: ${absolute}`);
+
+          // Check if path exists
+          let exists = false;
+          try {
+            fs.accessSync(absolute);
+            exists = true;
+            core.info('Path exists on filesystem');
+          } catch (e) {
+            exists = false;
+            core.warning('Path does not exist on filesystem');
+          }
+
+          // Set outputs
+          core.setOutput('normalized', normalized);
+          core.setOutput('absolute', absolute);
+          core.setOutput('exists', exists.toString());
+
+          core.info('Path normalization completed successfully');
+          core.endGroup();
+
+        } catch (error) {
+          core.error(`Error normalizing path: ${error.message}`);
+          process.exit(1);
+        }
+      env:
+        INPUT_PATH: ${{ inputs.path }}
+
+    - name: "📊 Action Summary"
+      if: always() && inputs.show-summary == 'true'
+      shell: bash
+      run: |
+        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+        <details><summary>Expand for details - 📊 Path Normalization Summary</summary>
+
+        ## 🔧 Input Parameters
+        | Parameter | Value |
+        |-----------|-------|
+        | 📁 Original Path | `${{ inputs.path }}` |
+        | 🖥️ Runner OS | `${{ runner.os }}` |
+
+        ## 📤 Normalization Results
+        | Metric | Value |
+        |--------|-------|
+        | 📁 Normalized Path | `${{ steps.normalize-path.outputs.normalized }}` |
+        | 🎯 Absolute Path | `${{ steps.normalize-path.outputs.absolute }}` |
+        | ✅ Path Exists | `${{ steps.normalize-path.outputs.exists }}` |
+        | 🔧 Status | `${{ steps.normalize-path.outcome }}` |
+
+        ## ⚙️ Process Details
+        | Step | Status |
+        |------|--------|
+        | ✅ Input Validation | `✅ Completed` |
+        | 🔧 Path Normalization | `${{ steps.normalize-path.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+
+        ## 📋 Path Analysis
+        - **Original**: `${{ inputs.path }}`
+        - **Normalized**: `${{ steps.normalize-path.outputs.normalized }}`
+        - **Absolute**: `${{ steps.normalize-path.outputs.absolute }}`
+        - **Exists**: ${{ steps.normalize-path.outputs.exists == 'true' && '✅ Yes' || '❌ No' }}
+
+        </details>
+        EOF
+
+branding:
+  icon: 'folder'
+  color: 'blue'
