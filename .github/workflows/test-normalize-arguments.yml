@@ -305,7 +305,7 @@ jobs:
           arguments: |
             /p:Configuration=Release
             /p:Platform="Any CPU"
-            /p:OutputPath=C:\Build\Output
+            /p:OutputPath="C:\Build\Output"
             /verbosity:minimal
           separator: ' '
           show-summary: ${{ env.SHOW_SUMMARY }}
@@ -314,7 +314,7 @@ jobs:
         shell: bash
         run: |
           echo "::group::🔍 Windows Test Results"
-          EXPECTED='/p:Configuration=Release /p:Platform="Any CPU" /p:OutputPath=C:\Build\Output /verbosity:minimal'
+          EXPECTED='/p:Configuration=Release /p:Platform="Any CPU" /p:OutputPath="C:\Build\Output" /verbosity:minimal'
           ACTUAL="${{ steps.test-windows-args.outputs.normalized-arguments }}"
 
           echo "Expected: $EXPECTED"
