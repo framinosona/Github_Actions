@@ -45,7 +45,7 @@ jobs:
 
     steps:
       - name: '📥 Checkout Repository'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: '📚 Build Documentation'
         id: docfx
@@ -77,7 +77,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: '📥 Checkout Repository'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -97,7 +97,7 @@ jobs:
 
     steps:
       - name: '📥 Checkout Repository'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: '🚀 Create GitHub Release'
         uses: framinosona/github_actions/github-release@main
