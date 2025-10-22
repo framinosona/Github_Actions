@@ -1,0 +1,172 @@
+name: '🛠 Normalize Arguments'
+description: 'Normalizes arguments passed as multi-line or single-line strings into a clean, properly formatted argument string for command concatenation'
+author: 'Francois Raminosona'
+
+inputs:
+  arguments:
+    description: 'Arguments to normalize (supports single-line, multi-line with |, or folded with >)'
+    required: true
+  separator:
+    description: 'Separator to use between normalized arguments (default: space)'
+    required: false
+    default: ' '
+  trim-empty:
+    description: 'Whether to remove empty lines and trim whitespace'
+    required: false
+    default: 'true'
+  show-summary:
+    description: 'Whether to show the action summary'
+    required: false
+    default: 'false'
+
+outputs:
+  normalized-arguments:
+    description: 'The normalized arguments as a single string'
+    value: ${{ steps.normalize.outputs.normalized-arguments }}
+  argument-count:
+    description: 'Number of normalized arguments'
+    value: ${{ steps.normalize.outputs.argument-count }}
+  is-empty:
+    description: 'Whether the normalized arguments are empty'
+    value: ${{ steps.normalize.outputs.is-empty }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: "✅ Validate inputs"
+      shell: bash
+      run: |
+        echo "::group::🔍 Input Validation"
+        echo "::debug::Validating inputs for argument normalization"
+
+        # Validate required parameters
+        if [ -z "${{ inputs.arguments }}" ]; then
+          echo "::error::Arguments parameter cannot be empty"
+          exit 1
+        fi
+
+        # Validate boolean parameters
+        case "${{ inputs.trim-empty }}" in
+          true|false) ;;
+          *) echo "::error::trim-empty must be 'true' or 'false'"; exit 1 ;;
+        esac
+
+        case "${{ inputs.show-summary }}" in
+          true|false) ;;
+          *) echo "::error::show-summary must be 'true' or 'false'"; exit 1 ;;
+        esac
+
+        echo "::notice::Input validation completed successfully"
+        echo "::endgroup::"
+
+    - name: "🔧 Normalize Arguments"
+      id: normalize
+      shell: bash
+      run: |
+        echo "::group::🚀 Normalizing Arguments"
+        echo "::debug::Starting argument normalization process"
+
+        # Read the arguments input into a temporary file for processing
+        cat << 'ARGUMENTS_EOF' > /tmp/input_arguments.txt
+        ${{ inputs.arguments }}
+        ARGUMENTS_EOF
+
+        echo "::debug::Original arguments received:"
+        echo "::debug::$(cat /tmp/input_arguments.txt)"
+
+        # Initialize variables
+        NORMALIZED_ARGS=""
+        ARG_COUNT=0
+        SEPARATOR="${{ inputs.separator }}"
+        TRIM_EMPTY="${{ inputs.trim-empty }}"
+
+        # Process each line
+        while IFS= read -r line || [ -n "$line" ]; do
+          # Trim whitespace if requested
+          if [ "$TRIM_EMPTY" = "true" ]; then
+            line=$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+          fi
+
+          # Skip empty lines if trim-empty is true
+          if [ "$TRIM_EMPTY" = "true" ] && [ -z "$line" ]; then
+            continue
+          fi
+
+          # Skip lines that are only whitespace
+          if [ -z "$(echo "$line" | tr -d '[:space:]')" ]; then
+            continue
+          fi
+
+          # Add the line as an argument
+          if [ -z "$NORMALIZED_ARGS" ]; then
+            NORMALIZED_ARGS="$line"
+          else
+            NORMALIZED_ARGS="${NORMALIZED_ARGS}${SEPARATOR}${line}"
+          fi
+
+          ARG_COUNT=$((ARG_COUNT + 1))
+          echo "::debug::Added argument $ARG_COUNT: $line"
+
+        done < /tmp/input_arguments.txt
+
+        # Determine if result is empty
+        IS_EMPTY="false"
+        if [ -z "$NORMALIZED_ARGS" ]; then
+          IS_EMPTY="true"
+          echo "::warning::No arguments found after normalization"
+        fi
+
+        # Clean up temporary file
+        rm -f /tmp/input_arguments.txt
+
+        # Set outputs
+        echo "normalized-arguments=$NORMALIZED_ARGS" >> $GITHUB_OUTPUT
+        echo "argument-count=$ARG_COUNT" >> $GITHUB_OUTPUT
+        echo "is-empty=$IS_EMPTY" >> $GITHUB_OUTPUT
+
+        echo "::notice::Argument normalization completed successfully"
+        echo "::debug::Normalized arguments: $NORMALIZED_ARGS"
+        echo "::debug::Argument count: $ARG_COUNT"
+        echo "::endgroup::"
+
+    - name: "📊 Action Summary"
+      if: always() && inputs.show-summary == 'true'
+      shell: bash
+      run: |
+        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+        <details><summary>Expand for details - 📊 Normalize Arguments Summary</summary>
+
+        ## 🔧 Input Parameters
+        | Parameter | Value |
+        |-----------|-------|
+        | 📝 Arguments | `${{ inputs.arguments }}` |
+        | 🔗 Separator | `${{ inputs.separator }}` |
+        | ✂️ Trim Empty | `${{ inputs.trim-empty }}` |
+
+        ## 📤 Normalization Results
+        | Metric | Value |
+        |--------|-------|
+        | 🎯 Normalized Arguments | `${{ steps.normalize.outputs.normalized-arguments }}` |
+        | 🔢 Argument Count | `${{ steps.normalize.outputs.argument-count }}` |
+        | 📭 Is Empty | `${{ steps.normalize.outputs.is-empty }}` |
+        | ✅ Status | `${{ steps.normalize.outcome }}` |
+
+        ## ⚙️ Process Details
+        | Step | Status |
+        |------|--------|
+        | ✅ Input Validation | `✅ Completed` |
+        | 🔧 Argument Normalization | `${{ steps.normalize.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+
+        ## 📋 Usage Example
+        ```yaml
+        - name: "Build with normalized arguments"
+          run: |
+            dotnet build ${{ steps.normalize.outputs.normalized-arguments }}
+        ```
+
+        </details>
+        EOF
+
+branding:
+  icon: 'settings'
+  color: 'blue'

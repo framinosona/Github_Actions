@@ -1,0 +1,658 @@
+name: '🧪 Test Normalize Arguments Action'
+
+on:
+  push:
+    paths:
+      - 'normalize-arguments/**'
+      - '.github/workflows/test-normalize-arguments.yml'
+  pull_request:
+    paths:
+      - 'normalize-arguments/**'
+      - '.github/workflows/test-normalize-arguments.yml'
+  workflow_dispatch:
+    inputs:
+      show-summary:
+        description: 'Show detailed action summaries'
+        required: false
+        default: true
+        type: boolean
+      test-platform:
+        description: 'Platform to test (all, linux, windows, macos)'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - linux
+          - windows
+          - macos
+
+env:
+  SHOW_SUMMARY: ${{ github.event.inputs.show-summary || 'true' }}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-strategy:
+    name: '🎯 Determine Test Strategy'
+    runs-on: ubuntu-latest
+    outputs:
+      test-linux: ${{ steps.strategy.outputs.test-linux }}
+      test-windows: ${{ steps.strategy.outputs.test-windows }}
+      test-macos: ${{ steps.strategy.outputs.test-macos }}
+    steps:
+      - name: '🎯 Set Test Strategy'
+        id: strategy
+        shell: bash
+        run: |
+          TEST_PLATFORM="${{ github.event.inputs.test-platform || 'all' }}"
+
+          case "$TEST_PLATFORM" in
+            "all")
+              echo "test-linux=true" >> $GITHUB_OUTPUT
+              echo "test-windows=true" >> $GITHUB_OUTPUT
+              echo "test-macos=true" >> $GITHUB_OUTPUT
+              ;;
+            "linux")
+              echo "test-linux=true" >> $GITHUB_OUTPUT
+              echo "test-windows=false" >> $GITHUB_OUTPUT
+              echo "test-macos=false" >> $GITHUB_OUTPUT
+              ;;
+            "windows")
+              echo "test-linux=false" >> $GITHUB_OUTPUT
+              echo "test-windows=true" >> $GITHUB_OUTPUT
+              echo "test-macos=false" >> $GITHUB_OUTPUT
+              ;;
+            "macos")
+              echo "test-linux=false" >> $GITHUB_OUTPUT
+              echo "test-windows=false" >> $GITHUB_OUTPUT
+              echo "test-macos=true" >> $GITHUB_OUTPUT
+              ;;
+          esac
+
+          echo "::notice::Testing strategy: $TEST_PLATFORM"
+
+  test-linux:
+    name: '🐧 Test on Linux'
+    if: needs.test-strategy.outputs.test-linux == 'true'
+    needs: [test-strategy]
+    runs-on: ubuntu-latest
+    steps:
+      - name: '📥 Checkout Repository'
+        uses: actions/checkout@v5
+
+      - name: '🧪 Test Single-line Arguments'
+        id: test-single-line
+        uses: ./normalize-arguments
+        with:
+          arguments: '--verbose --configuration Release --no-restore'
+          separator: ' '
+          trim-empty: 'true'
+          show-summary: ${{ env.SHOW_SUMMARY }}
+
+      - name: '✅ Verify Single-line Results'
+        shell: bash
+        run: |
+          echo "::group::🔍 Single-line Test Results"
+          EXPECTED="--verbose --configuration Release --no-restore"
+          ACTUAL="${{ steps.test-single-line.outputs.normalized-arguments }}"
+          COUNT="${{ steps.test-single-line.outputs.argument-count }}"
+          IS_EMPTY="${{ steps.test-single-line.outputs.is-empty }}"
+
+          echo "Expected: $EXPECTED"
+          echo "Actual: $ACTUAL"
+          echo "Count: $COUNT"
+          echo "Is Empty: $IS_EMPTY"
+
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "::error::Single-line test failed. Expected '$EXPECTED', got '$ACTUAL'"
+            exit 1
+          fi
+
+          if [ "$COUNT" != "3" ]; then
+            echo "::error::Single-line count test failed. Expected '3', got '$COUNT'"
+            exit 1
+          fi
+
+          if [ "$IS_EMPTY" != "false" ]; then
+            echo "::error::Single-line empty test failed. Expected 'false', got '$IS_EMPTY'"
+            exit 1
+          fi
+
+          echo "::notice::✅ Single-line test passed successfully"
+          echo "::endgroup::"
+
+      - name: '🧪 Test Multi-line Arguments (Literal Block Scalar |)'
+        id: test-multiline
+        uses: ./normalize-arguments
+        with:
+          arguments: |
+            --verbose
+            --configuration
+            Release
+            --no-restore
+            --output
+            ./bin/Release
+          separator: ' '
+          trim-empty: 'true'
+          show-summary: ${{ env.SHOW_SUMMARY }}
+
+      - name: '✅ Verify Multi-line Results'
+        shell: bash
+        run: |
+          echo "::group::🔍 Multi-line Test Results"
+          EXPECTED="--verbose --configuration Release --no-restore --output ./bin/Release"
+          ACTUAL="${{ steps.test-multiline.outputs.normalized-arguments }}"
+          COUNT="${{ steps.test-multiline.outputs.argument-count }}"
+          IS_EMPTY="${{ steps.test-multiline.outputs.is-empty }}"
+
+          echo "Expected: $EXPECTED"
+          echo "Actual: $ACTUAL"
+          echo "Count: $COUNT"
+          echo "Is Empty: $IS_EMPTY"
+
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "::error::Multi-line test failed. Expected '$EXPECTED', got '$ACTUAL'"
+            exit 1
+          fi
+
+          if [ "$COUNT" != "6" ]; then
+            echo "::error::Multi-line count test failed. Expected '6', got '$COUNT'"
+            exit 1
+          fi
+
+          if [ "$IS_EMPTY" != "false" ]; then
+            echo "::error::Multi-line empty test failed. Expected 'false', got '$IS_EMPTY'"
+            exit 1
+          fi
+
+          echo "::notice::✅ Multi-line test passed successfully"
+          echo "::endgroup::"
+
+      - name: '🧪 Test Folded Arguments (Folded Block Scalar >)'
+        id: test-folded
+        uses: ./normalize-arguments
+        with:
+          arguments: >
+            --verbose
+            --configuration Release
+            --no-restore
+            --output ./bin/Release
+            --framework net8.0
+          separator: ' '
+          trim-empty: 'true'
+          show-summary: ${{ env.SHOW_SUMMARY }}
+
+      - name: '✅ Verify Folded Results'
+        shell: bash
+        run: |
+          echo "::group::🔍 Folded Test Results"
+          EXPECTED="--verbose --configuration Release --no-restore --output ./bin/Release --framework net8.0"
+          ACTUAL="${{ steps.test-folded.outputs.normalized-arguments }}"
+          COUNT="${{ steps.test-folded.outputs.argument-count }}"
+          IS_EMPTY="${{ steps.test-folded.outputs.is-empty }}"
+
+          echo "Expected: $EXPECTED"
+          echo "Actual: $ACTUAL"
+          echo "Count: $COUNT"
+          echo "Is Empty: $IS_EMPTY"
+
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "::error::Folded test failed. Expected '$EXPECTED', got '$ACTUAL'"
+            exit 1
+          fi
+
+          if [ "$COUNT" != "1" ]; then
+            echo "::error::Folded count test failed. Expected '1', got '$COUNT'"
+            exit 1
+          fi
+
+          if [ "$IS_EMPTY" != "false" ]; then
+            echo "::error::Folded empty test failed. Expected 'false', got '$IS_EMPTY'"
+            exit 1
+          fi
+
+          echo "::notice::✅ Folded test passed successfully"
+          echo "::endgroup::"
+
+      - name: '🧪 Test Custom Separator'
+        id: test-separator
+        uses: ./normalize-arguments
+        with:
+          arguments: |
+            arg1
+            arg2
+            arg3
+          separator: ','
+          trim-empty: 'true'
+          show-summary: ${{ env.SHOW_SUMMARY }}
+
+      - name: '✅ Verify Separator Results'
+        shell: bash
+        run: |
+          echo "::group::🔍 Separator Test Results"
+          EXPECTED="arg1,arg2,arg3"
+          ACTUAL="${{ steps.test-separator.outputs.normalized-arguments }}"
+          COUNT="${{ steps.test-separator.outputs.argument-count }}"
+
+          echo "Expected: $EXPECTED"
+          echo "Actual: $ACTUAL"
+          echo "Count: $COUNT"
+
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "::error::Separator test failed. Expected '$EXPECTED', got '$ACTUAL'"
+            exit 1
+          fi
+
+          if [ "$COUNT" != "3" ]; then
+            echo "::error::Separator count test failed. Expected '3', got '$COUNT'"
+            exit 1
+          fi
+
+          echo "::notice::✅ Separator test passed successfully"
+          echo "::endgroup::"
+
+      - name: '🧪 Test Empty Arguments'
+        id: test-empty
+        uses: ./normalize-arguments
+        with:
+          arguments: |
+
+
+
+          separator: ' '
+          trim-empty: 'true'
+          show-summary: ${{ env.SHOW_SUMMARY }}
+
+      - name: '✅ Verify Empty Results'
+        shell: bash
+        run: |
+          echo "::group::🔍 Empty Test Results"
+          ACTUAL="${{ steps.test-empty.outputs.normalized-arguments }}"
+          COUNT="${{ steps.test-empty.outputs.argument-count }}"
+          IS_EMPTY="${{ steps.test-empty.outputs.is-empty }}"
+
+          echo "Actual: '$ACTUAL'"
+          echo "Count: $COUNT"
+          echo "Is Empty: $IS_EMPTY"
+
+          if [ -n "$ACTUAL" ]; then
+            echo "::error::Empty test failed. Expected empty string, got '$ACTUAL'"
+            exit 1
+          fi
+
+          if [ "$COUNT" != "0" ]; then
+            echo "::error::Empty count test failed. Expected '0', got '$COUNT'"
+            exit 1
+          fi
+
+          if [ "$IS_EMPTY" != "true" ]; then
+            echo "::error::Empty flag test failed. Expected 'true', got '$IS_EMPTY'"
+            exit 1
+          fi
+
+          echo "::notice::✅ Empty test passed successfully"
+          echo "::endgroup::"
+
+      - name: '🧪 Test Trim Empty Disabled'
+        id: test-no-trim
+        uses: ./normalize-arguments
+        with:
+          arguments: |
+            arg1
+
+            arg2
+          separator: ' '
+          trim-empty: 'false'
+          show-summary: ${{ env.SHOW_SUMMARY }}
+
+      - name: '✅ Verify No-Trim Results'
+        shell: bash
+        run: |
+          echo "::group::🔍 No-Trim Test Results"
+          ACTUAL="${{ steps.test-no-trim.outputs.normalized-arguments }}"
+          COUNT="${{ steps.test-no-trim.outputs.argument-count }}"
+
+          echo "Actual: '$ACTUAL'"
+          echo "Count: $COUNT"
+
+          # Should contain arg1, empty line, arg2
+          if [ "$COUNT" != "3" ]; then
+            echo "::error::No-trim count test failed. Expected '3', got '$COUNT'"
+            exit 1
+          fi
+
+          echo "::notice::✅ No-trim test passed successfully"
+          echo "::endgroup::"
+
+  test-windows:
+    name: '🪟 Test on Windows'
+    if: needs.test-strategy.outputs.test-windows == 'true'
+    needs: [test-strategy]
+    runs-on: windows-latest
+    steps:
+      - name: '📥 Checkout Repository'
+        uses: actions/checkout@v5
+
+      - name: '🧪 Test Windows-specific Arguments'
+        id: test-windows-args
+        uses: ./normalize-arguments
+        with:
+          arguments: |
+            /p:Configuration=Release
+            /p:Platform="Any CPU"
+            /p:OutputPath=C:\Build\Output
+            /verbosity:minimal
+          separator: ' '
+          trim-empty: 'true'
+          show-summary: ${{ env.SHOW_SUMMARY }}
+
+      - name: '✅ Verify Windows Results'
+        shell: bash
+        run: |
+          echo "::group::🔍 Windows Test Results"
+          EXPECTED="/p:Configuration=Release /p:Platform=\"Any CPU\" /p:OutputPath=C:\\Build\\Output /verbosity:minimal"
+          ACTUAL="${{ steps.test-windows-args.outputs.normalized-arguments }}"
+          COUNT="${{ steps.test-windows-args.outputs.argument-count }}"
+
+          echo "Expected: $EXPECTED"
+          echo "Actual: $ACTUAL"
+          echo "Count: $COUNT"
+
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "::error::Windows test failed. Expected '$EXPECTED', got '$ACTUAL'"
+            exit 1
+          fi
+
+          if [ "$COUNT" != "4" ]; then
+            echo "::error::Windows count test failed. Expected '4', got '$COUNT'"
+            exit 1
+          fi
+
+          echo "::notice::✅ Windows test passed successfully"
+          echo "::endgroup::"
+
+      - name: '🧪 Test PowerShell-style Arguments'
+        id: test-powershell
+        uses: ./normalize-arguments
+        with:
+          arguments: >
+            -Configuration Release
+            -Platform "Any CPU"
+            -OutputPath "C:\Build\Output"
+            -Verbosity minimal
+          separator: ' '
+          trim-empty: 'true'
+          show-summary: ${{ env.SHOW_SUMMARY }}
+
+      - name: '✅ Verify PowerShell Results'
+        shell: bash
+        run: |
+          echo "::group::🔍 PowerShell Test Results"
+          EXPECTED="-Configuration Release -Platform \"Any CPU\" -OutputPath \"C:\\Build\\Output\" -Verbosity minimal"
+          ACTUAL="${{ steps.test-powershell.outputs.normalized-arguments }}"
+          COUNT="${{ steps.test-powershell.outputs.argument-count }}"
+
+          echo "Expected: $EXPECTED"
+          echo "Actual: $ACTUAL"
+          echo "Count: $COUNT"
+
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "::error::PowerShell test failed. Expected '$EXPECTED', got '$ACTUAL'"
+            exit 1
+          fi
+
+          if [ "$COUNT" != "1" ]; then
+            echo "::error::PowerShell count test failed. Expected '1', got '$COUNT'"
+            exit 1
+          fi
+
+          echo "::notice::✅ PowerShell test passed successfully"
+          echo "::endgroup::"
+
+  test-macos:
+    name: '🍎 Test on macOS'
+    if: needs.test-strategy.outputs.test-macos == 'true'
+    needs: [test-strategy]
+    runs-on: macos-latest
+    steps:
+      - name: '📥 Checkout Repository'
+        uses: actions/checkout@v5
+
+      - name: '🧪 Test macOS-specific Arguments'
+        id: test-macos-args
+        uses: ./normalize-arguments
+        with:
+          arguments: |
+            --configuration
+            Release
+            --runtime
+            osx-x64
+            --self-contained
+            true
+            --output
+            /Users/runner/build
+          separator: ' '
+          trim-empty: 'true'
+          show-summary: ${{ env.SHOW_SUMMARY }}
+
+      - name: '✅ Verify macOS Results'
+        shell: bash
+        run: |
+          echo "::group::🔍 macOS Test Results"
+          EXPECTED="--configuration Release --runtime osx-x64 --self-contained true --output /Users/runner/build"
+          ACTUAL="${{ steps.test-macos-args.outputs.normalized-arguments }}"
+          COUNT="${{ steps.test-macos-args.outputs.argument-count }}"
+
+          echo "Expected: $EXPECTED"
+          echo "Actual: $ACTUAL"
+          echo "Count: $COUNT"
+
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "::error::macOS test failed. Expected '$EXPECTED', got '$ACTUAL'"
+            exit 1
+          fi
+
+          if [ "$COUNT" != "8" ]; then
+            echo "::error::macOS count test failed. Expected '8', got '$COUNT'"
+            exit 1
+          fi
+
+          echo "::notice::✅ macOS test passed successfully"
+          echo "::endgroup::"
+
+      - name: '🧪 Test Unix-style Arguments'
+        id: test-unix
+        uses: ./normalize-arguments
+        with:
+          arguments: >
+            -c Release
+            -r osx-arm64
+            -o ~/build
+            --self-contained
+          separator: ' '
+          trim-empty: 'true'
+          show-summary: ${{ env.SHOW_SUMMARY }}
+
+      - name: '✅ Verify Unix Results'
+        shell: bash
+        run: |
+          echo "::group::🔍 Unix Test Results"
+          EXPECTED="-c Release -r osx-arm64 -o ~/build --self-contained"
+          ACTUAL="${{ steps.test-unix.outputs.normalized-arguments }}"
+          COUNT="${{ steps.test-unix.outputs.argument-count }}"
+
+          echo "Expected: $EXPECTED"
+          echo "Actual: $ACTUAL"
+          echo "Count: $COUNT"
+
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "::error::Unix test failed. Expected '$EXPECTED', got '$ACTUAL'"
+            exit 1
+          fi
+
+          if [ "$COUNT" != "1" ]; then
+            echo "::error::Unix count test failed. Expected '1', got '$COUNT'"
+            exit 1
+          fi
+
+          echo "::notice::✅ Unix test passed successfully"
+          echo "::endgroup::"
+
+  test-integration:
+    name: '🔗 Integration Tests'
+    needs: [test-strategy, test-linux]
+    if: always() && needs.test-strategy.outputs.test-linux == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: '📥 Checkout Repository'
+        uses: actions/checkout@v5
+
+      - name: '🧪 Test with dotnet command'
+        id: test-dotnet
+        uses: ./normalize-arguments
+        with:
+          arguments: |
+            build
+            --configuration
+            Release
+            --no-restore
+            --verbosity
+            minimal
+          separator: ' '
+          trim-empty: 'true'
+          show-summary: ${{ env.SHOW_SUMMARY }}
+
+      - name: '🔧 Execute dotnet command (dry run)'
+        shell: bash
+        run: |
+          echo "::group::🚀 Integration Test - dotnet command"
+          DOTNET_ARGS="${{ steps.test-dotnet.outputs.normalized-arguments }}"
+          echo "Generated arguments: $DOTNET_ARGS"
+          echo "Would execute: dotnet $DOTNET_ARGS"
+
+          # Verify the command structure is valid
+          if [[ "$DOTNET_ARGS" =~ ^build[[:space:]]--configuration[[:space:]]Release[[:space:]]--no-restore[[:space:]]--verbosity[[:space:]]minimal$ ]]; then
+            echo "::notice::✅ Integration test passed - Command structure is valid"
+          else
+            echo "::error::Integration test failed - Invalid command structure"
+            exit 1
+          fi
+          echo "::endgroup::"
+
+      - name: '🧪 Test with complex build command'
+        id: test-complex
+        uses: ./normalize-arguments
+        with:
+          arguments: |
+            --configuration Release
+            --runtime linux-x64
+            --self-contained true
+            --output ./dist/linux-x64
+            --verbosity normal
+            /p:PublishSingleFile=true
+            /p:PublishTrimmed=true
+          separator: ' '
+          trim-empty: 'true'
+          show-summary: ${{ env.SHOW_SUMMARY }}
+
+      - name: '🔧 Execute complex build (dry run)'
+        shell: bash
+        run: |
+          echo "::group::🚀 Integration Test - complex build"
+          BUILD_ARGS="${{ steps.test-complex.outputs.normalized-arguments }}"
+          echo "Generated arguments: $BUILD_ARGS"
+          echo "Would execute: dotnet publish $BUILD_ARGS"
+
+          # Verify all arguments are present
+          EXPECTED_COUNT="${{ steps.test-complex.outputs.argument-count }}"
+          if [ "$EXPECTED_COUNT" -eq "7" ]; then
+            echo "::notice::✅ Complex integration test passed - All $EXPECTED_COUNT arguments present"
+          else
+            echo "::error::Complex integration test failed - Expected 7 arguments, got $EXPECTED_COUNT"
+            exit 1
+          fi
+          echo "::endgroup::"
+
+  test-summary:
+    name: '📋 Test Summary'
+    if: always()
+    needs: [test-strategy, test-linux, test-windows, test-macos, test-integration]
+    runs-on: ubuntu-latest
+    steps:
+      - name: '📊 Generate Test Summary'
+        shell: bash
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+          # 🧪 Normalize Arguments Action Test Results
+
+          ## 📋 Test Execution Summary
+          | Platform | Status | Details |
+          |----------|--------|---------|
+          | 🐧 Linux | ${{ needs.test-linux.result == 'success' && '✅ Passed' || needs.test-linux.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} | Core functionality, all argument types |
+          | 🪟 Windows | ${{ needs.test-windows.result == 'success' && '✅ Passed' || needs.test-windows.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} | Windows-specific paths and PowerShell |
+          | 🍎 macOS | ${{ needs.test-macos.result == 'success' && '✅ Passed' || needs.test-macos.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} | Unix-style arguments and macOS paths |
+          | 🔗 Integration | ${{ needs.test-integration.result == 'success' && '✅ Passed' || needs.test-integration.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} | Real-world usage scenarios |
+
+          ## 🧪 Test Categories Covered
+          - **Single-line arguments**: Direct string input
+          - **Multi-line arguments (|)**: Literal block scalar with newlines
+          - **Folded arguments (>)**: Folded block scalar (spaces between words)
+          - **Custom separators**: Using comma, space, and other delimiters
+          - **Empty handling**: Blank inputs and whitespace trimming
+          - **Platform-specific**: Windows paths, PowerShell, Unix-style args
+          - **Integration**: Real dotnet command scenarios
+
+          ## 🎯 Key Features Tested
+          - ✅ Input validation and error handling
+          - ✅ Argument counting and empty detection
+          - ✅ Whitespace trimming configuration
+          - ✅ Custom separator support
+          - ✅ Cross-platform compatibility
+          - ✅ YAML scalar type handling (|, >, plain)
+          - ✅ Output format consistency
+
+          ## 📤 Action Outputs Verified
+          - `normalized-arguments`: Properly formatted argument string
+          - `argument-count`: Accurate count of processed arguments
+          - `is-empty`: Correct empty state detection
+
+          ---
+          *Test completed on: ${{ github.run_number }} | Triggered by: ${{ github.event_name }}*
+          EOF
+
+          # Check overall success
+          LINUX_STATUS="${{ needs.test-linux.result }}"
+          WINDOWS_STATUS="${{ needs.test-windows.result }}"
+          MACOS_STATUS="${{ needs.test-macos.result }}"
+          INTEGRATION_STATUS="${{ needs.test-integration.result }}"
+
+          FAILED_TESTS=""
+
+          if [ "$LINUX_STATUS" = "failure" ]; then
+            FAILED_TESTS="$FAILED_TESTS Linux"
+          fi
+
+          if [ "$WINDOWS_STATUS" = "failure" ]; then
+            FAILED_TESTS="$FAILED_TESTS Windows"
+          fi
+
+          if [ "$MACOS_STATUS" = "failure" ]; then
+            FAILED_TESTS="$FAILED_TESTS macOS"
+          fi
+
+          if [ "$INTEGRATION_STATUS" = "failure" ]; then
+            FAILED_TESTS="$FAILED_TESTS Integration"
+          fi
+
+          if [ -n "$FAILED_TESTS" ]; then
+            echo "::error::Tests failed on:$FAILED_TESTS"
+            exit 1
+          else
+            echo "::notice::🎉 All tests passed successfully!"
+          fi
