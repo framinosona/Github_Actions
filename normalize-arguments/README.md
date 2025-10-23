@@ -43,7 +43,6 @@ Normalizes arguments passed as multi-line or single-line strings into a clean, p
       -O2
       -std=c++17
     separator: ' '
-    trim-empty: 'true'
     show-summary: 'true'
 
 - name: Compile with flags
@@ -69,9 +68,8 @@ Normalizes arguments passed as multi-line or single-line strings into a clean, p
 
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
-| `arguments` | Arguments to normalize (supports single-line, multi-line with `\|`, or folded with `>`) | ✅ Yes | - |
+| `arguments` | Arguments to normalize (supports single-line, multi-line with `\|`, or folded with `>`) - can be empty | ❌ No | ` ` (empty) |
 | `separator` | Separator to use between normalized arguments | ❌ No | ` ` (space) |
-| `trim-empty` | Whether to remove empty lines and trim whitespace | ❌ No | `true` |
 | `show-summary` | Whether to show the action summary | ❌ No | `false` |
 
 ## Outputs
@@ -79,8 +77,6 @@ Normalizes arguments passed as multi-line or single-line strings into a clean, p
 | Output | Description | Example |
 |--------|-------------|---------|
 | `normalized-arguments` | The normalized arguments as a single string | `-p:Version=1.0.0 -p:Configuration=Release` |
-| `argument-count` | Number of normalized arguments | `2` |
-| `is-empty` | Whether the normalized arguments are empty | `false` |
 
 ## YAML Multi-line Format Examples
 
@@ -270,17 +266,18 @@ separator: ' \
 ## Input Format Handling
 
 ### Empty Line Handling
+Empty lines and excessive whitespace are automatically removed during normalization:
 ```yaml
 arguments: |
   -p:Version=1.0.0
 
   -p:Configuration=Release
 
-# With trim-empty: true (default) → Two arguments
-# With trim-empty: false → Includes empty lines
+# Result: Two arguments, empty lines removed
 ```
 
 ### Whitespace Trimming
+Leading and trailing whitespace is automatically trimmed from each line:
 ```yaml
 arguments: |
     -p:Version=1.0.0
@@ -389,11 +386,10 @@ arguments: >
 
 **Issue: Empty result when arguments expected**
 - Ensure `arguments` parameter is not empty
-- Check if `trim-empty: 'true'` is removing all content
 - Verify YAML formatting is correct (proper indentation)
 
 **Issue: Extra whitespace in arguments**
-- Use `trim-empty: 'true'` (default) to remove whitespace
+- Whitespace is automatically trimmed during normalization
 - Check your YAML indentation and trailing spaces
 - Consider using folded (`>`) format for space-separated args
 
