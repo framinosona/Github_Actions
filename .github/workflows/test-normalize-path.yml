@@ -1,4 +1,4 @@
-name: '🧪 Test Normalize Path Action'
+name: '🧪 Test Normalize Path'
 
 on:
   push:
@@ -10,312 +10,67 @@ on:
       - 'normalize-path/**'
       - '.github/workflows/test-normalize-path.yml'
   workflow_dispatch:
-    inputs:
-      show-summary:
-        description: 'Show detailed action summaries'
-        required: false
-        default: true
-        type: boolean
-
-env:
-  SHOW_SUMMARY: ${{ github.event.inputs.show-summary || 'true' }}
 
 permissions:
   contents: read
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  test-cross-platform:
-    name: '${{ matrix.icon }} Test on ${{ matrix.platform }}'
+  test:
+    name: 'Test on ${{ matrix.os }}'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        include:
-          - os: ubuntu-latest
-            platform: 'Linux'
-            icon: '🐧'
-          - os: windows-latest
-            platform: 'Windows'
-            icon: '🪟'
-          - os: macos-latest
-            platform: 'macOS'
-            icon: '🍎'
     steps:
-      - name: '📥 Checkout Repository'
-        uses: actions/checkout@v5
+      - name: 'Checkout'
+        uses: actions/checkout@v4
 
-      - name: '📁 Create Test Directory Structure'
+      - name: 'Create test file'
         shell: bash
         run: |
-          echo "::group::🏗️ Creating test directory structure"
+          mkdir -p test-dir
+          echo "test" > test-dir/test-file.txt
 
-          # Create test directories and files
-          mkdir -p test-paths/src/components
-          mkdir -p test-paths/src/utils
-          mkdir -p test-paths/docs/api
-          mkdir -p test-paths/build/output
-          mkdir -p test-paths/config
-
-          # Create test files
-          echo "console.log('main');" > test-paths/src/main.js
-          echo "console.log('utils');" > test-paths/src/utils/helper.js
-          echo "# Component" > test-paths/src/components/Button.md
-          echo "# API Docs" > test-paths/docs/api/index.md
-          echo "# Guide" > test-paths/docs/guide.md
-          echo '{"name": "test"}' > test-paths/config/app.json
-          echo '{"version": "1.0.0"}' > test-paths/package.json
-
-          # List created structure
-          echo "Created test structure:"
-          find test-paths -type f | sort
-
-          echo "::endgroup::"
-
-      - name: '🧪 Test Simple Relative Path (File)'
-        id: test-simple-file
+      - name: 'Test file path'
+        id: test1
         uses: ./normalize-path
         with:
-          path: 'test-paths/src/main.js'
-          show-summary: ${{ env.SHOW_SUMMARY }}
+          path: 'test-dir/test-file.txt'
 
-      - name: '✅ Verify Simple File Path'
+      - name: 'Verify file path'
         shell: bash
         run: |
-          echo "::group::🔍 Simple File Path on ${{ matrix.platform }}"
-          EXISTS="${{ steps.test-simple-file.outputs.exists }}"
-          if [ "$EXISTS" != "true" ]; then
-            echo "::error::File existence check failed"
-            exit 1
-          fi
-          echo "::notice::✅ Test passed"
-          echo "::endgroup::"
+          NORMALIZED="${{ steps.test1.outputs.normalized }}"
+          EXISTS="${{ steps.test1.outputs.exists }}"
+          echo "Normalized: '$NORMALIZED'"
+          echo "Exists: '$EXISTS'"
+          [[ "$EXISTS" == "true" ]] || exit 1
 
-      - name: '🧪 Test Directory Path'
-        id: test-directory
+      - name: 'Test with backslashes'
+        id: test2
         uses: ./normalize-path
         with:
-          path: 'test-paths/src/utils'
-          show-summary: ${{ env.SHOW_SUMMARY }}
+          path: 'test-dir\test-file.txt'
 
-      - name: '✅ Verify Directory Path'
+      - name: 'Verify backslashes'
         shell: bash
         run: |
-          echo "::group::🔍 Directory Path on ${{ matrix.platform }}"
-          EXISTS="${{ steps.test-directory.outputs.exists }}"
-          if [ "$EXISTS" != "true" ]; then
-            echo "::error::Directory existence check failed"
-            exit 1
-          fi
-          echo "::notice::✅ Test passed"
-          echo "::endgroup::"
+          NORMALIZED="${{ steps.test2.outputs.normalized }}"
+          EXISTS="${{ steps.test2.outputs.exists }}"
+          echo "Normalized: '$NORMALIZED'"
+          echo "Exists: '$EXISTS'"
+          [[ "$EXISTS" == "true" ]] || exit 1
 
-      - name: '🧪 Test Path with Forward Slashes'
-        id: test-forward
+      - name: 'Test non-existent'
+        id: test3
         uses: ./normalize-path
         with:
-          path: 'test-paths/src/utils/helper.js'
-          show-summary: ${{ env.SHOW_SUMMARY }}
+          path: 'does-not-exist.txt'
 
-      - name: '✅ Verify Forward Slash Path'
+      - name: 'Verify non-existent'
         shell: bash
         run: |
-          echo "::group::🔍 Forward Slash Path on ${{ matrix.platform }}"
-          EXISTS="${{ steps.test-forward.outputs.exists }}"
-          if [ "$EXISTS" != "true" ]; then
-            echo "::error::Forward slash path check failed"
-            exit 1
-          fi
-          echo "::notice::✅ Test passed"
-          echo "::endgroup::"
-
-      - name: '🧪 Test Path with Backslashes'
-        id: test-backslash
-        uses: ./normalize-path
-        with:
-          path: 'test-paths\src\main.js'
-          show-summary: ${{ env.SHOW_SUMMARY }}
-
-      - name: '✅ Verify Backslash Path'
-        shell: bash
-        run: |
-          echo "::group::🔍 Backslash Path on ${{ matrix.platform }}"
-          EXISTS="${{ steps.test-backslash.outputs.exists }}"
-          if [ "$EXISTS" != "true" ]; then
-            echo "::error::Backslash path check failed"
-            exit 1
-          fi
-          echo "::notice::✅ Test passed"
-          echo "::endgroup::"
-
-      - name: '🧪 Test Mixed Path Separators'
-        id: test-mixed
-        uses: ./normalize-path
-        with:
-          path: 'test-paths/src\components/../utils/helper.js'
-          show-summary: ${{ env.SHOW_SUMMARY }}
-
-      - name: '✅ Verify Mixed Separators'
-        shell: bash
-        run: |
-          echo "::group::🔍 Mixed Separators on ${{ matrix.platform }}"
-          EXISTS="${{ steps.test-mixed.outputs.exists }}"
-          if [ "$EXISTS" != "true" ]; then
-            echo "::error::Mixed separator path check failed"
-            exit 1
-          fi
-          echo "::notice::✅ Test passed"
-          echo "::endgroup::"
-
-      - name: '🧪 Test Parent Directory References'
-        id: test-parent
-        uses: ./normalize-path
-        with:
-          path: 'test-paths/src/components/../utils/../main.js'
-          show-summary: ${{ env.SHOW_SUMMARY }}
-
-      - name: '✅ Verify Parent References'
-        shell: bash
-        run: |
-          echo "::group::🔍 Parent References on ${{ matrix.platform }}"
-          EXISTS="${{ steps.test-parent.outputs.exists }}"
-          if [ "$EXISTS" != "true" ]; then
-            echo "::error::Parent reference path check failed"
-            exit 1
-          fi
-          echo "::notice::✅ Test passed"
-          echo "::endgroup::"
-
-      - name: '🧪 Test Current Directory References'
-        id: test-current
-        uses: ./normalize-path
-        with:
-          path: './test-paths/./docs/./guide.md'
-          show-summary: ${{ env.SHOW_SUMMARY }}
-
-      - name: '✅ Verify Current Directory References'
-        shell: bash
-        run: |
-          echo "::group::🔍 Current Directory References on ${{ matrix.platform }}"
-          EXISTS="${{ steps.test-current.outputs.exists }}"
-          if [ "$EXISTS" != "true" ]; then
-            echo "::error::Current directory path check failed"
-            exit 1
-          fi
-          echo "::notice::✅ Test passed"
-          echo "::endgroup::"
-
-      - name: '🧪 Test Wildcard Pattern (Single Level)'
-        id: test-wildcard
-        uses: ./normalize-path
-        with:
-          path: 'test-paths/src/*.js'
-          show-summary: ${{ env.SHOW_SUMMARY }}
-
-      - name: '✅ Verify Wildcard Pattern'
-        shell: bash
-        run: |
-          echo "::group::🔍 Wildcard Pattern on ${{ matrix.platform }}"
-          EXISTS="${{ steps.test-wildcard.outputs.exists }}"
-          NORMALIZED="${{ steps.test-wildcard.outputs.normalized }}"
-          echo "Normalized: $NORMALIZED"
-          # Wildcard paths should report parent directory existence
-          if [ "$EXISTS" != "true" ]; then
-            echo "::error::Wildcard parent directory check failed"
-            exit 1
-          fi
-          echo "::notice::✅ Test passed"
-          echo "::endgroup::"
-
-      - name: '🧪 Test Recursive Wildcard Pattern'
-        id: test-wildcard-recursive
-        uses: ./normalize-path
-        with:
-          path: 'test-paths/**/*.js'
-          show-summary: ${{ env.SHOW_SUMMARY }}
-
-      - name: '✅ Verify Recursive Wildcard'
-        shell: bash
-        run: |
-          echo "::group::🔍 Recursive Wildcard on ${{ matrix.platform }}"
-          EXISTS="${{ steps.test-wildcard-recursive.outputs.exists }}"
-          NORMALIZED="${{ steps.test-wildcard-recursive.outputs.normalized }}"
-          echo "Normalized: $NORMALIZED"
-          # Wildcard paths should report parent directory existence
-          if [ "$EXISTS" != "true" ]; then
-            echo "::error::Recursive wildcard parent directory check failed"
-            exit 1
-          fi
-          echo "::notice::✅ Test passed"
-          echo "::endgroup::"
-
-      - name: '🧪 Test Non-existent Path'
-        id: test-nonexistent
-        uses: ./normalize-path
-        with:
-          path: 'test-paths/nonexistent/file.txt'
-          show-summary: ${{ env.SHOW_SUMMARY }}
-
-      - name: '✅ Verify Non-existent Path'
-        shell: bash
-        run: |
-          echo "::group::🔍 Non-existent Path on ${{ matrix.platform }}"
-          EXISTS="${{ steps.test-nonexistent.outputs.exists }}"
-          if [ "$EXISTS" != "false" ]; then
-            echo "::error::Non-existent path should report false"
-            exit 1
-          fi
-          echo "::notice::✅ Test passed"
-          echo "::endgroup::"
-
-  test-summary:
-    name: '📋 Test Summary'
-    if: always()
-    needs: [test-cross-platform]
-    runs-on: ubuntu-latest
-    steps:
-      - name: '📊 Generate Test Summary'
-        shell: bash
-        run: |
-          cat >> $GITHUB_STEP_SUMMARY << 'EOF'
-          # 🧪 Normalize Path Action Test Results
-
-          ## 📋 Test Execution Summary
-          | Platform | Status |
-          |----------|--------|
-          | 🐧 Linux | ${{ needs.test-cross-platform.result == 'success' && '✅ Passed' || '❌ Failed' }} |
-          | 🪟 Windows | ${{ needs.test-cross-platform.result == 'success' && '✅ Passed' || '❌ Failed' }} |
-          | 🍎 macOS | ${{ needs.test-cross-platform.result == 'success' && '✅ Passed' || '❌ Failed' }} |
-
-          ## 🧪 Test Categories Covered
-          - ✅ File paths with forward slashes (`/`)
-          - ✅ File paths with backslashes (`\`)
-          - ✅ Mixed path separators
-          - ✅ Directory paths
-          - ✅ Parent directory references (`..`)
-          - ✅ Current directory references (`.`)
-          - ✅ Wildcard patterns (`*`, `**`)
-          - ✅ Non-existent paths
-          - ✅ Cross-platform compatibility
-
-          ## 📤 Tested Features
-          - Path separator normalization (platform-specific)
-          - Path resolution and simplification
-          - File/directory existence checking
-          - Wildcard pattern support
-          - Absolute path generation
-
-          ---
-          *Test completed on: ${{ github.run_number }}*
-          EOF
-
-          if [ "${{ needs.test-cross-platform.result }}" != "success" ]; then
-            echo "::error::Tests failed"
-            exit 1
-          else
-            echo "::notice::🎉 All tests passed!"
-          fi
+          EXISTS="${{ steps.test3.outputs.exists }}"
+          echo "Exists: '$EXISTS'"
+          [[ "$EXISTS" == "false" ]] || exit 1

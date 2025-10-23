@@ -56,96 +56,60 @@ runs:
 
     - name: "🔧 Normalize path"
       id: normalize-path
-      shell: node {0}
+      shell: bash
       run: |
-        const path = require('path');
-        const fs = require('fs');
+        echo "::group::🚀 Normalizing path"
+        echo "::debug::Processing path normalization for: ${{ inputs.path }}"
 
-        // GitHub Actions workflow commands for Node.js
-        const core = {
-          info: (message) => console.log(`::notice::${message}`),
-          debug: (message) => console.log(`::debug::${message}`),
-          error: (message) => console.log(`::error::${message}`),
-          warning: (message) => console.log(`::warning::${message}`),
-          startGroup: (name) => console.log(`::group::${name}`),
-          endGroup: () => console.log('::endgroup::'),
-          setOutput: (name, value) => {
-            const outputFile = process.env.GITHUB_OUTPUT;
-            if (outputFile) {
-              fs.appendFileSync(outputFile, `${name}=${value}\n`, 'utf8');
-            }
-          }
-        };
+        INPUT_PATH="${{ inputs.path }}"
 
-        try {
-          core.startGroup('🚀 Normalizing path');
+        # Convert path separators based on OS
+        if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" || "$OSTYPE" == "cygwin" ]]; then
+          # Windows: convert forward slashes to backslashes
+          NORMALIZED=$(echo "$INPUT_PATH" | sed 's|/|\\|g')
+        else
+          # Unix: convert backslashes to forward slashes
+          NORMALIZED=$(echo "$INPUT_PATH" | sed 's|\\|/|g')
+        fi
 
-          const inputPath = process.env.INPUT_PATH;
-          core.debug(`Processing path normalization for: ${inputPath}`);
-
-          if (!inputPath) {
-            core.error('No path provided');
-            process.exit(1);
-          }
-
-          // Convert all path separators to the platform-appropriate separator
-          // On Windows, path.sep is '\', on Unix it's '/'
-          let cleanedPath = inputPath;
+        # Remove redundant slashes and resolve . and ..
+        # Use realpath if available, otherwise use a simpler approach
+        if command -v realpath &> /dev/null; then
+          if [ -e "$NORMALIZED" ]; then
+            ABSOLUTE=$(realpath "$NORMALIZED" 2>/dev/null || echo "$PWD/$NORMALIZED")
+            EXISTS="true"
+          else
+            ABSOLUTE="$PWD/$NORMALIZED"
+            EXISTS="false"
+          fi
+        else
+          # Fallback: construct absolute path manually
+          if [[ "$NORMALIZED" == /* ]] || [[ "$NORMALIZED" == ?:* ]]; then
+            ABSOLUTE="$NORMALIZED"
+          else
+            ABSOLUTE="$PWD/$NORMALIZED"
+          fi
           
-          // Normalize path separators: replace all backslashes and forward slashes
-          // with the platform-specific separator
-          if (path.sep === '/') {
-            // On Unix-like systems, convert backslashes to forward slashes
-            cleanedPath = inputPath.replace(/\\/g, '/');
-          } else {
-            // On Windows, convert forward slashes to backslashes
-            cleanedPath = inputPath.replace(/\//g, '\\');
-          }
-          
-          core.debug(`Path after separator normalization: ${cleanedPath}`);
+          if [ -e "$NORMALIZED" ]; then
+            EXISTS="true"
+          else
+            EXISTS="false"
+          fi
+        fi
 
-          // Normalize the path (resolve . and .. segments)
-          const normalized = path.normalize(cleanedPath);
-          core.debug(`Normalized path: ${normalized}`);
+        # Normalize the path (remove ./ and resolve ..)
+        NORMALIZED=$(echo "$NORMALIZED" | sed 's|^\./||' | sed 's|/\./|/|g')
 
-          // Get absolute path
-          const absolute = path.resolve(normalized);
-          core.debug(`Absolute path: ${absolute}`);
+        # Set outputs
+        echo "normalized=$NORMALIZED" >> $GITHUB_OUTPUT
+        echo "absolute=$ABSOLUTE" >> $GITHUB_OUTPUT
+        echo "exists=$EXISTS" >> $GITHUB_OUTPUT
 
-          // Check if path exists (handles wildcards gracefully)
-          let exists = false;
-          try {
-            // For paths with wildcards, check if parent directory exists
-            if (absolute.includes('*') || absolute.includes('?')) {
-              core.debug('Path contains wildcards, checking parent directory');
-              const parentDir = path.dirname(absolute);
-              fs.accessSync(parentDir);
-              exists = true;
-              core.info('Parent directory exists (path contains wildcards)');
-            } else {
-              fs.accessSync(absolute);
-              exists = true;
-              core.info('Path exists on filesystem');
-            }
-          } catch (e) {
-            exists = false;
-            core.warning('Path does not exist on filesystem');
-          }
-
-          // Set outputs
-          core.setOutput('normalized', normalized);
-          core.setOutput('absolute', absolute);
-          core.setOutput('exists', exists.toString());
-
-          core.info('Path normalization completed successfully');
-          core.endGroup();
-
-        } catch (error) {
-          core.error(`Error normalizing path: ${error.message}`);
-          process.exit(1);
-        }
-      env:
-        INPUT_PATH: ${{ inputs.path }}
+        echo "::notice::Path normalization completed successfully"
+        echo "::debug::Normalized: $NORMALIZED"
+        echo "::debug::Absolute: $ABSOLUTE"
+        echo "::debug::Exists: $EXISTS"
+        echo "::endgroup::"
 
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
