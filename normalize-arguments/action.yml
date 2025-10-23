@@ -46,12 +46,11 @@ runs:
         echo "::group::🚀 Normalizing Arguments"
         echo "::debug::Starting argument normalization process"
 
-        # Get the input arguments and separator
-        ARGS="${{ inputs.arguments }}"
+        # Get the input arguments and separator using environment variables to avoid quote issues
         SEPARATOR="${{ inputs.separator }}"
 
         # Handle empty arguments case
-        if [ -z "$ARGS" ]; then
+        if [ -z "$INPUT_ARGUMENTS" ]; then
           echo "::debug::Empty arguments provided, returning empty result"
           echo "normalized-arguments=" >> $GITHUB_OUTPUT
           echo "::notice::Argument normalization completed (empty input)"
@@ -61,7 +60,7 @@ runs:
 
         # Simple approach: replace all newlines with spaces, then clean up
         # Use printf to avoid echo adding trailing newline
-        NORMALIZED_ARGS=$(printf '%s' "$ARGS" | tr '\n' ' ' | tr -s ' ' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+        NORMALIZED_ARGS=$(printf '%s' "$INPUT_ARGUMENTS" | tr '\n' ' ' | tr -s ' ' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
 
         # If a custom separator is specified (not space), replace spaces with the separator
         if [ "$SEPARATOR" != " " ]; then
@@ -80,6 +79,8 @@ runs:
         echo "::notice::Argument normalization completed successfully"
         echo "::debug::Normalized arguments: $NORMALIZED_ARGS"
         echo "::endgroup::"
+      env:
+        INPUT_ARGUMENTS: ${{ inputs.arguments }}
 
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
