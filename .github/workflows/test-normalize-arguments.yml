@@ -51,8 +51,9 @@ jobs:
 
       - name: 'Verify multi-line'
         shell: bash
+        env:
+          RESULT: ${{ steps.test2.outputs.normalized-arguments }}
         run: |
-          RESULT="${{ steps.test2.outputs.normalized-arguments }}"
           echo "Result: '$RESULT'"
           [[ "$RESULT" == '--env "NODE_ENV=prod" --port "3000"' ]] || exit 1
 
