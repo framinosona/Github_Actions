@@ -59,16 +59,23 @@ runs:
           exit 0
         fi
 
-        # Simple approach: replace all newlines with the separator, then clean up extra spaces
-        NORMALIZED_ARGS=$(echo "$ARGS" | tr '\n' ' ' | tr -s ' ' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+        # Simple approach: replace all newlines with spaces, then clean up
+        # Use printf to avoid echo adding trailing newline
+        NORMALIZED_ARGS=$(printf '%s' "$ARGS" | tr '\n' ' ' | tr -s ' ' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
 
         # If a custom separator is specified (not space), replace spaces with the separator
         if [ "$SEPARATOR" != " " ]; then
-          NORMALIZED_ARGS=$(echo "$NORMALIZED_ARGS" | sed "s/ /$SEPARATOR/g")
+          NORMALIZED_ARGS=$(printf '%s' "$NORMALIZED_ARGS" | sed "s/ /$SEPARATOR/g")
         fi
 
-        # Set outputs
-        printf 'normalized-arguments=%s\n' "$NORMALIZED_ARGS" >> "$GITHUB_OUTPUT"
+        # Set outputs - use delimiter to handle any special characters safely
+        delimiter="$(openssl rand -hex 16)"
+        {
+          echo "normalized-arguments<<${delimiter}"
+          printf '%s' "$NORMALIZED_ARGS"
+          echo ""
+          echo "${delimiter}"
+        } >> "$GITHUB_OUTPUT"
 
         echo "::notice::Argument normalization completed successfully"
         echo "::debug::Normalized arguments: $NORMALIZED_ARGS"
