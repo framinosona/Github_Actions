@@ -99,16 +99,44 @@ outputs:
 runs:
   using: "composite"
   steps:
+    # ================== ℹ️ ==================
+    - name: "ℹ️ Gather environment information"
+      shell: bash
+      run: |
+        echo "::group::ℹ️ Environment Information"
+        echo "::debug::Operating System: $(uname -a)"
+        echo "::debug::GitHub Runner OS: $RUNNER_OS"
+        echo "::debug::GitHub Runner Version: $RUNNER_VERSION"
+        echo "::debug::GitHub CLI Version: $(gh --version || echo 'Not installed')"
+        echo "::debug::jq Version: $(jq --version || echo 'Not installed')"
+        echo "::debug::Git Version: $(git --version || echo 'Not installed')"
+        echo "::endgroup::"
+
+    # ================== 🔒 ==================
 
     - name: "🔒 Mask sensitive data"
       shell: bash
       run: |
-        # Mask sensitive data FIRST
         if [ -n "${{ inputs.github-token }}" ]; then
           echo "::add-mask::${{ inputs.github-token }}"
         fi
 
         echo "::debug::Masked sensitive inputs"
+
+    # ================== 📁 ==================
+    - name: "📁 Normalize notes-file path"
+      id: normalize-notes-file
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.notes-file }}
+
+    - name: "📁 Normalize assets paths"
+      id: normalize-assets
+      uses: framinosona/github_actions/normalize-arguments@main
+      with:
+        arguments: ${{ inputs.assets }}
+
+    # ================== ✅ ==================
 
     - name: "✅ Validate input : booleans"
       shell: bash
@@ -150,10 +178,10 @@ runs:
       if: ${{ inputs.notes-file != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating notes-file input: ${{ inputs.notes-file }}"
+        echo "::debug::Validating notes-file input: ${{ steps.normalize-notes-file.outputs.normalized }}"
 
-        if [ ! -f "${{ inputs.notes-file }}" ]; then
-          echo "::error file=${{ inputs.notes-file }}::Notes file not found: ${{ inputs.notes-file }}"
+        if [ ! -f "${{ steps.normalize-notes-file.outputs.normalized }}" ]; then
+          echo "::error file=${{ steps.normalize-notes-file.outputs.normalized }}::Notes file not found: ${{ steps.normalize-notes-file.outputs.normalized }}"
           exit 1
         fi
 
@@ -237,6 +265,7 @@ runs:
           exit 1
         fi
 
+    # ================== 🏗️ ==================
     - name: "🏗️ Build argument list"
       id: build-args
       shell: bash
@@ -253,11 +282,14 @@ runs:
 
         # Add asset files if provided
         if [ -n "${{ inputs.assets }}" ]; then
-          while IFS= read -r asset_file; do
-            # Skip empty lines
-            [ -z "$asset_file" ] && continue
-            ARGUMENTS="$ARGUMENTS '$asset_file'"
-          done <<< "${{ inputs.assets }}"
+          NORMALIZED_ASSETS="${{ steps.normalize-assets.outputs.normalized }}"
+          if [ -n "$NORMALIZED_ASSETS" ]; then
+            while IFS= read -r asset_file; do
+              # Skip empty lines
+              [ -z "$asset_file" ] && continue
+              ARGUMENTS="$ARGUMENTS '$asset_file'"
+            done <<< "$NORMALIZED_ASSETS"
+          fi
         fi
 
         # Add repository if provided
@@ -274,7 +306,7 @@ runs:
         if [ -n "${{ inputs.notes }}" ]; then
           ARGUMENTS="$ARGUMENTS --notes '${{ inputs.notes }}'"
         elif [ -n "${{ inputs.notes-file }}" ]; then
-          ARGUMENTS="$ARGUMENTS --notes-file '${{ inputs.notes-file }}'"
+          ARGUMENTS="$ARGUMENTS --notes-file '${{ steps.normalize-notes-file.outputs.normalized }}'"
         elif [ "${{ inputs.notes-from-tag }}" = "true" ]; then
           ARGUMENTS="$ARGUMENTS --notes-from-tag"
         elif [ "${{ inputs.generate-notes }}" = "true" ]; then
@@ -323,6 +355,7 @@ runs:
         echo "::debug::Argument list built successfully: $ARGUMENTS"
         echo "✅ Argument list built successfully"
 
+    # ================== 🚀 ==================
     - name: "🚀 Execute GitHub release creation"
       id: execute
       shell: bash
@@ -423,6 +456,7 @@ runs:
           echo "::warning::No release tag available for verification"
         fi
 
+    # ================== 📊 ==================
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash
