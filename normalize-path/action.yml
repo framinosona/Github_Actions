@@ -4,8 +4,9 @@ author: 'Francois Raminosona'
 
 inputs:
   path:
-    description: 'Path to normalize (can be relative or absolute)'
-    required: true
+    description: 'Path to normalize (can be relative or absolute, can be empty)'
+    required: false
+    default: ''
   show-summary:
     description: 'Whether to show the action summary'
     required: false
@@ -46,27 +47,26 @@ runs:
         echo "::group::🔍 Input Validation"
         echo "::debug::Validating inputs for path normalization"
 
-        # Validate required parameters
+        # Handle empty path - this is now allowed
         if [ -z "${{ inputs.path }}" ]; then
-          echo "::error::Path parameter cannot be empty"
-          exit 1
-        fi
+          echo "::debug::Path parameter is empty - will return empty results"
+        else
+          # Check for potentially dangerous paths
+          if [[ "${{ inputs.path }}" == *".."* ]]; then
+            echo "::warning::Path contains parent directory references (..), ensure this is intentional"
+          fi
 
-        # Check for potentially dangerous paths
-        if [[ "${{ inputs.path }}" == *".."* ]]; then
-          echo "::warning::Path contains parent directory references (..), ensure this is intentional"
-        fi
-
-        # Check for reserved characters on Windows
-        if [[ "${{ runner.os }}" == "Windows" ]]; then
-          INPUT_PATH="${{ inputs.path }}"
-          if [[ "$INPUT_PATH" == *"<"* ]] || [[ "$INPUT_PATH" == *">"* ]] || [[ "$INPUT_PATH" == *":"* ]] || [[ "$INPUT_PATH" == *"\""* ]] || [[ "$INPUT_PATH" == *"|"* ]] || [[ "$INPUT_PATH" == *"?"* ]] || [[ "$INPUT_PATH" == *"*"* ]]; then
-            echo "::warning::Path contains characters that may be invalid on Windows"
+          # Check for reserved characters on Windows
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            INPUT_PATH="${{ inputs.path }}"
+            if [[ "$INPUT_PATH" == *"<"* ]] || [[ "$INPUT_PATH" == *">"* ]] || [[ "$INPUT_PATH" == *":"* ]] || [[ "$INPUT_PATH" == *"\""* ]] || [[ "$INPUT_PATH" == *"|"* ]] || [[ "$INPUT_PATH" == *"?"* ]] || [[ "$INPUT_PATH" == *"*"* ]]; then
+              echo "::warning::Path contains characters that may be invalid on Windows"
+            fi
           fi
         fi
 
         echo "::notice::Input validation completed successfully"
-        echo "::debug::Path to normalize: ${{ inputs.path }}"
+        echo "::debug::Path to normalize: '${{ inputs.path }}'"
         echo "::endgroup::"
 
     # ================== 🚀 ==================
@@ -76,9 +76,24 @@ runs:
       shell: bash
       run: |
         echo "::group::🚀 Normalizing path"
-        echo "::debug::Processing path normalization for: ${{ inputs.path }}"
+        echo "::debug::Processing path normalization for: '${{ inputs.path }}'"
 
         INPUT_PATH="${{ inputs.path }}"
+
+        # Handle empty path - return empty results
+        if [ -z "$INPUT_PATH" ]; then
+          echo "::debug::Input path is empty, returning empty results"
+          echo "normalized=" >> $GITHUB_OUTPUT
+          echo "absolute=" >> $GITHUB_OUTPUT
+          echo "exists=false" >> $GITHUB_OUTPUT
+
+          echo "::notice::Path normalization completed (empty path handled)"
+          echo "::debug::Normalized: (empty)"
+          echo "::debug::Absolute: (empty)"
+          echo "::debug::Exists: false"
+          echo "::endgroup::"
+          exit 0
+        fi
 
         # Convert path separators based on OS
         if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" || "$OSTYPE" == "cygwin" ]]; then
@@ -135,7 +150,34 @@ runs:
       run: |
         echo "::group::🔍 Verifying Normalization Results"
 
-        # Verify that normalized output was generated
+        # Handle empty path case - outputs should all be empty/false
+        if [ -z "${{ inputs.path }}" ]; then
+          echo "::debug::Verifying empty path results"
+
+          # Verify empty normalized output
+          if [ -n "${{ steps.normalize-path.outputs.normalized }}" ]; then
+            echo "::error::Expected empty normalized path for empty input, got: '${{ steps.normalize-path.outputs.normalized }}'"
+            exit 1
+          fi
+
+          # Verify empty absolute output
+          if [ -n "${{ steps.normalize-path.outputs.absolute }}" ]; then
+            echo "::error::Expected empty absolute path for empty input, got: '${{ steps.normalize-path.outputs.absolute }}'"
+            exit 1
+          fi
+
+          # Verify exists is false
+          if [ "${{ steps.normalize-path.outputs.exists }}" != "false" ]; then
+            echo "::error::Expected exists=false for empty input, got: '${{ steps.normalize-path.outputs.exists }}'"
+            exit 1
+          fi
+
+          echo "::notice::Empty path normalization verification completed successfully"
+          echo "::endgroup::"
+          exit 0
+        fi
+
+        # Verify that normalized output was generated (for non-empty paths)
         if [ -z "${{ steps.normalize-path.outputs.normalized }}" ]; then
           echo "::error::Normalization failed - no normalized path generated"
           exit 1
