@@ -361,7 +361,7 @@ runs:
           echo "has-components=false" >> $GITHUB_OUTPUT
         fi
 
-        echo "::notice::SBOM generation verification completed"
+        echo "::debug::SBOM generation verification completed"
 
     # ================== �📊 ==================
     - name: "📊 Action Summary"

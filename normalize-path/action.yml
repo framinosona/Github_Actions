@@ -65,7 +65,7 @@ runs:
           fi
         fi
 
-        echo "::notice::Input validation completed successfully"
+        echo "::debug::Input validation completed successfully"
         echo "::debug::Path to normalize: '${{ inputs.path }}'"
         echo "::endgroup::"
 
@@ -87,7 +87,7 @@ runs:
           echo "absolute=" >> $GITHUB_OUTPUT
           echo "exists=false" >> $GITHUB_OUTPUT
 
-          echo "::notice::Path normalization completed (empty path handled)"
+          echo "::debug::Path normalization completed (empty path handled)"
           echo "::debug::Normalized: (empty)"
           echo "::debug::Absolute: (empty)"
           echo "::debug::Exists: false"
@@ -137,7 +137,7 @@ runs:
         echo "absolute=$ABSOLUTE" >> $GITHUB_OUTPUT
         echo "exists=$EXISTS" >> $GITHUB_OUTPUT
 
-        echo "::notice::Path normalization completed successfully"
+        echo "::debug::Path normalization completed successfully"
         echo "::debug::Normalized: $NORMALIZED"
         echo "::debug::Absolute: $ABSOLUTE"
         echo "::debug::Exists: $EXISTS"
@@ -172,7 +172,7 @@ runs:
             exit 1
           fi
 
-          echo "::notice::Empty path normalization verification completed successfully"
+          echo "::debug::Empty path normalization verification completed successfully"
           echo "::endgroup::"
           exit 0
         fi
@@ -196,7 +196,7 @@ runs:
           exit 1
         fi
 
-        echo "::notice::Path normalization verification completed successfully"
+        echo "::debug::Path normalization verification completed successfully"
         echo "::debug::Verified normalized path: ${{ steps.normalize-path.outputs.normalized }}"
         echo "::debug::Verified absolute path: ${{ steps.normalize-path.outputs.absolute }}"
         echo "::debug::Verified exists status: ${{ steps.normalize-path.outputs.exists }}"

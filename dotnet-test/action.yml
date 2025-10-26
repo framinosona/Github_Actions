@@ -502,7 +502,7 @@ runs:
         # Report final status
         EXIT_CODE="${{ steps.run-dotnet.outputs.exit-code }}"
         if [ "$EXIT_CODE" = "0" ]; then
-          echo "::notice::✅ .NET tests completed successfully"
+          echo "::debug::✅ .NET tests completed successfully"
         else
           echo "::warning::⚠️ .NET tests completed with exit code $EXIT_CODE (may indicate test failures)"
         fi

@@ -65,7 +65,7 @@ runs:
           *) echo "::error::show-summary must be 'true' or 'false'"; exit 1 ;;
         esac
 
-        echo "::notice::Input validation completed successfully"
+        echo "::debug::Input validation completed successfully"
         echo "::endgroup::"
 
     # ================== 🚀 ==================
@@ -84,7 +84,7 @@ runs:
         if [ -z "$INPUT_ARGUMENTS" ]; then
           echo "::debug::Empty arguments provided, returning empty result"
           echo "normalized=" >> $GITHUB_OUTPUT
-          echo "::notice::Argument normalization completed (empty input)"
+          echo "::debug::Argument normalization completed (empty input)"
           echo "::endgroup::"
           exit 0
         fi
@@ -107,7 +107,7 @@ runs:
           echo "${delimiter}"
         } >> "$GITHUB_OUTPUT"
 
-        echo "::notice::Argument normalization completed successfully"
+        echo "::debug::Argument normalization completed successfully"
         echo "::debug::Normalized arguments: $NORMALIZED_ARGS"
         echo "::endgroup::"
       env:
@@ -123,7 +123,7 @@ runs:
         if [ -z "${{ steps.normalize.outputs.normalized }}" ]; then
           echo "::warning::Normalization resulted in empty output"
         else
-          echo "::notice::Normalization completed with valid output"
+          echo "::debug::Normalization completed with valid output"
           echo "::debug::Output length: $(printf '%s' '${{ steps.normalize.outputs.normalized }}' | wc -c)"
         fi
 

@@ -220,7 +220,7 @@ runs:
           echo "upload-success=false" >> $GITHUB_OUTPUT
         fi
 
-        echo "::notice::Package upload verification completed"
+        echo "::debug::Package upload verification completed"
 
     # ================== �📊 ==================
     - name: "📊 Action Summary"

@@ -468,7 +468,7 @@ runs:
           echo "output-file-size=0" >> $GITHUB_OUTPUT
         fi
 
-        echo "::notice::Badge generation verification completed"
+        echo "::debug::Badge generation verification completed"
 
     # ================== �📊 ==================
     - name: "📊 Action Summary"
