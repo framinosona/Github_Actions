@@ -97,10 +97,74 @@ outputs:
   executed-command:
     description: "The actual command that was executed"
     value: ${{ steps.run-dotnet.outputs.executed-command }}
+  tool-installed:
+    description: "Whether the tool was successfully installed"
+    value: ${{ steps.check-installed.outputs.has-been-installed }}
 
 runs:
   using: "composite"
   steps:
+    # ================== ℹ️ ==================
+    - name: "ℹ️ Gather environment information"
+      shell: bash
+      run: |
+        echo "::group::ℹ️ Environment Information"
+        echo "::debug::Operating System: $(uname -a)"
+        echo "::debug::GitHub Runner OS: $RUNNER_OS"
+        echo "::debug::GitHub Runner Version: $RUNNER_VERSION"
+        echo "::debug::.NET SDK Version: $(dotnet --version || echo 'Not installed')"
+        echo "::endgroup::"
+
+    # ================== 🔒 ==================
+    - name: "🔒 Mask sensitive data"
+      shell: bash
+      run: |
+        # No sensitive inputs to mask in this action
+        echo "✅ No sensitive data to mask"
+
+    # ================== 📁 ==================
+    - name: "💯 Normalize arguments"
+      id: normalize-arguments
+      uses: framinosona/github_actions/normalize-arguments@main
+      with:
+        arguments: ${{ inputs.arguments }}
+
+    - name: "📁 Normalize working-directory"
+      id: normalize-working-directory
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.working-directory }}
+
+    - name: "📁 Normalize tool-path"
+      id: normalize-tool-path
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.tool-path }}
+
+    - name: "📁 Normalize configfile"
+      id: normalize-configfile
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.configfile }}
+
+    - name: "📁 Normalize tool-manifest"
+      id: normalize-tool-manifest
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.tool-manifest }}
+
+    # ================== ✅ ==================
+    - name: "✅ Validate input : tool-name"
+      shell: bash
+      run: |
+        echo "::debug::Validating tool name input: ${{ inputs.tool-name }}"
+
+        if [ -z "${{ inputs.tool-name }}" ]; then
+          echo "::error::Tool name is required"
+          exit 1
+        fi
+
+        echo "✅ Tool name validation completed successfully"
 
     - name: "✅ Validate input : booleans"
       shell: bash
@@ -125,18 +189,6 @@ runs:
 
         echo "✅ Boolean inputs validation completed successfully"
 
-    - name: "✅ Validate input : tool-name"
-      shell: bash
-      run: |
-        echo "::debug::Validating tool name input: ${{ inputs.tool-name }}"
-
-        if [ -z "${{ inputs.tool-name }}" ]; then
-          echo "::error::Tool name is required"
-          exit 1
-        fi
-
-        echo "✅ Tool name validation completed successfully"
-
     - name: "✅ Validate input : version"
       if: ${{ inputs.version != '' }}
       shell: bash
@@ -154,10 +206,10 @@ runs:
       if: ${{ inputs.configfile != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating configfile input: ${{ inputs.configfile }}"
+        echo "::debug::Validating configfile input: ${{ steps.normalize-configfile.outputs.normalized }}"
 
-        if [ ! -f "${{ inputs.configfile }}" ]; then
-          echo "::error file=${{ inputs.configfile }}::Configuration file not found: ${{ inputs.configfile }}"
+        if [ "${{ steps.normalize-configfile.outputs.exists }}" != "true" ]; then
+          echo "::error file=${{ steps.normalize-configfile.outputs.normalized }}::Configuration file not found: ${{ steps.normalize-configfile.outputs.normalized }}"
           exit 1
         fi
 
@@ -167,10 +219,10 @@ runs:
       if: ${{ inputs.tool-path != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating tool-path input: ${{ inputs.tool-path }}"
+        echo "::debug::Validating tool-path input: ${{ steps.normalize-tool-path.outputs.normalized }}"
 
         # Check if parent directory exists (tool-path directory will be created if needed)
-        PARENT_DIR=$(dirname "${{ inputs.tool-path }}")
+        PARENT_DIR=$(dirname "${{ steps.normalize-tool-path.outputs.normalized }}")
         if [ ! -d "$PARENT_DIR" ]; then
           echo "::error::Parent directory for tool path does not exist: $PARENT_DIR"
           exit 1
@@ -204,6 +256,7 @@ runs:
 
         echo "✅ Source validation completed successfully"
 
+    # ================== 🏗️ ==================
     - name: "🏗️ Build argument list"
       id: build-args
       shell: bash
@@ -237,21 +290,28 @@ runs:
           fi
         fi
 
-        # Key-value options
-        for param in version tool-path add-source source configfile tool-manifest framework; do
+        # Key-value options with normalized paths
+        for param in version tool-path add-source source configfile tool-manifest; do
           case $param in
             version) value="${{ inputs.version }}" ;;
-            tool-path) value="${{ inputs.tool-path }}" ;;
+            tool-path) value="${{ steps.normalize-tool-path.outputs.normalized }}" ;;
             add-source) value="${{ inputs.add-source }}" ;;
             source) value="${{ inputs.source }}" ;;
-            configfile) value="${{ inputs.configfile }}" ;;
-            tool-manifest) value="${{ inputs.tool-manifest }}" ;;
-            framework) value="${{ inputs.framework }}" ;;
+            configfile) value="${{ steps.normalize-configfile.outputs.normalized }}" ;;
+            tool-manifest) value="${{ steps.normalize-tool-manifest.outputs.normalized }}" ;;
           esac
           if [ -n "$value" ]; then
             ARGUMENTS="$ARGUMENTS --$param '$value'"
           fi
         done
+
+        # Add normalized arguments
+        if [ -n "${{ steps.normalize-arguments.outputs.normalized }}" ]; then
+          NORMALIZED_ARGS="${{ steps.normalize-arguments.outputs.normalized }}"
+          echo "::debug::Original arguments: ${{ inputs.arguments }}"
+          echo "::debug::Normalized arguments: $NORMALIZED_ARGS"
+          ARGUMENTS="$ARGUMENTS $NORMALIZED_ARGS"
+        fi
 
         # Trim leading space
         ARGUMENTS="${ARGUMENTS# }"
@@ -259,22 +319,24 @@ runs:
         echo "arguments=$ARGUMENTS" >> $GITHUB_OUTPUT
         echo "✅ Argument list built successfully: $ARGUMENTS"
 
+    # ================== 🚀 ==================
     - name: "🔧 Install .NET tool"
       id: run-dotnet
       uses: "framinosona/github_actions/dotnet@main"
       with:
         command: "tool"
-        working-directory: ${{ inputs.working-directory }}
+        working-directory: ${{ steps.normalize-working-directory.outputs.normalized }}
         framework: ${{ inputs.framework }}
         verbosity: ${{ inputs.verbosity }}
         arch: ${{ inputs.arch }}
         arguments: ${{ steps.build-args.outputs.arguments }}
         show-summary: ${{ inputs.show-summary }}
 
-    - name: "✅ Check if tool is now installed"
+    # ================== 🔍 ==================
+    - name: "🔍 Verify tool installation"
       id: check-installed
       shell: bash
-      working-directory: ${{ inputs.working-directory }}
+      working-directory: ${{ steps.normalize-working-directory.outputs.normalized }}
       run: |
         echo "::debug::Verifying installation of tool '${{ inputs.tool-name }}'..."
 
@@ -298,8 +360,9 @@ runs:
           fi
         fi
 
-        echo "✅ Tool '${{ inputs.tool-name }}' installed successfully"
+        echo "✅ Tool '${{ inputs.tool-name }}' installation verification completed"
 
+    # ================== 📊 ==================
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash
@@ -310,15 +373,20 @@ runs:
         ## 🔧 Input Parameters
         | Parameter | Value |
         |-----------|-------|
-        | 🔧 Tool Name | `${{ inputs.tool-name }}` |
+        | � Working Directory | `${{ steps.normalize-working-directory.outputs.normalized }}` |
+        | ⚙️ Framework | `${{ inputs.framework || 'none' }}` |
+        | 🔊 Verbosity | `${{ inputs.verbosity || 'auto' }}` |
+        | 🏗️ Architecture | `${{ inputs.arch || 'none' }}` |
+        | 🔧 Arguments | `${{ steps.normalize-arguments.outputs.normalized || 'none' }}` |
+        | �🔧 Tool Name | `${{ inputs.tool-name }}` |
         | 📦 Tool Version | `${{ inputs.version || 'latest' }}` |
         | 🌍 Global Install | `${{ inputs.global }}` |
         | 🧪 Include Prerelease | `${{ inputs.prerelease }}` |
-        | 🛤️ Tool Path | `${{ inputs.tool-path || 'default' }}` |
+        | 🛤️ Tool Path | `${{ steps.normalize-tool-path.outputs.normalized || 'default' }}` |
         | 🔗 Additional Source | `${{ inputs.add-source || 'none' }}` |
         | 🔄 Replace Sources | `${{ inputs.source || 'none' }}` |
-        | ⚙️ Config File | `${{ inputs.configfile || 'default' }}` |
-        | 📄 Tool Manifest | `${{ inputs.tool-manifest || 'default' }}` |
+        | ⚙️ Config File | `${{ steps.normalize-configfile.outputs.normalized || 'default' }}` |
+        | 📄 Tool Manifest | `${{ steps.normalize-tool-manifest.outputs.normalized || 'default' }}` |
         | 📊 Allow Downgrade | `${{ inputs.allow-downgrade }}` |
         | ➡️ Allow Roll Forward | `${{ inputs.allow-roll-forward }}` |
         | 🛠️ Disable Parallel Restore | `${{ inputs.disable-parallel }}` |
@@ -326,15 +394,21 @@ runs:
         | 🚫 No HTTP Cache | `${{ inputs.no-http-cache }}` |
         | 🆕 Create Manifest If Needed | `${{ inputs.create-manifest-if-needed }}` |
 
+        ## 📤 Execution Results
+        | Metric | Value |
+        |--------|-------|
+        | ✅ Exit Code | `${{ steps.run-dotnet.outputs.exit-code }}` |
+        | 📊 Status | `${{ steps.run-dotnet.outcome }}` |
+        | 🚀 Executed Command | `${{ steps.run-dotnet.outputs.executed-command }}` |
+        | 🔧 Tool Installed | `${{ steps.check-installed.outputs.has-been-installed }}` |
+
         ## ⚙️ Process Details
         | Step | Status |
         |------|--------|
-        | ✅ Exit Code | `${{ steps.run-dotnet.outputs.exit-code }}` |
+        | ✅ Input Validation | `✅ Completed` |
         | 🏗️ Argument Building | `${{ steps.build-args.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
-        | 🔄 Tool Restore | `${{ steps.restore-tools.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
-        | 📦 Installation | `${{ steps.install-tool.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
-        | 📊 Execution | `${{ steps.run-dotnet.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
-        | ✅ Verification | `${{ steps.check-installed.outputs.has-been-installed == 'true' && '✅ Installed' || '❌ Failed' }}` |
+        | � Tool Installation | `${{ steps.run-dotnet.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | � Installation Verification | `${{ steps.check-installed.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
         </details>
         EOF
 
