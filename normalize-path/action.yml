@@ -25,6 +25,21 @@ outputs:
 runs:
   using: "composite"
   steps:
+    # ================== ℹ️ ==================
+
+    - name: "ℹ️ Gather environment information"
+      shell: bash
+      run: |
+        echo "::group::ℹ️ Environment Information"
+        echo "::debug::Operating System: $(uname -a)"
+        echo "::debug::GitHub Runner OS: $RUNNER_OS"
+        echo "::debug::GitHub Runner Version: $RUNNER_VERSION"
+        echo "::debug::Shell: $SHELL"
+        echo "::debug::OS Type: $OSTYPE"
+        echo "::endgroup::"
+
+    # ================== ✅ ==================
+
     - name: "✅ Validate inputs"
       shell: bash
       run: |
@@ -53,6 +68,8 @@ runs:
         echo "::notice::Input validation completed successfully"
         echo "::debug::Path to normalize: ${{ inputs.path }}"
         echo "::endgroup::"
+
+    # ================== 🚀 ==================
 
     - name: "🔧 Normalize path"
       id: normalize-path
@@ -89,7 +106,7 @@ runs:
           else
             ABSOLUTE="$PWD/$NORMALIZED"
           fi
-          
+
           if [ -e "$NORMALIZED" ]; then
             EXISTS="true"
           else
@@ -111,7 +128,40 @@ runs:
         echo "::debug::Exists: $EXISTS"
         echo "::endgroup::"
 
-    - name: "📊 Action Summary"
+    # ================== 🔍 ===================
+
+    - name: "🔍 Verify normalization results"
+      shell: bash
+      run: |
+        echo "::group::🔍 Verifying Normalization Results"
+
+        # Verify that normalized output was generated
+        if [ -z "${{ steps.normalize-path.outputs.normalized }}" ]; then
+          echo "::error::Normalization failed - no normalized path generated"
+          exit 1
+        fi
+
+        # Verify that absolute path was generated
+        if [ -z "${{ steps.normalize-path.outputs.absolute }}" ]; then
+          echo "::error::Normalization failed - no absolute path generated"
+          exit 1
+        fi
+
+        # Verify exists output is boolean
+        EXISTS_VALUE="${{ steps.normalize-path.outputs.exists }}"
+        if [ "$EXISTS_VALUE" != "true" ] && [ "$EXISTS_VALUE" != "false" ]; then
+          echo "::error::Invalid exists value: $EXISTS_VALUE (should be true or false)"
+          exit 1
+        fi
+
+        echo "::notice::Path normalization verification completed successfully"
+        echo "::debug::Verified normalized path: ${{ steps.normalize-path.outputs.normalized }}"
+        echo "::debug::Verified absolute path: ${{ steps.normalize-path.outputs.absolute }}"
+        echo "::debug::Verified exists status: ${{ steps.normalize-path.outputs.exists }}"
+        echo "::endgroup::"
+
+    # ================== 🔍 ===================
+    - name: "🔍 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash
       run: |
