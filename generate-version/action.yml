@@ -733,14 +733,6 @@ runs:
             exit 1
           fi
         fi
-                exit 1
-              fi
-            fi
-          else
-            echo "::error file=${{ inputs.output-json }}::Output JSON file not created: ${{ inputs.output-json }}"
-            exit 1
-          fi
-        fi
 
         echo "✅ Version verification completed successfully"
 
