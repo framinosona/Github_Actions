@@ -64,16 +64,35 @@ runs:
   using: "composite"
   steps:
 
+    # ================== ℹ️ ==================
+    - name: "ℹ️ Gather environment information"
+      shell: bash
+      run: |
+        echo "::group::ℹ️ Environment Information"
+        echo "::debug::Operating System: $(uname -a)"
+        echo "::debug::GitHub Runner OS: $RUNNER_OS"
+        echo "::debug::GitHub Runner Version: $RUNNER_VERSION"
+        echo "::debug::.NET SDK Version: $(dotnet --version || echo 'Not installed')"
+        echo "::endgroup::"
+
+    # ================== 🔒 ==================
     - name: "🔒 Mask sensitive data"
       shell: bash
       run: |
-        # Mask sensitive data FIRST
         if [ -n "${{ inputs.password }}" ]; then
           echo "::add-mask::${{ inputs.password }}"
         fi
 
         echo "✅ Masked sensitive inputs"
 
+    # ================== 📁 ==================
+    - name: "📁 Normalize configfile path"
+      id: normalize-configfile
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.configfile }}
+
+    # ================== ✅ ==================
     - name: "✅ Validate input : store-password-in-clear-text"
       id: validate-store-password-in-clear-text
       shell: bash
@@ -158,10 +177,10 @@ runs:
       if: ${{ inputs.configfile != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating configfile input: ${{ inputs.configfile }}"
+        echo "::debug::Validating configfile input: ${{ steps.normalize-configfile.outputs.normalized }}"
 
-        if [ ! -f "${{ inputs.configfile }}" ]; then
-          echo "::error file=${{ inputs.configfile }}::NuGet configuration file not found: ${{ inputs.configfile }}"
+        if [ ! -f "${{ steps.normalize-configfile.outputs.normalized }}" ]; then
+          echo "::error file=${{ steps.normalize-configfile.outputs.normalized }}::NuGet configuration file not found: ${{ steps.normalize-configfile.outputs.normalized }}"
           exit 1
         fi
 
@@ -199,6 +218,7 @@ runs:
 
         echo "✅ Valid authentication types validation completed successfully"
 
+    # ================== 🏗️ ==================
     - name: "🏗️ Build argument list"
       id: build-args
       shell: bash
@@ -225,7 +245,7 @@ runs:
             username) value="${{ inputs.username }}" ;;
             password) value="${{ inputs.password }}" ;;
             valid-authentication-types) value="${{ inputs.valid-authentication-types }}" ;;
-            configfile) value="${{ inputs.configfile }}" ;;
+            configfile) value="${{ steps.normalize-configfile.outputs.normalized }}" ;;
             protocol-version) value="${{ inputs.protocol-version }}" ;;
           esac
           if [ -n "$value" ]; then
@@ -239,6 +259,7 @@ runs:
         echo "arguments=$ARGUMENTS" >> $GITHUB_OUTPUT
         echo "::debug::Argument list built successfully: $ARGUMENTS"
 
+    # ================== 🚀 ==================
     - name: "🔄 Execute NuGet source setup"
       id: run-dotnet
       uses: "framinosona/github_actions/dotnet@main"
@@ -249,6 +270,7 @@ runs:
         verbosity: ${{ inputs.verbosity }}
         show-summary: ${{ inputs.show-summary }}
 
+    # ================== 🔍 ==================
     - name: "🔍 Verify source was added"
       id: verify-source
       shell: bash
@@ -259,8 +281,8 @@ runs:
         SOURCE_ADDED="false"
 
         # List all sources and check if our source was added
-        if [ -n "${{ inputs.configfile }}" ]; then
-          SOURCES_OUTPUT=$(dotnet nuget list source --configfile "${{ inputs.configfile }}" 2>/dev/null || echo "")
+        if [ -n "${{ steps.normalize-configfile.outputs.normalized }}" ]; then
+          SOURCES_OUTPUT=$(dotnet nuget list source --configfile "${{ steps.normalize-configfile.outputs.normalized }}" 2>/dev/null || echo "")
         else
           SOURCES_OUTPUT=$(dotnet nuget list source 2>/dev/null || echo "")
         fi
@@ -278,6 +300,7 @@ runs:
 
         echo "source-added=$SOURCE_ADDED" >> $GITHUB_OUTPUT
 
+    # ================== 📊 ==================
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash
@@ -294,7 +317,7 @@ runs:
         | 🔑 Password | `${{ inputs.password != '' && '***configured***' || 'not provided' }}` |
         | 🔐 Store Password in Clear Text | `${{ inputs.store-password-in-clear-text }}` |
         | 🔐 Valid Auth Types | `${{ inputs.valid-authentication-types || 'default' }}` |
-        | ⚙️ Config File | `${{ inputs.configfile || 'default' }}` |
+        | ⚙️ Config File | `${{ steps.normalize-configfile.outputs.normalized || 'default' }}` |
         | 📜 Protocol Version | `${{ inputs.protocol-version || 'default' }}` |
 
         ## ⚙️ Process Details
