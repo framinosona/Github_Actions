@@ -295,7 +295,7 @@ runs:
         ARGUMENTS="${{ inputs.command }}"
 
         if [ -n "${{ inputs.path }}" ]; then
-          ARGUMENTS="$ARGUMENTS ${{ steps.normalize-path.outputs.normalized }}"
+          ARGUMENTS="$ARGUMENTS '${{ steps.normalize-path.outputs.normalized }}'"
         fi
 
         # Add normalized arguments
