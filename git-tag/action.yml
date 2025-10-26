@@ -74,15 +74,38 @@ outputs:
 runs:
   using: "composite"
   steps:
+    # ================== ℹ️ ==================
+    - name: "ℹ️ Gather environment information"
+      shell: bash
+      run: |
+        echo "::group::ℹ️ Environment Information"
+        echo "::debug::Operating System: $(uname -a)"
+        echo "::debug::GitHub Runner OS: $RUNNER_OS"
+        echo "::debug::GitHub Runner Version: $RUNNER_VERSION"
+        echo "::debug::Git Version: $(git --version || echo 'Not installed')"
+        echo "::debug::Current Git Repository: $(git remote get-url origin 2>/dev/null || echo 'Not a git repository')"
+        echo "::debug::Current Branch: $(git branch --show-current 2>/dev/null || echo 'Unknown')"
+        echo "::endgroup::"
+
+    # ================== 🔒 ==================
+
     - name: "🔒 Mask sensitive data"
       shell: bash
       run: |
-        # Mask sensitive data FIRST
         if [ -n "${{ inputs.github-token }}" ]; then
           echo "::add-mask::${{ inputs.github-token }}"
         fi
 
         echo "::debug::Masked sensitive inputs"
+
+    # ================== 📁 ==================
+    - name: "📁 Normalize paths"
+      shell: bash
+      run: |
+        # No file paths to normalize in this action
+        echo "✅ No file paths to normalize"
+
+    # ================== ✅ ==================
 
     - name: "✅ Validate input : required parameters"
       shell: bash
@@ -228,6 +251,9 @@ runs:
 
         echo "✅ GitHub token validation completed successfully"
 
+    # ================== 🏗️ ==================
+    # ================== 🚀 ==================
+
     - name: "🔧 Configure Git"
       shell: bash
       run: |
@@ -372,6 +398,7 @@ runs:
 
         echo "✅ Git tag operation completed successfully"
 
+    # ================== 🔍 ==================
     - name: "🔍 Verify tag creation"
       id: verify
       shell: bash
@@ -417,6 +444,7 @@ runs:
 
         echo "✅ Tag verification completed successfully"
 
+    # ================== 📊 ==================
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash
