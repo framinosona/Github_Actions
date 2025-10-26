@@ -74,6 +74,21 @@ outputs:
 runs:
   using: "composite"
   steps:
+    # ================== ℹ️ ==================
+
+    - name: "ℹ️ Display environment info"
+      shell: bash
+      run: |
+        echo "::debug::Running on $(uname -s) $(uname -m)"
+        echo "::debug::Home directory: $HOME"
+        echo "::debug::Current directory: $PWD"
+        echo "::debug::Available certificates:"
+        security find-certificate -a 2>/dev/null | grep "labl" || echo "  No certificates found"
+        echo "::debug::Available provisioning profiles:"
+        ls "$HOME/Library/MobileDevice/Provisioning Profiles" 2>/dev/null || echo "  No provisioning profiles found"
+
+    # ================== 🔒 ==================
+
     - name: "🔒 Mask sensitive data"
       shell: bash
       run: |
@@ -92,6 +107,22 @@ runs:
         fi
 
         echo "::debug::Masked sensitive inputs"
+
+    # ================== 📁 ==================
+
+    - name: "📁 Normalize certificate-path"
+      id: normalize-certificate-path
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.certificate-path }}
+
+    - name: "📁 Normalize provisioning-profile-path"
+      id: normalize-provisioning-profile-path
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.provisioning-profile-path }}
+
+    # ================== ✅ ==================
 
     - name: "✅ Validate environment : macOS required"
       shell: bash
@@ -271,6 +302,9 @@ runs:
 
         echo "✅ Team ID validation completed successfully"
 
+    # ================== 🏗️ ==================
+    # ================== 🚀 ==================
+
     - name: "🍎 Install Apple certificate and provisioning profile"
       id: install
       shell: bash
@@ -419,7 +453,8 @@ runs:
 
         echo "✅ Apple certificate and provisioning profile installation completed successfully"
 
-    - name: "� Verify installation"
+    # ================== 🔍 ==================
+    - name: "🔍 Verify installation"
       id: verify
       shell: bash
       run: |
@@ -474,6 +509,7 @@ runs:
 
         echo "✅ Keychain cleanup completed successfully"
 
+    # ================== 📊 ==================
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash
@@ -507,13 +543,6 @@ runs:
         | 🍎 Certificate Installation | `${{ steps.install.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
         | 🔍 Installation Verification | `${{ steps.verify.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
         | 🧹 Keychain Cleanup | `${{ inputs.delete-keychain == 'true' && '✅ Completed' || '⏭️ Skipped' }}` |
-
-        ## 🛡️ Security Notes
-        - Temporary keychain created for secure certificate storage
-        - Certificate password handled securely through GitHub Secrets
-        - Keychain configured for codesign access if enabled
-        - Automatic cleanup performed if requested
-
         </details>
         EOF
 
