@@ -170,6 +170,7 @@ jobs:
       version-latest-tag: ${{ steps.version.outputs.VERSION_LATEST_TAG }}
 
     steps:
+
       - name: "📥 Checkout repository"
         uses: actions/checkout@v5
         with:

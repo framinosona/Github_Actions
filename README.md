@@ -34,12 +34,23 @@ A comprehensive collection of reusable GitHub Actions for .NET development, docu
 | Action | Description | Key Features |
 |--------|-------------|--------------|
 | [🛠️ dotnet-tool-install](./dotnet-tool-install/) | .NET tool management | Global tool installation, version control, caching |
+| [📦 dotnet-pack](./dotnet-pack/) | Package creation | NuGet package building, symbol support, artifact management |
+| [🧪 dotnet-test](./dotnet-test/) | Test execution | Comprehensive testing, coverage, filtering, reporting |
 | [📚 dotnet-docfx-build](./dotnet-docfx-build/) | Documentation generation | DocFX integration, theme support, metadata injection |
 | [📄 dotnet-docfx-metadata](./dotnet-docfx-metadata/) | API documentation | Metadata extraction, XML documentation |
 | [📖 dotnet-docfx-pdf](./dotnet-docfx-pdf/) | PDF generation | Documentation export to PDF |
 | [📦 dotnet-nuget-upload](./dotnet-nuget-upload/) | Package publishing | NuGet upload, feed management |
 | [🔧 dotnet-nuget-feed-setup](./dotnet-nuget-feed-setup/) | Feed configuration | Private feed setup, authentication |
 | [🔍 dotnet-cyclonedx](./dotnet-cyclonedx/) | SBOM generation | Software Bill of Materials creation |
+
+### Utility Actions
+
+| Action | Description | Key Features |
+|--------|-------------|--------------|
+| [🛠 normalize-arguments](./normalize-arguments/) | Argument normalization | Multi-line to single-line conversion, customizable separators |
+| [📁 normalize-path](./normalize-path/) | Path normalization | Cross-platform paths, existence checking, absolute resolution |
+| [🌳 debug-tree](./debug-tree/) | Directory tree display | Debug directory structure, configurable depth |
+| [📦 gh-sbom](./gh-sbom/) | GitHub SBOM generation | Repository SBOM creation, multiple formats |
 
 ### Specialized Actions
 
