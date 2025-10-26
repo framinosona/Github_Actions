@@ -18,7 +18,7 @@ Normalizes arguments passed as multi-line or single-line strings into a clean, p
 ```yaml
 - name: Normalize build arguments
   id: args
-  uses: ./normalize-arguments
+  uses: framinosona/github_actions/normalize-arguments@main
   with:
     arguments: |
       -p:Version_Props_Path=${{ github.workspace }}/${{ env.PROJECT_NAME }}.Output/Version/version.props
@@ -27,7 +27,7 @@ Normalizes arguments passed as multi-line or single-line strings into a clean, p
 
 - name: Build with normalized arguments
   run: |
-    dotnet build ${{ steps.args.outputs.normalized-arguments }}
+    dotnet build ${{ steps.args.outputs.normalized }}
 ```
 
 ### Advanced Usage with Custom Separator
@@ -35,7 +35,7 @@ Normalizes arguments passed as multi-line or single-line strings into a clean, p
 ```yaml
 - name: Normalize compiler flags
   id: flags
-  uses: ./normalize-arguments
+  uses: framinosona/github_actions/normalize-arguments@main
   with:
     arguments: >
       -Wall
@@ -47,7 +47,8 @@ Normalizes arguments passed as multi-line or single-line strings into a clean, p
 
 - name: Compile with flags
   run: |
-    g++ ${{ steps.flags.outputs.normalized-arguments }} main.cpp -o app
+    gcc ${{ steps.flags.outputs.normalized }} main.c
+    g++ ${{ steps.flags.outputs.normalized }} main.cpp -o app
 ```
 
 ### Single Argument Processing
@@ -55,13 +56,14 @@ Normalizes arguments passed as multi-line or single-line strings into a clean, p
 ```yaml
 - name: Normalize single argument
   id: single
-  uses: ./normalize-arguments
+  uses: framinosona/github_actions/normalize-arguments@main
   with:
     arguments: '--nologo'
 
 - name: Run command
   run: |
-    dotnet ${{ steps.single.outputs.normalized-arguments }} --version
+    myapp ${{ steps.single.outputs.normalized }}
+    dotnet ${{ steps.single.outputs.normalized }} --version
 ```
 
 ## Inputs
@@ -76,7 +78,7 @@ Normalizes arguments passed as multi-line or single-line strings into a clean, p
 
 | Output | Description | Example |
 |--------|-------------|---------|
-| `normalized-arguments` | The normalized arguments as a single string | `-p:Version=1.0.0 -p:Configuration=Release` |
+| `normalized` | The normalized arguments as a single string | `-p:Version=1.0.0 -p:Configuration=Release` |
 
 ## YAML Multi-line Format Examples
 
@@ -115,7 +117,7 @@ arguments: '--nologo --verbosity quiet'
 ```yaml
 - name: Setup build arguments
   id: build-args
-  uses: ./normalize-arguments
+  uses: framinosona/github_actions/normalize-arguments@main
   with:
     arguments: |
       -p:Version=${{ steps.version.outputs.version }}
@@ -127,7 +129,7 @@ arguments: '--nologo --verbosity quiet'
 
 - name: Build solution
   run: |
-    dotnet build MySolution.sln ${{ steps.build-args.outputs.normalized-arguments }}
+    dotnet build MySolution.sln ${{ steps.build-args.outputs.normalized }}
 ```
 
 ### Example 2: Docker Build Arguments
@@ -135,7 +137,7 @@ arguments: '--nologo --verbosity quiet'
 ```yaml
 - name: Normalize Docker build args
   id: docker-args
-  uses: ./normalize-arguments
+  uses: framinosona/github_actions/normalize-arguments@main
   with:
     arguments: |
       --build-arg VERSION=${{ github.ref_name }}
@@ -145,7 +147,7 @@ arguments: '--nologo --verbosity quiet'
 
 - name: Build Docker image
   run: |
-    docker build ${{ steps.docker-args.outputs.normalized-arguments }} .
+    docker build ${{ steps.docker-args.outputs.normalized }} .
 ```
 
 ### Example 3: Test Arguments with Custom Separator
@@ -153,7 +155,7 @@ arguments: '--nologo --verbosity quiet'
 ```yaml
 - name: Setup test arguments
   id: test-args
-  uses: ./normalize-arguments
+  uses: framinosona/github_actions/normalize-arguments@main
   with:
     arguments: |
       --logger:trx
@@ -164,7 +166,7 @@ arguments: '--nologo --verbosity quiet'
 
 - name: Run tests
   run: |
-    dotnet test ${{ steps.test-args.outputs.normalized-arguments }}
+    dotnet test ${{ steps.test-args.outputs.normalized }}
 ```
 
 ### Example 4: Conditional Argument Building
@@ -172,7 +174,7 @@ arguments: '--nologo --verbosity quiet'
 ```yaml
 - name: Base arguments
   id: base-args
-  uses: ./normalize-arguments
+  uses: framinosona/github_actions/normalize-arguments@main
   with:
     arguments: |
       --configuration Release
@@ -181,7 +183,7 @@ arguments: '--nologo --verbosity quiet'
 - name: Debug arguments (conditional)
   if: github.event_name == 'pull_request'
   id: debug-args
-  uses: ./normalize-arguments
+  uses: framinosona/github_actions/normalize-arguments@main
   with:
     arguments: |
       --verbosity detailed
@@ -189,8 +191,8 @@ arguments: '--nologo --verbosity quiet'
 
 - name: Build with conditional args
   run: |
-    ARGS="${{ steps.base-args.outputs.normalized-arguments }}"
-    ${{ github.event_name == 'pull_request' && format('ARGS="$ARGS {0}"', steps.debug-args.outputs.normalized-arguments) || '' }}
+    ARGS="${{ steps.base-args.outputs.normalized }}"
+    ${{ github.event_name == 'pull_request' && format('ARGS="$ARGS {0}"', steps.debug-args.outputs.normalized) || '' }}
     dotnet build $ARGS
 ```
 
@@ -199,7 +201,7 @@ arguments: '--nologo --verbosity quiet'
 ```yaml
 - name: NPM install arguments
   id: npm-args
-  uses: ./normalize-arguments
+  uses: framinosona/github_actions/normalize-arguments@main
   with:
     arguments: |
       --production
@@ -209,7 +211,7 @@ arguments: '--nologo --verbosity quiet'
 
 - name: Install dependencies
   run: |
-    npm install ${{ steps.npm-args.outputs.normalized-arguments }}
+    npm install ${{ steps.npm-args.outputs.normalized }}
 ```
 
 ### Example 6: Compiler Flags for Multiple Languages
@@ -218,7 +220,7 @@ arguments: '--nologo --verbosity quiet'
 # C++ Compilation
 - name: C++ compiler flags
   id: cpp-flags
-  uses: ./normalize-arguments
+  uses: framinosona/github_actions/normalize-arguments@main
   with:
     arguments: >
       -Wall -Werror -std=c++17 -O2
@@ -226,12 +228,12 @@ arguments: '--nologo --verbosity quiet'
 
 - name: Compile C++
   run: |
-    g++ ${{ steps.cpp-flags.outputs.normalized-arguments }} src/*.cpp -o app
+    g++ ${{ steps.cpp-flags.outputs.normalized }} src/*.cpp -o app
 
 # Rust Compilation
 - name: Rust build flags
   id: rust-flags
-  uses: ./normalize-arguments
+  uses: framinosona/github_actions/normalize-arguments@main
   with:
     arguments: |
       --release
@@ -240,7 +242,7 @@ arguments: '--nologo --verbosity quiet'
 
 - name: Build Rust project
   run: |
-    cargo build ${{ steps.rust-flags.outputs.normalized-arguments }}
+    cargo build ${{ steps.rust-flags.outputs.normalized }}
 ```
 
 ## Separator Options
@@ -307,7 +309,7 @@ arguments: >
 ```yaml
 - name: Build arguments with env vars
   id: args
-  uses: ./normalize-arguments
+  uses: framinosona/github_actions/normalize-arguments@main
   with:
     arguments: |
       -p:Version=${{ env.VERSION }}
@@ -315,14 +317,14 @@ arguments: >
       -p:OutputPath=${{ env.OUTPUT_DIR }}
 
 - name: Build
-  run: dotnet build ${{ steps.args.outputs.normalized-arguments }}
+  run: dotnet build ${{ steps.args.outputs.normalized }}
 ```
 
 ### Command Chaining
 ```yaml
 - name: Base command args
   id: base
-  uses: ./normalize-arguments
+  uses: framinosona/github_actions/normalize-arguments@main
   with:
     arguments: |
       --configuration Release
@@ -330,7 +332,7 @@ arguments: >
 
 - name: Additional args
   id: extra
-  uses: ./normalize-arguments
+  uses: framinosona/github_actions/normalize-arguments@main
   with:
     arguments: |
       --verbosity detailed
@@ -339,8 +341,8 @@ arguments: >
 - name: Execute with combined args
   run: |
     dotnet build \
-      ${{ steps.base.outputs.normalized-arguments }} \
-      ${{ steps.extra.outputs.normalized-arguments }}
+      ${{ steps.base.outputs.normalized }} \
+      ${{ steps.extra.outputs.normalized }}
 ```
 
 ### Conditional Arguments
@@ -348,7 +350,7 @@ arguments: >
 - name: Production arguments
   if: github.ref == 'refs/heads/main'
   id: prod-args
-  uses: ./normalize-arguments
+  uses: framinosona/github_actions/normalize-arguments@main
   with:
     arguments: |
       --configuration Release
@@ -357,7 +359,7 @@ arguments: >
 - name: Development arguments
   if: github.ref != 'refs/heads/main'
   id: dev-args
-  uses: ./normalize-arguments
+  uses: framinosona/github_actions/normalize-arguments@main
   with:
     arguments: |
       --configuration Debug
@@ -365,7 +367,7 @@ arguments: >
 
 - name: Build with environment-specific args
   run: |
-    ARGS="${{ github.ref == 'refs/heads/main' && steps.prod-args.outputs.normalized-arguments || steps.dev-args.outputs.normalized-arguments }}"
+    ARGS="${{ github.ref == 'refs/heads/main' && steps.prod-args.outputs.normalized || steps.dev-args.outputs.normalized }}"
     dotnet build $ARGS
 ```
 

@@ -17,13 +17,42 @@ inputs:
     default: 'false'
 
 outputs:
-  normalized-arguments:
+  normalized:
     description: 'The normalized arguments as a single line'
-    value: ${{ steps.normalize.outputs.normalized-arguments }}
+    value: ${{ steps.normalize.outputs.normalized }}
 
 runs:
   using: "composite"
   steps:
+    # ================== ℹ️ ==================
+    - name: "ℹ️ Gather environment information"
+      shell: bash
+      run: |
+        echo "::group::ℹ️ Environment Information"
+        echo "::debug::Operating System: $(uname -a)"
+        echo "::debug::GitHub Runner OS: $RUNNER_OS"
+        echo "::debug::GitHub Runner Version: $RUNNER_VERSION"
+        echo "::debug::Shell: $SHELL"
+        echo "::endgroup::"
+
+    # ================== 🔒 ==================
+
+    - name: "🔒 Mask sensitive data"
+      shell: bash
+      run: |
+        # No sensitive inputs to mask in this action
+        echo "✅ No sensitive data to mask"
+
+    # ================== 📁 ==================
+
+    - name: "📁 Normalize file paths"
+      shell: bash
+      run: |
+        # This action IS the normalization action, no additional normalization needed
+        echo "✅ No file paths to normalize"
+
+    # ================== ✅ ==================
+
     - name: "✅ Validate inputs"
       shell: bash
       run: |
@@ -39,6 +68,8 @@ runs:
         echo "::notice::Input validation completed successfully"
         echo "::endgroup::"
 
+    # ================== 🚀 ==================
+
     - name: "🔧 Normalize Arguments"
       id: normalize
       shell: bash
@@ -52,7 +83,7 @@ runs:
         # Handle empty arguments case
         if [ -z "$INPUT_ARGUMENTS" ]; then
           echo "::debug::Empty arguments provided, returning empty result"
-          echo "normalized-arguments=" >> $GITHUB_OUTPUT
+          echo "normalized=" >> $GITHUB_OUTPUT
           echo "::notice::Argument normalization completed (empty input)"
           echo "::endgroup::"
           exit 0
@@ -70,7 +101,7 @@ runs:
         # Set outputs - use delimiter to handle any special characters safely
         delimiter="$(openssl rand -hex 16)"
         {
-          echo "normalized-arguments<<${delimiter}"
+          echo "normalized<<${delimiter}"
           printf '%s' "$NORMALIZED_ARGS"
           echo ""
           echo "${delimiter}"
@@ -82,6 +113,24 @@ runs:
       env:
         INPUT_ARGUMENTS: ${{ inputs.arguments }}
 
+    # ================== 🔍 ==================
+    - name: "🔍 Verify normalization results"
+      shell: bash
+      run: |
+        echo "::group::🔍 Verifying Normalization Results"
+
+        # Verify that output was generated
+        if [ -z "${{ steps.normalize.outputs.normalized }}" ]; then
+          echo "::warning::Normalization resulted in empty output"
+        else
+          echo "::notice::Normalization completed with valid output"
+          echo "::debug::Output length: $(printf '%s' '${{ steps.normalize.outputs.normalized }}' | wc -c)"
+        fi
+
+        echo "✅ Normalization verification completed"
+        echo "::endgroup::"
+
+    # ================== 🔍 ===================
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash
@@ -98,7 +147,7 @@ runs:
         ## 📤 Normalization Results
         | Metric | Value |
         |--------|-------|
-        | 🎯 Normalized Arguments | `${{ steps.normalize.outputs.normalized-arguments }}` |
+        | 🎯 Normalized Arguments | `${{ steps.normalize.outputs.normalized }}` |
         | ✅ Status | `${{ steps.normalize.outcome }}` |
 
         ## ⚙️ Process Details
@@ -111,7 +160,7 @@ runs:
         ```yaml
         - name: "Build with normalized arguments"
           run: |
-            dotnet build ${{ steps.normalize.outputs.normalized-arguments }}
+            dotnet build ${{ steps.normalize.outputs.normalized }}
         ```
 
         </details>
