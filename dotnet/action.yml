@@ -74,14 +74,86 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - name: "ℹ️ Environment info"
+    # ================== ℹ️ ==================
+    - name: "ℹ️ Gather environment information"
       shell: bash
       run: |
-        echo "ℹ️ Working directory: $(pwd)"
-        echo "ℹ️ .NET version: $(dotnet --version 2>/dev/null || echo 'Not found')"
-        echo "ℹ️ Available runtimes: $(dotnet --list-runtimes 2>/dev/null || echo 'None')"
+        echo "::group::ℹ️ Environment Information"
+        echo "::debug::Operating System: $(uname -a)"
+        echo "::debug::GitHub Runner OS: $RUNNER_OS"
+        echo "::debug::GitHub Runner Version: $RUNNER_VERSION"
+        echo "::debug::.NET SDK Version: $(dotnet --version || echo 'Not installed')"
+        echo "::debug::Available runtimes: $(dotnet --list-runtimes 2>/dev/null || echo 'None')"
+        echo "::endgroup::"
 
-        # Reset environment variable
+    # ================== 🔒 ==================
+    - name: "🔒 Mask sensitive data"
+      shell: bash
+      run: |
+        # No sensitive inputs to mask in this action
+        echo "✅ No sensitive data to mask"
+
+    # ================== 📁 ==================
+    - name: "💯 Normalize arguments"
+      id: normalize-arguments
+      uses: framinosona/github_actions/normalize-arguments@main
+      with:
+        arguments: ${{ inputs.arguments }}
+
+    - name: "📁 Normalize output"
+      id: normalize-output
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.output }}
+
+    - name: "📁 Normalize artifacts-path"
+      id: normalize-artifacts-path
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.artifacts-path }}
+
+    - name: "📁 Normalize working-directory"
+      id: normalize-working-directory
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.working-directory }}
+
+    - name: "📁 Normalize path"
+      id: normalize-path
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.path }}
+
+    # ================== ✅ ==================
+    - name: "✅ Validate input : working-directory"
+      shell: bash
+      run: |
+        echo "::debug::Validating working-directory input: ${{ steps.normalize-working-directory.outputs.normalized }}"
+
+        if [ -z "${{ steps.normalize-working-directory.outputs.normalized }}" ]; then
+          echo "::error::Working directory input is required"
+          exit 1
+        fi
+
+        if [ "${{ steps.normalize-working-directory.outputs.exists }}" != "true" ]; then
+          echo "::error file=${{ steps.normalize-working-directory.outputs.normalized }}::Working directory does not exist or is not a directory: ${{ steps.normalize-working-directory.outputs.normalized }}"
+          exit 1
+        fi
+
+        echo "✅ Working directory validation completed successfully"
+
+    - name: "✅ Validate input : path"
+      if: ${{ inputs.path != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating path input: ${{ steps.normalize-path.outputs.exists }}"
+
+        if [ "${{ steps.normalize-path.outputs.exists }}" != "true" ]; then
+          echo "::error file=${{ steps.normalize-path.outputs.exists }}::Specified path does not exist: ${{ steps.normalize-path.outputs.exists }}"
+          exit 1
+        fi
+
+        echo "✅ Path validation completed successfully"
 
     - name: "✅ Validate input : booleans"
       shell: bash
@@ -113,36 +185,6 @@ runs:
 
         echo "✅ Command validation completed successfully"
 
-    - name: "✅ Validate input : path"
-      if: ${{ inputs.path != '' }}
-      shell: bash
-      run: |
-        echo "::debug::Validating path input: ${{ inputs.path }}"
-
-        if [ ! -e "${{ inputs.path }}" ]; then
-          echo "::error file=${{ inputs.path }}::Specified path does not exist: ${{ inputs.path }}"
-          exit 1
-        fi
-
-        echo "✅ Path validation completed successfully"
-
-    - name: "✅ Validate input : working-directory"
-      shell: bash
-      run: |
-        echo "::debug::Validating working-directory input: ${{ inputs.working-directory }}"
-
-        if [ -z "${{ inputs.working-directory }}" ]; then
-          echo "::error::Working directory input is required"
-          exit 1
-        fi
-
-        if [ ! -d "${{ inputs.working-directory }}" ]; then
-          echo "::error file=${{ inputs.working-directory }}::Working directory does not exist or is not a directory: ${{ inputs.working-directory }}"
-          exit 1
-        fi
-
-        echo "✅ Working directory validation completed successfully"
-
     - name: "✅ Validate input : verbosity"
       if: ${{ inputs.verbosity != '' }}
       shell: bash
@@ -155,18 +197,6 @@ runs:
         esac
 
         echo "✅ Verbosity validation completed successfully"
-
-    - name: "🔧 Set verbosity level"
-      id: validate-verbosity
-      shell: bash
-      run: |
-        if [ -n "${{ inputs.verbosity }}" ]; then
-          echo "verbosity=${{ inputs.verbosity }}" >> $GITHUB_OUTPUT
-        elif [ "$RUNNER_DEBUG" == "true" ] || [ "$ACTIONS_STEP_DEBUG" == "true" ]; then
-          echo "verbosity=diagnostic" >> $GITHUB_OUTPUT
-        else
-          echo "verbosity=minimal" >> $GITHUB_OUTPUT
-        fi
 
     - name: "✅ Validate input : configuration"
       if: ${{ inputs.configuration != '' }}
@@ -217,6 +247,19 @@ runs:
 
         echo "✅ Arch validation completed successfully"
 
+    # ================== 🏗️ ==================
+    - name: "🔧 Set verbosity level"
+      id: validate-verbosity
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.verbosity }}" ]; then
+          echo "verbosity=${{ inputs.verbosity }}" >> $GITHUB_OUTPUT
+        elif [ "$RUNNER_DEBUG" == "true" ] || [ "$ACTIONS_STEP_DEBUG" == "true" ]; then
+          echo "verbosity=diagnostic" >> $GITHUB_OUTPUT
+        else
+          echo "verbosity=minimal" >> $GITHUB_OUTPUT
+        fi
+
     - name: "🏗️ Build argument list"
       id: build-args
       shell: bash
@@ -248,12 +291,12 @@ runs:
         ARGUMENTS="${{ inputs.command }}"
 
         if [ -n "${{ inputs.path }}" ]; then
-          ARGUMENTS="$ARGUMENTS ${{ inputs.path }}"
+          ARGUMENTS="$ARGUMENTS ${{ steps.normalize-path.outputs.normalized }}"
         fi
 
-        # Normalize multiline arguments (convert newlines to spaces, trim whitespace)
-        if [ -n "${{ inputs.arguments }}" ]; then
-          NORMALIZED_ARGS=$(echo "${{ inputs.arguments }}" | tr '\n' ' ' | sed 's/[[:space:]]\+/ /g' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+        # Add normalized arguments
+        if [ -n "${{ steps.normalize-arguments.outputs.normalized }}" ]; then
+          NORMALIZED_ARGS="${{ steps.normalize-arguments.outputs.normalized }}"
           echo "::debug::Original arguments: ${{ inputs.arguments }}"
           echo "::debug::Normalized arguments: $NORMALIZED_ARGS"
           ARGUMENTS="$ARGUMENTS $NORMALIZED_ARGS"
@@ -271,20 +314,16 @@ runs:
           fi
         done
 
-        # Verbosity
-        if supports_option "verbosity"; then
-            ARGUMENTS="$ARGUMENTS --verbosity '${{ steps.validate-verbosity.outputs.verbosity }}'"
-        fi
-
         # Key-value options
-        for param in configuration framework runtime output arch artifacts-path; do
+        for param in verbosity configuration framework runtime output arch artifacts-path; do
           case $param in
+            verbosity) value="${{ steps.validate-verbosity.outputs.verbosity }}" ;;
             configuration) value="${{ inputs.configuration }}" ;;
             framework) value="${{ inputs.framework }}" ;;
             runtime) value="${{ inputs.runtime }}" ;;
-            output) value="${{ inputs.output }}" ;;
+            output) value="${{ steps.normalize-output.outputs.normalized }}" ;;
             arch) value="${{ inputs.arch }}" ;;
-            artifacts-path) value="${{ inputs.artifacts-path }}" ;;
+            artifacts-path) value="${{ steps.normalize-artifacts-path.outputs.normalized }}" ;;
           esac
           if [ -n "$value" ] && supports_option "$param"; then
             ARGUMENTS="$ARGUMENTS --$param '$value'"
@@ -299,10 +338,11 @@ runs:
 
         echo "✅ Argument list built successfully: $ARGUMENTS"
 
+    # ================== 🚀 ==================
     - name: "🚀 Run dotnet command with auto-verbosity"
       id: run-command
       shell: bash
-      working-directory: ${{ inputs.working-directory }}
+      working-directory: ${{ steps.normalize-working-directory.outputs.normalized }}
       run: |
         echo "::debug::Building final command from environment: ${{ steps.build-args.outputs.arguments }}"
 
@@ -329,6 +369,30 @@ runs:
         # Exit with the same code as the dotnet command
         exit $EXIT_CODE
 
+    # ================== � ==================
+    - name: "🔍 Verify command execution"
+      if: always()
+      shell: bash
+      run: |
+        echo "::debug::Verifying command execution results..."
+
+        # Check if the command executed (has exit code output)
+        if [ -z "${{ steps.run-command.outputs.exit-code }}" ]; then
+          echo "::error::Command execution failed - no exit code available"
+          exit 1
+        fi
+
+        # Report final status
+        EXIT_CODE="${{ steps.run-command.outputs.exit-code }}"
+        if [ "$EXIT_CODE" = "0" ]; then
+          echo "::notice::✅ .NET command '${{ inputs.command }}' completed successfully"
+        else
+          echo "::error::❌ .NET command '${{ inputs.command }}' failed with exit code $EXIT_CODE"
+        fi
+
+        echo "✅ Command execution verification completed"
+
+    # ================== �📊 ==================
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash
@@ -340,16 +404,17 @@ runs:
         | Parameter | Value |
         |-----------|-------|
         | 🚀 Command | `${{ inputs.command }}` |
-        | 📍 Path | `${{ inputs.path || 'none' }}` |
-        | 📁 Working Directory | `${{ inputs.working-directory }}` |
+        | 📍 Path | `${{ steps.normalize-path.outputs.normalized || 'none' }}` |
+        | 📁 Working Directory | `${{ steps.normalize-working-directory.outputs.normalized }}` |
         | ⚙️ Configuration | `${{ inputs.configuration }}` |
         | 🎯 Framework | `${{ inputs.framework || 'none' }}` |
         | 🖥️ Runtime | `${{ inputs.runtime || 'none' }}` |
-        | 🔧 Arguments | `${{ inputs.arguments || 'none' }}` |
+        | 🔧 Arguments | `${{ steps.normalize-arguments.outputs.normalized || 'none' }}` |
         | 🔇 No Logo | `${{ inputs.nologo }}` |
         | 🚫 No Restore | `${{ inputs.no-restore }}` |
         | 🚫 No Build | `${{ inputs.no-build }}` |
-        | 📤 Output Path | `${{ inputs.output || 'none' }}` |
+        | 📤 Output Path | `${{ steps.normalize-output.outputs.normalized || 'none' }}` |
+        | 🗂️ Artifacts Path | `${{ steps.normalize-artifacts-path.outputs.normalized || 'none' }}` |
         | 🔊 Force Verbosity | `${{ inputs.verbosity || 'auto' }}` |
 
         ## ⚙️ Process Details
