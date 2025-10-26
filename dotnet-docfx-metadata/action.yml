@@ -117,6 +117,45 @@ outputs:
 runs:
   using: "composite"
   steps:
+    # ================== ℹ️ ==================
+    - name: "ℹ️ Gather environment information"
+      shell: bash
+      run: |
+        echo "::group::ℹ️ Environment Information"
+        echo "::debug::Operating System: $(uname -a)"
+        echo "::debug::GitHub Runner OS: $RUNNER_OS"
+        echo "::debug::GitHub Runner Version: $RUNNER_VERSION"
+        echo "::debug::.NET SDK Version: $(dotnet --version || echo 'Not installed')"
+        echo "::endgroup::"
+
+    # ================== 🔒 ==================
+    - name: "🔒 Mask sensitive data"
+      shell: bash
+      run: |
+        # No sensitive inputs to mask in this action
+        echo "✅ No sensitive data to mask"
+
+    # ================== 📁 ==================
+
+    - name: "📁 Normalize config"
+      id: normalize-config
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.config }}
+
+    - name: "📁 Normalize output"
+      id: normalize-output
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.output }}
+
+    - name: "📁 Normalize filter"
+      id: normalize-filter
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.filter }}
+
+    # ================== ✅ ==================
     - name: "✅ Validate input : booleans"
       shell: bash
       run: |
@@ -146,8 +185,8 @@ runs:
       run: |
         echo "::debug::Validating config input for DocFX metadata generation"
 
-        if [ ! -f "${{ inputs.config }}" ]; then
-          echo "::error file=${{ inputs.config }}::DocFX configuration file not found: ${{ inputs.config }}"
+        if [ ! -f "${{ steps.normalize-config.outputs.normalized }}" ]; then
+          echo "::error file=${{ steps.normalize-config.outputs.normalized }}::DocFX configuration file not found: ${{ steps.normalize-config.outputs.normalized }}"
           exit 1
         fi
 
@@ -224,8 +263,8 @@ runs:
       run: |
         echo "::debug::Validating filter input for DocFX metadata generation"
 
-        if [ ! -f "${{ inputs.filter }}" ]; then
-          echo "::error file=${{ inputs.filter }}::Filter config file not found: ${{ inputs.filter }}"
+        if [ ! -f "${{ steps.normalize-filter.outputs.normalized }}" ]; then
+          echo "::error file=${{ steps.normalize-filter.outputs.normalized }}::Filter config file not found: ${{ steps.normalize-filter.outputs.normalized }}"
           exit 1
         fi
 
@@ -243,14 +282,7 @@ runs:
 
         echo "✅ docfx-version input validation completed successfully"
 
-    - name: "📦 Install DocFX tool"
-      uses: "framinosona/github_actions/dotnet-tool-install@main"
-      with:
-        tool-name: "docfx"
-        global: ${{ inputs.global }}
-        create-manifest-if-needed: "true"
-        version: ${{ inputs.docfx-version }}
-
+    # ================== 🏗️ ==================
     - name: "🔧 Build arguments"
       id: build-args
       shell: bash
@@ -258,21 +290,22 @@ runs:
         echo "::debug::Building arguments for DocFX metadata generation"
 
         # Start with base command
-        ARGS="run docfx metadata"
+        ARGS="run docfx Metadata"
 
-        # Add config file path
-        if [ -n "${{ inputs.config }}" ]; then
-          ARGS="$ARGS '${{ inputs.config }}'"
-        fi
-        CONFIG_PATH=$(realpath "${{ inputs.config }}")
-        echo "config-path=$CONFIG_PATH" >> $GITHUB_OUTPUT
-
-        # Add output directory
-        if [ -n "${{ inputs.output }}" ]; then
-          ARGS="$ARGS --output '${{ inputs.output }}'"
-        fi
-        OUTPUT_PATH=$(realpath "${{ inputs.output }}")
-        echo "output-path=$OUTPUT_PATH" >> $GITHUB_OUTPUT
+        # Key-value options (only add if not empty)
+        for param in filter globalNamespaceId output config log property; do
+          case $param in
+            filter) value="${{ steps.normalize-filter.outputs.normalized }}" ;;
+            globalNamespaceId) value="${{ inputs.globalNamespaceId }}" ;;
+            output) value="${{ steps.normalize-output.outputs.normalized }}" ;;
+            config) value="${{ steps.normalize-config.outputs.normalized }}" ;;
+            log) value="${{ inputs.logFile }}" ;;
+            property) value="${{ inputs.property }}" ;;
+          esac
+          if [ -n "$value" ]; then
+            ARGS="$ARGS --$param '$value'"
+          fi
+        done
 
         # Boolean flags
         for param in verbose warningsAsErrors shouldSkipMarkup disableGitFeatures disableDefaultFilter noRestore useClrTypeNames; do
@@ -287,17 +320,6 @@ runs:
           esac
           if [ "$value" == "true" ]; then
             ARGS="$ARGS --${param}"
-          fi
-        done
-
-        # Key-value options (only add if not empty)
-        for param in filter globalNamespaceId; do
-          case $param in
-            filter) value="${{ inputs.filter }}" ;;
-            globalNamespaceId) value="${{ inputs.globalNamespaceId }}" ;;
-          esac
-          if [ -n "$value" ]; then
-            ARGS="$ARGS --$param '$value'"
           fi
         done
 
@@ -318,19 +340,18 @@ runs:
           ARGS="$ARGS --memberLayout '${{ inputs.memberLayout }}'"
         fi
 
-        # Log file
-        if [ -n "${{ inputs.logFile }}" ]; then
-          ARGS="$ARGS --log '${{ inputs.logFile }}'"
-        fi
-
-        # MSBuild properties (JSON format)
-        if [ -n "${{ inputs.property }}" ]; then
-          ARGS="$ARGS --property '${{ inputs.property }}'"
-        fi
-
         echo "::debug::Generated arguments: $ARGS"
         echo "arguments=$ARGS" >> $GITHUB_OUTPUT
         echo "✅ Arguments built successfully"
+
+    # ================== 🚀 ==================
+    - name: "📦 Install DocFX tool"
+      uses: "framinosona/github_actions/dotnet-tool-install@main"
+      with:
+        tool-name: "docfx"
+        global: ${{ inputs.global }}
+        create-manifest-if-needed: "true"
+        version: ${{ inputs.docfx-version }}
 
     - name: "📖 Generate metadata with DocFX"
       id: run-dotnet
@@ -341,6 +362,7 @@ runs:
         arguments: ${{ steps.build-args.outputs.arguments }}
         show-summary: "${{ inputs.show-summary }}"
 
+    # ================== 🔍 ==================
     - name: "📊 Analyze generated metadata"
       id: analyze
       shell: bash
@@ -398,6 +420,7 @@ runs:
           echo "output-size=0" >> $GITHUB_OUTPUT
         fi
 
+    # ================== 📊 ==================
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash
@@ -408,8 +431,8 @@ runs:
         ## 🔧 Input Parameters
         | Parameter | Value |
         |-----------|-------|
-        | 📋 Config File | `${{ inputs.config }}` |
-        | 📁 Output Directory | `${{ inputs.output }}` |
+        | 📋 Config File | `${{ steps.normalize-config.outputs.normalized }}` |
+        | 📁 Output Directory | `${{ steps.normalize-output.outputs.normalized }}` |
         | 📊 Log Level | `${{ inputs.logLevel }}` |
         | 📄 Output Format | `${{ inputs.outputFormat }}` |
         | 🌐 Namespace Layout | `${{ inputs.namespaceLayout }}` |

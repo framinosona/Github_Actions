@@ -114,11 +114,58 @@ outputs:
   executed-command:
     description: "The actual command that was executed"
     value: ${{ steps.run-dotnet.outputs.executed-command }}
+  build-success:
+    description: "Whether the documentation build was successful"
+    value: ${{ steps.verify-build.outputs.build-success }}
+  files-generated:
+    description: "Number of files generated in the output directory"
+    value: ${{ steps.verify-build.outputs.files-generated }}
+  has-index:
+    description: "Whether an index.html file was generated"
+    value: ${{ steps.verify-build.outputs.has-index }}
 
 runs:
   using: "composite"
   steps:
+    # ================== ℹ️ ==================
+    - name: "ℹ️ Gather environment information"
+      shell: bash
+      run: |
+        echo "::group::ℹ️ Environment Information"
+        echo "::debug::Operating System: $(uname -a)"
+        echo "::debug::GitHub Runner OS: $RUNNER_OS"
+        echo "::debug::GitHub Runner Version: $RUNNER_VERSION"
+        echo "::debug::.NET SDK Version: $(dotnet --version || echo 'Not installed')"
+        echo "::endgroup::"
 
+    # ================== 🔒 ==================
+    - name: "🔒 Mask sensitive data"
+      shell: bash
+      run: |
+        # No sensitive inputs to mask in this action
+        echo "✅ No sensitive data to mask"
+
+    # ================== 📁 ==================
+
+    - name: "📁 Normalize config"
+      id: normalize-config
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.config }}
+
+    - name: "📁 Normalize output"
+      id: normalize-output
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.output }}
+
+    - name: "📁 Normalize filter"
+      id: normalize-filter
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.filter }}
+
+    # ================== ✅ ==================
     - name: "✅ Validate input : booleans"
       shell: bash
       run: |
@@ -148,8 +195,8 @@ runs:
       run: |
         echo "::debug::Validating config input for DocFX documentation generation"
 
-        if [ ! -f "${{ inputs.config }}" ]; then
-          echo "::error file=${{ inputs.config }}::DocFX configuration file not found: ${{ inputs.config }}"
+        if [ ! -f "${{ steps.normalize-config.outputs.normalized }}" ]; then
+          echo "::error file=${{ steps.normalize-config.outputs.normalized }}::DocFX configuration file not found: ${{ steps.normalize-config.outputs.normalized }}"
           exit 1
         fi
 
@@ -251,15 +298,8 @@ runs:
 
         echo "✅ Xref input validation completed successfully"
 
-    - name: "📦 Install DocFX tool"
-      uses: "framinosona/github_actions/dotnet-tool-install@main"
-      with:
-        tool-name: "docfx"
-        global: ${{ inputs.global }}
-        create-manifest-if-needed: "true"
-        version: ${{ inputs.docfx-version }}
-
-    - name: "🔧 Build arguments"
+    # ================== 🏗️  ==================
+    - name: "🏗️ Build argument list"
       id: build-args
       shell: bash
       run: |
@@ -269,8 +309,8 @@ runs:
         ARGS="run docfx build"
 
         # Add config file path
-        if [ -n "${{ inputs.config }}" ]; then
-          ARGS="$ARGS '${{ inputs.config }}'"
+        if [ -n "${{ steps.normalize-config.outputs.normalized }}" ]; then
+          ARGS="$ARGS '${{ steps.normalize-config.outputs.normalized }}'"
         fi
 
         # Boolean flags
@@ -292,7 +332,7 @@ runs:
         # Key-value options (only add if not default values)
         for param in output template debugOutput rawModelOutputFolder viewModelOutputFolder markdownEngineProperties postProcessors log; do
           case $param in
-            output) value="${{ inputs.output }}" ;;
+            output) value="${{ steps.normalize-output.outputs.normalized }}" ;;
             template) value="${{ inputs.template }}" ;;
             debugOutput) value="${{ inputs.debugOutput }}" ;;
             rawModelOutputFolder) value="${{ inputs.rawModelOutputFolder }}" ;;
@@ -339,6 +379,15 @@ runs:
         echo "arguments=$ARGS" >> $GITHUB_OUTPUT
         echo "✅ Arguments built successfully"
 
+    # ================== 🚀 ==================
+    - name: "📦 Install DocFX tool"
+      uses: "framinosona/github_actions/dotnet-tool-install@main"
+      with:
+        tool-name: "docfx"
+        global: ${{ inputs.global }}
+        create-manifest-if-needed: "true"
+        version: ${{ inputs.docfx-version }}
+
     - name: "📚 Generate documentation with DocFX"
       id: run-dotnet
       uses: "framinosona/github_actions/dotnet@main"
@@ -348,6 +397,40 @@ runs:
         arguments: ${{ steps.build-args.outputs.arguments }}
         show-summary: "${{ inputs.show-summary }}"
 
+    # ================== 🔍 ==================
+    - name: "🔍 Verify documentation generation"
+      id: verify-build
+      shell: bash
+      run: |
+        echo "::debug::Verifying DocFX documentation generation..."
+
+        OUTPUT_DIR="${{ steps.normalize-output.outputs.normalized }}"
+
+        # Check if output directory exists and has content
+        if [ -d "$OUTPUT_DIR" ]; then
+          FILE_COUNT=$(find "$OUTPUT_DIR" -type f | wc -l | tr -d ' ')
+          echo "📁 Generated files: $FILE_COUNT"
+          echo "files-generated=$FILE_COUNT" >> $GITHUB_OUTPUT
+
+          # Check for common DocFX output files
+          if [ -f "$OUTPUT_DIR/index.html" ]; then
+            echo "✅ Main index.html found"
+            echo "has-index=true" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ No index.html found in output"
+            echo "has-index=false" >> $GITHUB_OUTPUT
+          fi
+
+          echo "build-success=true" >> $GITHUB_OUTPUT
+          echo "✅ Documentation generation verification completed"
+        else
+          echo "❌ Output directory not found: $OUTPUT_DIR"
+          echo "files-generated=0" >> $GITHUB_OUTPUT
+          echo "has-index=false" >> $GITHUB_OUTPUT
+          echo "build-success=false" >> $GITHUB_OUTPUT
+        fi
+
+    # ================== �📊 ==================
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash
@@ -358,8 +441,8 @@ runs:
         ## 🔧 DocFX Configuration
         | Parameter | Value |
         |-----------|-------|
-        | 📄 Config File | `${{ inputs.config }}` |
-        | 📁 Output Directory | `${{ inputs.output }}` |
+        | 📄 Config File | `${{ steps.normalize-config.outputs.normalized }}` |
+        | 📁 Output Directory | `${{ steps.normalize-output.outputs.normalized }}` |
         | 📊 Log Level | `${{ inputs.logLevel }}` |
         | 🎨 Template | `${{ inputs.template || 'none' }}` |
         | 🎭 Theme | `${{ inputs.theme }}` |
@@ -383,11 +466,15 @@ runs:
         | 📦 Tool Installation | `✅ Completed` |
         | 🔧 Argument Building | `${{ steps.build-args.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
         | 📚 Documentation Generation | `${{ steps.run-dotnet.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | 🔍 Build Verification | `${{ steps.verify-build.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
 
         ## 📤 Execution Results
         | Metric | Value |
         |--------|-------|
         | ✅ Exit Code | `${{ steps.run-dotnet.outputs.exit-code }}` |
+        | 📁 Files Generated | `${{ steps.verify-build.outputs.files-generated }}` |
+        | 🏠 Has Index Page | `${{ steps.verify-build.outputs.has-index }}` |
+        | ✅ Build Success | `${{ steps.verify-build.outputs.build-success }}` |
         | 🚀 Executed Command | `${{ steps.run-dotnet.outputs.executed-command }}` |
 
         </details>

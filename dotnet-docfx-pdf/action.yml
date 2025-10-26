@@ -73,6 +73,39 @@ outputs:
 runs:
   using: "composite"
   steps:
+
+    # ================== ℹ️ ==================
+    - name: "ℹ️ Gather environment information"
+      shell: bash
+      run: |
+        echo "::group::ℹ️ Environment Information"
+        echo "::debug::Operating System: $(uname -a)"
+        echo "::debug::GitHub Runner OS: $RUNNER_OS"
+        echo "::debug::GitHub Runner Version: $RUNNER_VERSION"
+        echo "::debug::.NET SDK Version: $(dotnet --version || echo 'Not installed')"
+        echo "::endgroup::"
+
+    # ================== 🔒 ==================
+    - name: "🔒 Mask sensitive data"
+      shell: bash
+      run: |
+        # No sensitive inputs to mask in this action
+        echo "✅ No sensitive data to mask"
+
+    # ================== 📁 ==================
+    - name: "📁 Normalize config path"
+      id: normalize-config
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.config }}
+
+    - name: "📁 Normalize output path"
+      id: normalize-output
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.output }}
+
+    # ================== ✅ ==================
     - name: "✅ Validate input : booleans"
       shell: bash
       run: |
@@ -97,8 +130,8 @@ runs:
       run: |
         echo "::debug::Validating config input for DocFX PDF generation"
 
-        if [ ! -f "${{ inputs.config }}" ]; then
-          echo "::error file=${{ inputs.config }}::DocFX configuration file not found: ${{ inputs.config }}"
+        if [ ! -f "${{ steps.normalize-config.outputs.normalized }}" ]; then
+          echo "::error file=${{ steps.normalize-config.outputs.normalized }}::DocFX configuration file not found: ${{ steps.normalize-config.outputs.normalized }}"
           exit 1
         fi
 
@@ -129,14 +162,7 @@ runs:
 
         echo "✅ docfx-version input validation completed successfully"
 
-    - name: "📦 Install DocFX tool"
-      uses: "framinosona/github_actions/dotnet-tool-install@main"
-      with:
-        tool-name: "docfx"
-        global: ${{ inputs.global }}
-        create-manifest-if-needed: "true"
-        version: ${{ inputs.docfx-version }}
-
+    # ================== 🏗️ ==================
     - name: "🔧 Build arguments"
       id: build-args
       shell: bash
@@ -147,17 +173,17 @@ runs:
         ARGS="run docfx pdf"
 
         # Add config file path
-        if [ -n "${{ inputs.config }}" ]; then
-          ARGS="$ARGS '${{ inputs.config }}'"
+        if [ -n "${{ steps.normalize-config.outputs.normalized }}" ]; then
+          ARGS="$ARGS '${{ steps.normalize-config.outputs.normalized }}'"
         fi
-        CONFIG_PATH=$(realpath "${{ inputs.config }}")
+        CONFIG_PATH="${{ steps.normalize-config.outputs.normalized }}"
         echo "config-path=$CONFIG_PATH" >> $GITHUB_OUTPUT
 
         # Add output directory
-        if [ -n "${{ inputs.output }}" ]; then
-          ARGS="$ARGS --output '${{ inputs.output }}'"
+        if [ -n "${{ steps.normalize-output.outputs.normalized }}" ]; then
+          ARGS="$ARGS --output '${{ steps.normalize-output.outputs.normalized }}'"
         fi
-        OUTPUT_PATH=$(realpath "${{ inputs.output }}")
+        OUTPUT_PATH="${{ steps.normalize-output.outputs.normalized }}"
         echo "output-path=$OUTPUT_PATH" >> $GITHUB_OUTPUT
 
         # Boolean flags
@@ -185,6 +211,15 @@ runs:
         echo "arguments=$ARGS" >> $GITHUB_OUTPUT
         echo "✅ Arguments built successfully"
 
+    # ================== 🚀 ==================
+    - name: "📦 Install DocFX tool"
+      uses: "framinosona/github_actions/dotnet-tool-install@main"
+      with:
+        tool-name: "docfx"
+        global: ${{ inputs.global }}
+        create-manifest-if-needed: "true"
+        version: ${{ inputs.docfx-version }}
+
     - name: "📄 Generate PDF with DocFX"
       id: run-dotnet
       uses: "framinosona/github_actions/dotnet@main"
@@ -194,6 +229,7 @@ runs:
         arguments: ${{ steps.build-args.outputs.arguments }}
         show-summary: "${{ inputs.show-summary }}"
 
+    # ================== 🔍 ==================
     - name: "📊 Analyze generated PDF files"
       id: analyze
       shell: bash
@@ -256,6 +292,7 @@ runs:
           echo "pdf-files=" >> $GITHUB_OUTPUT
         fi
 
+    # ================== 📊 ==================
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash
@@ -266,8 +303,8 @@ runs:
         ## 🔧 Input Parameters
         | Parameter | Value |
         |-----------|-------|
-        | 📋 Config File | `${{ inputs.config }}` |
-        | 📁 Output Directory | `${{ inputs.output }}` |
+        | 📋 Config File | `${{ steps.normalize-config.outputs.normalized }}` |
+        | 📁 Output Directory | `${{ steps.normalize-output.outputs.normalized }}` |
         | 📊 Log Level | `${{ inputs.logLevel }}` |
 
         ## 📤 Generation Results
