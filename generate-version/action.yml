@@ -115,6 +115,52 @@ outputs:
 runs:
   using: "composite"
   steps:
+    # ================== ℹ️ ==================
+    - name: "ℹ️ Gather environment information"
+      shell: bash
+      run: |
+        echo "::group::ℹ️ Environment Information"
+        echo "::debug::Operating System: $(uname -a)"
+        echo "::debug::GitHub Runner OS: $RUNNER_OS"
+        echo "::debug::GitHub Runner Version: $RUNNER_VERSION"
+        echo "::debug::Git Version: $(git --version || echo 'Not installed')"
+        echo "::debug::jq Version: $(jq --version || echo 'Not installed')"
+        echo "::endgroup::"
+
+    # ================== 🔒 ==================
+    - name: "🔒 Mask sensitive data"
+      shell: bash
+      run: |
+        # No sensitive inputs to mask in this action
+        echo "✅ No sensitive data to mask"
+
+    # ================== 📁 ==================
+    - name: "📁 Normalize config-file path"
+      id: normalize-config-file
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.config-file }}
+
+    - name: "📁 Normalize output-txt path"
+      id: normalize-output-txt
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.output-txt }}
+
+    - name: "📁 Normalize output-props path"
+      id: normalize-output-props
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.output-props }}
+
+    - name: "📁 Normalize output-json path"
+      id: normalize-output-json
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.output-json }}
+
+    # ================== ✅ ==================
+
     - name: "✅ Validate input : version numbers"
       shell: bash
       id: major-minor-validation
@@ -122,15 +168,15 @@ runs:
         echo "::debug::Validating version number inputs..."
 
         if [ "${{ inputs.config-file }}" != "" ]; then
-          echo "::debug::📋 Config file provided (${{ inputs.config-file }})"
+          echo "::debug::📋 Config file provided (${{ steps.normalize-config-file.outputs.normalized }})"
 
-          if [ ! -f "${{ inputs.config-file }}" ]; then
-            echo "::error::Version configuration file ${{ inputs.config-file }} not found"
+          if [ ! -f "${{ steps.normalize-config-file.outputs.normalized }}" ]; then
+            echo "::error::Version configuration file ${{ steps.normalize-config-file.outputs.normalized }} not found"
             exit 1
           fi
 
-          VERSION_MAJOR=$(jq -r '.major' "${{ inputs.config-file }}")
-          VERSION_MINOR=$(jq -r '.minor' "${{ inputs.config-file }}")
+          VERSION_MAJOR=$(jq -r '.major' "${{ steps.normalize-config-file.outputs.normalized }}")
+          VERSION_MINOR=$(jq -r '.minor' "${{ steps.normalize-config-file.outputs.normalized }}")
         elif [ "${{ inputs.major }}" != "" ] && [ "${{ inputs.minor }}" != "" ]; then
           VERSION_MAJOR="${{ inputs.major }}"
           VERSION_MINOR="${{ inputs.minor }}"
@@ -242,15 +288,15 @@ runs:
       if: ${{ inputs.output-txt != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating output-txt input: ${{ inputs.output-txt }}"
+        echo "::debug::Validating output-txt input: ${{ steps.normalize-output-txt.outputs.normalized }}"
 
         # Validate file extension
-        if [[ ! "${{ inputs.output-txt }}" =~ \.(txt|env)$ ]]; then
+        if [[ ! "${{ steps.normalize-output-txt.outputs.normalized }}" =~ \.(txt|env)$ ]]; then
           echo "::warning::Output txt file should typically have .txt or .env extension"
         fi
 
         # Validate output directory exists or can be created
-        OUTPUT_DIR=$(dirname "${{ inputs.output-txt }}")
+        OUTPUT_DIR=$(dirname "${{ steps.normalize-output-txt.outputs.normalized }}")
         if [ "$OUTPUT_DIR" != "." ] && [ ! -d "$OUTPUT_DIR" ]; then
           echo "::debug::Output directory will be created: $OUTPUT_DIR"
         fi
@@ -261,15 +307,15 @@ runs:
       if: ${{ inputs.output-props != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating output-props input: ${{ inputs.output-props }}"
+        echo "::debug::Validating output-props input: ${{ steps.normalize-output-props.outputs.normalized }}"
 
         # Validate file extension
-        if [[ ! "${{ inputs.output-props }}" =~ \.(props|xml)$ ]]; then
+        if [[ ! "${{ steps.normalize-output-props.outputs.normalized }}" =~ \.(props|xml)$ ]]; then
           echo "::warning::Output props file should typically have .props or .xml extension"
         fi
 
         # Validate output directory exists or can be created
-        OUTPUT_DIR=$(dirname "${{ inputs.output-props }}")
+        OUTPUT_DIR=$(dirname "${{ steps.normalize-output-props.outputs.normalized }}")
         if [ "$OUTPUT_DIR" != "." ] && [ ! -d "$OUTPUT_DIR" ]; then
           echo "::debug::Output directory will be created: $OUTPUT_DIR"
         fi
@@ -280,21 +326,22 @@ runs:
       if: ${{ inputs.output-json != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating output-json input: ${{ inputs.output-json }}"
+        echo "::debug::Validating output-json input: ${{ steps.normalize-output-json.outputs.normalized }}"
 
         # Validate file extension
-        if [[ ! "${{ inputs.output-json }}" =~ \.json$ ]]; then
+        if [[ ! "${{ steps.normalize-output-json.outputs.normalized }}" =~ \.json$ ]]; then
           echo "::warning::Output JSON file should have .json extension"
         fi
 
         # Validate output directory exists or can be created
-        OUTPUT_DIR=$(dirname "${{ inputs.output-json }}")
+        OUTPUT_DIR=$(dirname "${{ steps.normalize-output-json.outputs.normalized }}")
         if [ "$OUTPUT_DIR" != "." ] && [ ! -d "$OUTPUT_DIR" ]; then
           echo "::debug::Output directory will be created: $OUTPUT_DIR"
         fi
 
         echo "✅ Output JSON validation completed successfully"
 
+    # ================== 🔍 ==================
     - name: "🔍 Fetch Git history"
       shell: bash
       run: |
@@ -333,6 +380,8 @@ runs:
         else
           echo "::warning::Unable to determine current branch (detached HEAD?)"
         fi
+
+    # ================== 🚀 ==================
 
     - name: "🔢 Generate version numbers"
       id: generate
@@ -511,7 +560,7 @@ runs:
           setEnvironmentVariable "VERSION_OUTPUTJSON" ""
         else
           # Generate txt file if requested
-          output_txt="${{ inputs.output-txt }}"
+          output_txt="${{ steps.normalize-output-txt.outputs.normalized }}"
           if [ -n "$output_txt" ]; then
             echo "📝 Generating txt file: $output_txt"
             mkdir -p "$(dirname "$output_txt")" && touch "$output_txt"
@@ -537,7 +586,7 @@ runs:
           fi
 
           # Generate props file if requested
-          output_props="${{ inputs.output-props }}"
+          output_props="${{ steps.normalize-output-props.outputs.normalized }}"
           if [ -n "$output_props" ]; then
             echo "📝 Generating props file: $output_props"
             mkdir -p "$(dirname "$output_props")" && touch "$output_props"
@@ -567,7 +616,7 @@ runs:
           fi
 
           # Generate JSON file if requested
-          output_json="${{ inputs.output-json }}"
+          output_json="${{ steps.normalize-output-json.outputs.normalized }}"
           if [ -n "$output_json" ]; then
             echo "📝 Generating JSON file: $output_json"
             mkdir -p "$(dirname "$output_json")" && touch "$output_json"
@@ -597,6 +646,7 @@ runs:
 
         echo "✅ Version generation completed successfully"
 
+    # ================== 🔍 ==================
     - name: "🔍 Verify generated versions"
       id: verify
       shell: bash
@@ -634,45 +684,55 @@ runs:
 
         # Verify output files if they were requested
         if [ -n "${{ inputs.output-txt }}" ]; then
-          if [ -f "${{ inputs.output-txt }}" ]; then
-            echo "✅ Output txt file created: ${{ inputs.output-txt }}"
+          if [ -f "${{ steps.normalize-output-txt.outputs.normalized }}" ]; then
+            echo "✅ Output txt file created: ${{ steps.normalize-output-txt.outputs.normalized }}"
             echo "::debug::Content preview:"
-            head -5 "${{ inputs.output-txt }}" | sed 's/^/  /'
+            head -5 "${{ steps.normalize-output-txt.outputs.normalized }}" | sed 's/^/  /'
           else
-            echo "::error file=${{ inputs.output-txt }}::Output txt file not created: ${{ inputs.output-txt }}"
+            echo "::error file=${{ steps.normalize-output-txt.outputs.normalized }}::Output txt file not created: ${{ steps.normalize-output-txt.outputs.normalized }}"
             exit 1
           fi
         fi
 
         if [ -n "${{ inputs.output-props }}" ]; then
-          if [ -f "${{ inputs.output-props }}" ]; then
-            echo "✅ Output props file created: ${{ inputs.output-props }}"
+          if [ -f "${{ steps.normalize-output-props.outputs.normalized }}" ]; then
+            echo "✅ Output props file created: ${{ steps.normalize-output-props.outputs.normalized }}"
             echo "::debug::Content preview:"
-            head -10 "${{ inputs.output-props }}" | sed 's/^/  /'
+            head -10 "${{ steps.normalize-output-props.outputs.normalized }}" | sed 's/^/  /'
           else
-            echo "::error file=${{ inputs.output-props }}::Output props file not created: ${{ inputs.output-props }}"
+            echo "::error file=${{ steps.normalize-output-props.outputs.normalized }}::Output props file not created: ${{ steps.normalize-output-props.outputs.normalized }}"
             exit 1
           fi
         fi
 
         if [ -n "${{ inputs.output-json }}" ]; then
-          if [ -f "${{ inputs.output-json }}" ]; then
-            echo "✅ Output JSON file created: ${{ inputs.output-json }}"
+          if [ -f "${{ steps.normalize-output-json.outputs.normalized }}" ]; then
+            echo "✅ Output JSON file created: ${{ steps.normalize-output-json.outputs.normalized }}"
             echo "::debug::Content preview:"
-            head -10 "${{ inputs.output-json }}" | sed 's/^/  /'
+            head -10 "${{ steps.normalize-output-json.outputs.normalized }}" | sed 's/^/  /'
             # Validate JSON format
             if command -v jq >/dev/null 2>&1; then
-              if jq empty "${{ inputs.output-json }}" 2>/dev/null; then
+              if jq empty "${{ steps.normalize-output-json.outputs.normalized }}" 2>/dev/null; then
                 echo "✅ JSON file is valid"
               else
                 echo "::error::Generated JSON file is invalid"
                 exit 1
               fi
             elif command -v python3 >/dev/null 2>&1; then
-              if python3 -m json.tool "${{ inputs.output-json }}" >/dev/null 2>&1; then
+              if python3 -m json.tool "${{ steps.normalize-output-json.outputs.normalized }}" >/dev/null 2>&1; then
                 echo "✅ JSON file is valid"
               else
                 echo "::error::Generated JSON file is invalid"
+                exit 1
+              fi
+            else
+              echo "::warning::Neither jq nor python3 available for JSON validation"
+            fi
+          else
+            echo "::error file=${{ steps.normalize-output-json.outputs.normalized }}::Output JSON file not created: ${{ steps.normalize-output-json.outputs.normalized }}"
+            exit 1
+          fi
+        fi
                 exit 1
               fi
             fi
@@ -683,6 +743,8 @@ runs:
         fi
 
         echo "✅ Version verification completed successfully"
+
+    # ================== 📊 ==================
 
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'

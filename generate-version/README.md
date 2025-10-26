@@ -19,7 +19,7 @@ Generate version for main branch (major.minor.patch):
 
 ```yaml
 - name: Generate Version
-  uses: ./generate-version
+  uses: framinosona/github_actions/generate-version@main
   with:
     major: '1'
     minor: '2'
@@ -31,7 +31,7 @@ Generate version for feature branch with suffix and revision:
 
 ```yaml
 - name: Generate Feature Version
-  uses: ./generate-version
+  uses: framinosona/github_actions/generate-version@main
   with:
     major: '1'
     minor: '3'
@@ -42,7 +42,7 @@ Generate version for feature branch with suffix and revision:
 
 ```yaml
 - name: Generate Version with Outputs
-  uses: ./generate-version
+  uses: framinosona/github_actions/generate-version@main
   with:
     major: '2'
     minor: '0'
@@ -166,7 +166,7 @@ jobs:
 
     - name: Generate Version
       id: version
-      uses: ./generate-version
+      uses: framinosona/github_actions/generate-version@main
       with:
         major: '1'
         minor: '0'
@@ -227,7 +227,7 @@ jobs:
 
     - name: Generate Release Version
       id: version
-      uses: ./generate-version
+      uses: framinosona/github_actions/generate-version@main
       with:
         major: ${{ github.event.inputs.major }}
         minor: ${{ github.event.inputs.minor }}
@@ -239,7 +239,7 @@ jobs:
         git push origin v${{ steps.version.outputs.VERSION_CORE }}
 
     - name: Create GitHub Release
-      uses: ./github-release
+      uses: framinosona/github_actions/github-release@main
       with:
         tag: v${{ steps.version.outputs.VERSION_CORE }}
         title: 'Release v${{ steps.version.outputs.VERSION_CORE }}'
@@ -250,7 +250,7 @@ jobs:
 
 ```yaml
 - name: Generate .NET Version
-  uses: ./generate-version
+  uses: framinosona/github_actions/generate-version@main
   with:
     major: '2'
     minor: '1'
@@ -285,7 +285,7 @@ strategy:
 
 steps:
 - name: Generate Environment Version
-  uses: ./generate-version
+  uses: framinosona/github_actions/generate-version@main
   with:
     major: ${{ matrix.major }}
     minor: ${{ matrix.minor }}
@@ -388,7 +388,7 @@ Branch names are sanitized for use as version suffixes:
 ```yaml
 # Use timestamp as build ID
 - name: Generate with Timestamp
-  uses: ./generate-version
+  uses: framinosona/github_actions/generate-version@main
   with:
     major: '1'
     minor: '0'
@@ -396,7 +396,7 @@ Branch names are sanitized for use as version suffixes:
 
 # Use commit hash as build ID
 - name: Generate with Commit
-  uses: ./generate-version
+  uses: framinosona/github_actions/generate-version@main
   with:
     major: '1'
     minor: '0'
@@ -449,7 +449,7 @@ Enable verbose output:
 
 ```yaml
 - name: Debug Version Generation
-  uses: ./generate-version
+  uses: framinosona/github_actions/generate-version@main
   with:
     major: '1'
     minor: '0'
@@ -479,7 +479,7 @@ git tag -l "v${major}.${minor}.*" | sort -V | tail -1
 ```yaml
 - name: Generate Docker Version
   id: version
-  uses: ./generate-version
+  uses: framinosona/github_actions/generate-version@main
   with:
     major: '1'
     minor: '0'
