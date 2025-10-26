@@ -95,6 +95,64 @@ outputs:
 runs:
   using: "composite"
   steps:
+    # ================== ℹ️ ==================
+    - name: "ℹ️ Gather environment information"
+      shell: bash
+      run: |
+        echo "::group::ℹ️ Environment Information"
+        echo "::debug::Operating System: $(uname -a)"
+        echo "::debug::GitHub Runner OS: $RUNNER_OS"
+        echo "::debug::GitHub Runner Version: $RUNNER_VERSION"
+        echo "::debug::.NET SDK Version: $(dotnet --version || echo 'Not installed')"
+        echo "::endgroup::"
+
+    # ================== 🔒 ==================
+    - name: "🔒 Mask sensitive data"
+      shell: bash
+      run: |
+        # No sensitive inputs to mask in this action
+        echo "✅ No sensitive data to mask"
+
+    # ================== 📁 ==================
+    - name: "💯 Normalize arguments"
+      id: normalize-arguments
+      uses: framinosona/github_actions/normalize-arguments@main
+      with:
+        arguments: ${{ inputs.arguments }}
+
+    - name: "📁 Normalize path"
+      id: normalize-path
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.path }}
+
+    - name: "📁 Normalize output"
+      id: normalize-output
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.output }}
+
+    - name: "📁 Normalize artifacts-path"
+      id: normalize-artifacts
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.artifacts-path }}
+
+    # ================== ✅ ==================
+
+    - name: "✅ Validate input : path"
+      if: ${{ inputs.path != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating path input: ${{ steps.normalize-path.outputs.normalized }}"
+
+        if [ "${{ steps.normalize-path.outputs.exists }}" != "true" ]; then
+          echo "::error file=${{ steps.normalize-path.outputs.normalized }}::Specified path does not exist: ${{ steps.normalize-path.outputs.normalized }}"
+          exit 1
+        fi
+
+        echo "✅ Path validation completed successfully"
+
     - name: "✅ Validate input : booleans"
       shell: bash
       run: |
@@ -135,6 +193,7 @@ runs:
 
         echo "✅ Version suffix validation completed successfully"
 
+    # ================== 🏗️ ==================
     - name: "🏗️ Build argument list"
       id: build-args
       shell: bash
@@ -171,7 +230,13 @@ runs:
           fi
         done
 
-        ARGUMENTS="$ARGUMENTS ${{ inputs.arguments }}"
+        # Add normalized arguments
+        if [ -n "${{ steps.normalize-arguments.outputs.normalized }}" ]; then
+          NORMALIZED_ARGS="${{ steps.normalize-arguments.outputs.normalized }}"
+          echo "::debug::Original arguments: ${{ inputs.arguments }}"
+          echo "::debug::Normalized arguments: $NORMALIZED_ARGS"
+          ARGUMENTS="$ARGUMENTS $NORMALIZED_ARGS"
+        fi
 
         # Trim leading space
         ARGUMENTS="${ARGUMENTS# }"
@@ -181,14 +246,15 @@ runs:
 
         echo "✅ Argument list built successfully: $ARGUMENTS"
 
+    # ================== 🚀 ==================
     - name: "📦 Run .NET pack"
       id: run-dotnet
       uses: "framinosona/github_actions/dotnet@main"
       with:
         command: "pack"
-        path: ${{ inputs.path }}
-        artifacts-path: ${{ inputs.artifacts-path }}
-        output: ${{ inputs.output }}
+        path: ${{ steps.normalize-path.outputs.normalized }}
+        artifacts-path: ${{ steps.normalize-artifacts.outputs.normalized }}
+        output: ${{ steps.normalize-output.outputs.normalized }}
         arguments: ${{ steps.build-args.outputs.arguments }}
         working-directory: ${{ inputs.working-directory }}
         verbosity: ${{ inputs.verbosity }}
@@ -198,6 +264,7 @@ runs:
         configuration: ${{ inputs.configuration }}
         show-summary: ${{ inputs.show-summary }}
 
+    # ================== 🔍 ==================
     - name: "🔍 Find generated packages"
       id: find-packages
       shell: bash
@@ -206,10 +273,10 @@ runs:
 
         # Determine the search directory based on inputs
         SEARCH_DIR="${{ inputs.working-directory }}"
-        if [ -n "${{ inputs.output }}" ]; then
-          SEARCH_DIR="${{ inputs.output }}"
-        elif [ -n "${{ inputs.artifacts-path }}" ]; then
-          SEARCH_DIR="${{ inputs.artifacts-path }}"
+        if [ -n "${{ steps.normalize-output.outputs.normalized }}" ]; then
+          SEARCH_DIR="${{ steps.normalize-output.outputs.normalized }}"
+        elif [ -n "${{ steps.normalize-artifacts.outputs.normalized }}" ]; then
+          SEARCH_DIR="${{ steps.normalize-artifacts.outputs.normalized }}"
         fi
 
         echo "::debug::Searching in directory: $SEARCH_DIR"
@@ -242,6 +309,9 @@ runs:
           echo "✅ Found $PACKAGE_COUNT NuGet package(s)"
         fi
 
+        echo "✅ Package discovery completed successfully"
+
+    # ================== 📊 ==================
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash
@@ -252,7 +322,13 @@ runs:
         ## 🔧 Input Parameters
         | Parameter | Value |
         |-----------|-------|
-        | 🔢 Version Suffix | `${{ inputs.version-suffix || 'none' }}` |
+        | � Path | `${{ steps.normalize-path.outputs.normalized || 'none' }}` |
+        | 📁 Working Directory | `${{ inputs.working-directory }}` |
+        | ⚙️ Configuration | `${{ inputs.configuration }}` |
+        | 🔧 Arguments | `${{ steps.normalize-arguments.outputs.normalized || 'none' }}` |
+        | 📤 Output Path | `${{ steps.normalize-output.outputs.normalized || 'none' }}` |
+        | 🗂️ Artifacts Path | `${{ steps.normalize-artifacts.outputs.normalized || 'none' }}` |
+        | �🔢 Version Suffix | `${{ inputs.version-suffix || 'none' }}` |
         | 🔍 Include Symbols | `${{ inputs.include-symbols }}` |
         | 📝 Include Source | `${{ inputs.include-source }}` |
         | ⚙️ Serviceable | `${{ inputs.serviceable }}` |
