@@ -31,13 +31,11 @@ runs:
     - name: "ℹ️ Gather environment information"
       shell: bash
       run: |
-        echo "::group::ℹ️ Environment Information"
         echo "::debug::Operating System: $(uname -a)"
         echo "::debug::GitHub Runner OS: $RUNNER_OS"
         echo "::debug::GitHub Runner Version: $RUNNER_VERSION"
         echo "::debug::Shell: $SHELL"
         echo "::debug::OS Type: $OSTYPE"
-        echo "::endgroup::"
 
     # ================== ✅ ==================
 
@@ -59,8 +57,21 @@ runs:
           # Check for reserved characters on Windows
           if [[ "${{ runner.os }}" == "Windows" ]]; then
             INPUT_PATH="${{ inputs.path }}"
-            if [[ "$INPUT_PATH" == *"<"* ]] || [[ "$INPUT_PATH" == *">"* ]] || [[ "$INPUT_PATH" == *":"* ]] || [[ "$INPUT_PATH" == *"\""* ]] || [[ "$INPUT_PATH" == *"|"* ]] || [[ "$INPUT_PATH" == *"?"* ]] || [[ "$INPUT_PATH" == *"*"* ]]; then
-              echo "::warning::Path contains characters that may be invalid on Windows"
+            INVALID_CHARS=""
+
+            # Check each reserved character individually
+            [[ "$INPUT_PATH" == *"<"* ]] && INVALID_CHARS="${INVALID_CHARS}<, "
+            [[ "$INPUT_PATH" == *">"* ]] && INVALID_CHARS="${INVALID_CHARS}>, "
+            [[ "$INPUT_PATH" == *":"* ]] && INVALID_CHARS="${INVALID_CHARS}:, "
+            [[ "$INPUT_PATH" == *"\""* ]] && INVALID_CHARS="${INVALID_CHARS}\", "
+            [[ "$INPUT_PATH" == *"|"* ]] && INVALID_CHARS="${INVALID_CHARS}|, "
+            [[ "$INPUT_PATH" == *"?"* ]] && INVALID_CHARS="${INVALID_CHARS}?, "
+            [[ "$INPUT_PATH" == *"*"* ]] && INVALID_CHARS="${INVALID_CHARS}*, "
+
+            if [[ -n "$INVALID_CHARS" ]]; then
+              # Remove trailing comma and space
+              INVALID_CHARS="${INVALID_CHARS%, }"
+              echo "::warning::Path contains Windows-reserved characters: [$INVALID_CHARS]. These may cause file system operations to fail on Windows."
             fi
           fi
         fi
@@ -143,7 +154,7 @@ runs:
         echo "::debug::Exists: $EXISTS"
         echo "::endgroup::"
 
-    # ================== 🔍 ===================
+    # ================== 🔍 ==================
 
     - name: "🔍 Verify normalization results"
       shell: bash
@@ -202,8 +213,9 @@ runs:
         echo "::debug::Verified exists status: ${{ steps.normalize-path.outputs.exists }}"
         echo "::endgroup::"
 
-    # ================== 🔍 ===================
-    - name: "🔍 Action Summary"
+    # ================== 📊 ==================
+
+    - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash
       run: |

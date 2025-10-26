@@ -158,18 +158,19 @@ outputs:
 runs:
   using: "composite"
   steps:
+
     # ================== ℹ️ ==================
+
     - name: "ℹ️ Gather environment information"
       shell: bash
       run: |
-        echo "::group::ℹ️ Environment Information"
         echo "::debug::Operating System: $(uname -a)"
         echo "::debug::GitHub Runner OS: $RUNNER_OS"
         echo "::debug::GitHub Runner Version: $RUNNER_VERSION"
         echo "::debug::.NET SDK Version: $(dotnet --version || echo 'Not installed')"
-        echo "::endgroup::"
 
     # ================== 🔒 ==================
+
     - name: "🔒 Mask sensitive data"
       shell: bash
       run: |
@@ -189,6 +190,7 @@ runs:
         echo "✅ Masked sensitive inputs"
 
     # ================== 📁 ==================
+
     - name: "📁 Normalize path"
       id: normalize-path
       uses: framinosona/github_actions/normalize-path@main
@@ -214,6 +216,7 @@ runs:
         path: ${{ inputs.import-metadata-path }}
 
     # ================== ✅ ==================
+
     - name: "✅ Validate input : booleans"
       shell: bash
       run: |
@@ -371,6 +374,7 @@ runs:
         echo "✅ Base intermediate output path validation completed successfully"
 
     # ================== 🏗️  ==================
+
     - name: "🏗️ Build argument list"
       id: build-args
       shell: bash
@@ -446,6 +450,7 @@ runs:
         echo "✅ Argument list built successfully: $ARGUMENTS"
 
     # ================== 🚀 ==================
+
     - name: "📦 Install CycloneDX .NET Global Tool"
       id: install-tool
       uses: "framinosona/github_actions/dotnet-tool-install@main"
@@ -467,7 +472,8 @@ runs:
         output: ${{ inputs.output }}
         show-summary: ${{ inputs.show-summary }}
 
-    # ================== � ==================
+    # ================== 🔍 ==================
+
     - name: "🔍 Verify SBOM generation"
       id: verify-sbom
       shell: bash
@@ -531,7 +537,8 @@ runs:
 
         echo "::debug::SBOM generation verification completed"
 
-    # ================== �📊 ==================
+    # ================== 📊 ==================
+
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash

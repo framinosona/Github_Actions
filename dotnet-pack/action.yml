@@ -95,18 +95,19 @@ outputs:
 runs:
   using: "composite"
   steps:
+
     # ================== ℹ️ ==================
+
     - name: "ℹ️ Gather environment information"
       shell: bash
       run: |
-        echo "::group::ℹ️ Environment Information"
         echo "::debug::Operating System: $(uname -a)"
         echo "::debug::GitHub Runner OS: $RUNNER_OS"
         echo "::debug::GitHub Runner Version: $RUNNER_VERSION"
         echo "::debug::.NET SDK Version: $(dotnet --version || echo 'Not installed')"
-        echo "::endgroup::"
 
     # ================== 🔒 ==================
+
     - name: "🔒 Mask sensitive data"
       shell: bash
       run: |
@@ -114,6 +115,7 @@ runs:
         echo "✅ No sensitive data to mask"
 
     # ================== 📁 ==================
+
     - name: "💯 Normalize arguments"
       id: normalize-arguments
       uses: framinosona/github_actions/normalize-arguments@main
@@ -194,6 +196,7 @@ runs:
         echo "✅ Version suffix validation completed successfully"
 
     # ================== 🏗️ ==================
+
     - name: "🏗️ Build argument list"
       id: build-args
       shell: bash
@@ -247,6 +250,7 @@ runs:
         echo "✅ Argument list built successfully: $ARGUMENTS"
 
     # ================== 🚀 ==================
+
     - name: "📦 Run .NET pack"
       id: run-dotnet
       uses: "framinosona/github_actions/dotnet@main"
@@ -265,6 +269,7 @@ runs:
         show-summary: ${{ inputs.show-summary }}
 
     # ================== 🔍 ==================
+
     - name: "🔍 Find generated packages"
       id: find-packages
       shell: bash
@@ -312,6 +317,7 @@ runs:
         echo "✅ Package discovery completed successfully"
 
     # ================== 📊 ==================
+
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash

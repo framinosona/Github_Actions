@@ -61,16 +61,15 @@ runs:
   using: "composite"
   steps:
     # ================== ℹ️ ==================
+
     - name: "ℹ️ Gather environment information"
       shell: bash
       run: |
-        echo "::group::ℹ️ Environment Information"
         echo "::debug::Operating System: $(uname -a)"
         echo "::debug::GitHub Runner OS: $RUNNER_OS"
         echo "::debug::GitHub Runner Version: $RUNNER_VERSION"
         echo "::debug::GitHub CLI Version: $(gh --version || echo 'Not installed')"
         echo "::debug::jq Version: $(jq --version || echo 'Not installed')"
-        echo "::endgroup::"
 
     # ================== 🔒 ==================
 
@@ -84,6 +83,7 @@ runs:
         echo "::debug::Masked sensitive inputs"
 
     # ================== 📁 ==================
+
     - name: "📁 Normalize output-file path"
       id: normalize-output-file
       uses: framinosona/github_actions/normalize-path@main
@@ -301,7 +301,8 @@ runs:
           exit $exit_code
         fi
 
-    # ================== � ==================
+    # ================== 🔍 ==================
+
     - name: "🔍 Verify SBOM generation"
       id: verify-sbom
       shell: bash
@@ -363,7 +364,8 @@ runs:
 
         echo "::debug::SBOM generation verification completed"
 
-    # ================== �📊 ==================
+    # ================== 📊 ==================
+
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash

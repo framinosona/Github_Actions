@@ -100,17 +100,16 @@ runs:
   using: "composite"
   steps:
     # ================== ℹ️ ==================
+
     - name: "ℹ️ Gather environment information"
       shell: bash
       run: |
-        echo "::group::ℹ️ Environment Information"
         echo "::debug::Operating System: $(uname -a)"
         echo "::debug::GitHub Runner OS: $RUNNER_OS"
         echo "::debug::GitHub Runner Version: $RUNNER_VERSION"
         echo "::debug::GitHub CLI Version: $(gh --version || echo 'Not installed')"
         echo "::debug::jq Version: $(jq --version || echo 'Not installed')"
         echo "::debug::Git Version: $(git --version || echo 'Not installed')"
-        echo "::endgroup::"
 
     # ================== 🔒 ==================
 
@@ -124,6 +123,7 @@ runs:
         echo "::debug::Masked sensitive inputs"
 
     # ================== 📁 ==================
+
     - name: "📁 Normalize notes-file path"
       id: normalize-notes-file
       uses: framinosona/github_actions/normalize-path@main
@@ -266,6 +266,7 @@ runs:
         fi
 
     # ================== 🏗️ ==================
+
     - name: "🏗️ Build argument list"
       id: build-args
       shell: bash
@@ -356,6 +357,7 @@ runs:
         echo "✅ Argument list built successfully"
 
     # ================== 🚀 ==================
+
     - name: "🚀 Execute GitHub release creation"
       id: execute
       shell: bash
@@ -457,6 +459,7 @@ runs:
         fi
 
     # ================== 📊 ==================
+
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash

@@ -69,17 +69,17 @@ runs:
   using: "composite"
   steps:
     # ================== ℹ️ ==================
+
     - name: "ℹ️ Gather environment information"
       shell: bash
       run: |
-        echo "::group::ℹ️ Environment Information"
         echo "::debug::Operating System: $(uname -a)"
         echo "::debug::GitHub Runner OS: $RUNNER_OS"
         echo "::debug::GitHub Runner Version: $RUNNER_VERSION"
         echo "::debug::.NET SDK Version: $(dotnet --version || echo 'Not installed')"
-        echo "::endgroup::"
 
     # ================== 🔒 ==================
+
     - name: "🔒 Mask sensitive data"
       shell: bash
       run: |
@@ -93,6 +93,7 @@ runs:
         echo "✅ Masked sensitive inputs"
 
     # ================== 📁 ==================
+
     - name: "📁 Normalize package path"
       id: normalize-package-path
       uses: framinosona/github_actions/normalize-path@main
@@ -100,6 +101,7 @@ runs:
         path: ${{ inputs.package-path }}
 
     # ================== ✅ ==================
+
     - name: "✅ Validate input : booleans"
       shell: bash
       run: |
@@ -148,6 +150,7 @@ runs:
         echo "::debug::Timeout validation completed successfully"
 
     # ================== 🏗️ ==================
+
     - name: "🏗️ Build argument list"
       id: build-args
       shell: bash
@@ -194,6 +197,7 @@ runs:
         echo "::debug::Argument list built successfully: $ARGUMENTS"
 
     # ================== 🚀 ==================
+
     - name: "🔄 Execute NuGet package upload"
       id: run-dotnet
       uses: "framinosona/github_actions/dotnet@main"
@@ -204,7 +208,8 @@ runs:
         verbosity: ${{ inputs.verbosity }}
         show-summary: ${{ inputs.show-summary }}
 
-    # ================== � ==================
+    # ================== 🔍 ==================
+
     - name: "🔍 Verify package upload"
       id: verify-upload
       shell: bash
@@ -222,7 +227,8 @@ runs:
 
         echo "::debug::Package upload verification completed"
 
-    # ================== �📊 ==================
+    # ================== 📊 ==================
+
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash

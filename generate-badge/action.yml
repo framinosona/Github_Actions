@@ -84,18 +84,18 @@ runs:
   using: "composite"
   steps:
     # ================== ℹ️ ==================
+
     - name: "ℹ️ Gather environment information"
       shell: bash
       run: |
-        echo "::group::ℹ️ Environment Information"
         echo "::debug::Operating System: $(uname -a)"
         echo "::debug::GitHub Runner OS: $RUNNER_OS"
         echo "::debug::GitHub Runner Version: $RUNNER_VERSION"
         echo "::debug::curl availability: $(command -v curl >/dev/null 2>&1 && echo 'Available' || echo 'Not available')"
         echo "::debug::wget availability: $(command -v wget >/dev/null 2>&1 && echo 'Available' || echo 'Not available')"
-        echo "::endgroup::"
 
     # ================== 🔒 ==================
+
     - name: "🔒 Mask sensitive data"
       shell: bash
       run: |
@@ -103,6 +103,7 @@ runs:
         echo "✅ No sensitive data to mask"
 
     # ================== 📁 ==================
+
     - name: "📁 Normalize output-file path"
       id: normalize-output-file
       uses: framinosona/github_actions/normalize-path@main
@@ -110,6 +111,7 @@ runs:
         path: ${{ inputs.output-file }}
 
     # ================== ✅ ==================
+
     - name: "✅ Validate input : required parameters"
       shell: bash
       run: |
@@ -271,6 +273,7 @@ runs:
         echo "✅ Output file validation completed successfully"
 
     # ================== 🚀 ==================
+
     - name: "🛠️ Build badge URL"
       id: build-url
       shell: bash
@@ -425,7 +428,8 @@ runs:
         echo "output-file-path=${output_file_full_path}" >> $GITHUB_OUTPUT
         echo "✅ Badge saved to: ${output_file_full_path}"
 
-    # ================== � ==================
+    # ================== 🔍 ==================
+
     - name: "🔍 Verify badge generation"
       id: verify-badge
       shell: bash
@@ -470,7 +474,8 @@ runs:
 
         echo "::debug::Badge generation verification completed"
 
-    # ================== �📊 ==================
+    # ================== 📊 ==================
+
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash

@@ -75,17 +75,17 @@ runs:
   steps:
 
     # ================== ℹ️ ==================
+
     - name: "ℹ️ Gather environment information"
       shell: bash
       run: |
-        echo "::group::ℹ️ Environment Information"
         echo "::debug::Operating System: $(uname -a)"
         echo "::debug::GitHub Runner OS: $RUNNER_OS"
         echo "::debug::GitHub Runner Version: $RUNNER_VERSION"
         echo "::debug::.NET SDK Version: $(dotnet --version || echo 'Not installed')"
-        echo "::endgroup::"
 
     # ================== 🔒 ==================
+
     - name: "🔒 Mask sensitive data"
       shell: bash
       run: |
@@ -93,6 +93,7 @@ runs:
         echo "✅ No sensitive data to mask"
 
     # ================== 📁 ==================
+
     - name: "📁 Normalize config path"
       id: normalize-config
       uses: framinosona/github_actions/normalize-path@main
@@ -106,6 +107,7 @@ runs:
         path: ${{ inputs.output }}
 
     # ================== ✅ ==================
+
     - name: "✅ Validate input : booleans"
       shell: bash
       run: |
@@ -163,6 +165,7 @@ runs:
         echo "✅ docfx-version input validation completed successfully"
 
     # ================== 🏗️ ==================
+
     - name: "🔧 Build arguments"
       id: build-args
       shell: bash
@@ -212,6 +215,7 @@ runs:
         echo "✅ Arguments built successfully"
 
     # ================== 🚀 ==================
+
     - name: "📦 Install DocFX tool"
       uses: "framinosona/github_actions/dotnet-tool-install@main"
       with:
@@ -230,6 +234,7 @@ runs:
         show-summary: "${{ inputs.show-summary }}"
 
     # ================== 🔍 ==================
+
     - name: "📊 Analyze generated PDF files"
       id: analyze
       shell: bash
@@ -293,6 +298,7 @@ runs:
         fi
 
     # ================== 📊 ==================
+
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash

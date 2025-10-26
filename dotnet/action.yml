@@ -74,19 +74,20 @@ outputs:
 runs:
   using: "composite"
   steps:
+
     # ================== ℹ️ ==================
+
     - name: "ℹ️ Gather environment information"
       shell: bash
       run: |
-        echo "::group::ℹ️ Environment Information"
         echo "::debug::Operating System: $(uname -a)"
         echo "::debug::GitHub Runner OS: $RUNNER_OS"
         echo "::debug::GitHub Runner Version: $RUNNER_VERSION"
         echo "::debug::.NET SDK Version: $(dotnet --version || echo 'Not installed')"
         echo "::debug::Available runtimes: $(dotnet --list-runtimes 2>/dev/null || echo 'None')"
-        echo "::endgroup::"
 
     # ================== 🔒 ==================
+
     - name: "🔒 Mask sensitive data"
       shell: bash
       run: |
@@ -94,6 +95,7 @@ runs:
         echo "✅ No sensitive data to mask"
 
     # ================== 📁 ==================
+
     - name: "💯 Normalize arguments"
       id: normalize-arguments
       uses: framinosona/github_actions/normalize-arguments@main
@@ -125,6 +127,7 @@ runs:
         path: ${{ inputs.path }}
 
     # ================== ✅ ==================
+
     - name: "✅ Validate input : working-directory"
       shell: bash
       run: |
@@ -248,6 +251,7 @@ runs:
         echo "✅ Arch validation completed successfully"
 
     # ================== 🏗️ ==================
+
     - name: "🔧 Set verbosity level"
       id: validate-verbosity
       shell: bash
@@ -339,6 +343,7 @@ runs:
         echo "✅ Argument list built successfully: $ARGUMENTS"
 
     # ================== 🚀 ==================
+
     - name: "🚀 Run dotnet command with auto-verbosity"
       id: run-command
       shell: bash
@@ -369,7 +374,8 @@ runs:
         # Exit with the same code as the dotnet command
         exit $EXIT_CODE
 
-    # ================== � ==================
+    # ================== 🔍 ==================
+
     - name: "🔍 Verify command execution"
       if: always()
       shell: bash
@@ -392,7 +398,8 @@ runs:
 
         echo "✅ Command execution verification completed"
 
-    # ================== �📊 ==================
+    # ================== 📊 ==================
+
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash

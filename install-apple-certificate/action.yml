@@ -76,7 +76,7 @@ runs:
   steps:
     # ================== ℹ️ ==================
 
-    - name: "ℹ️ Display environment info"
+    - name: "ℹ️ Gather environment information"
       shell: bash
       run: |
         echo "::debug::Running on $(uname -s) $(uname -m)"
@@ -303,6 +303,7 @@ runs:
         echo "✅ Team ID validation completed successfully"
 
     # ================== 🏗️ ==================
+
     # ================== 🚀 ==================
 
     - name: "🍎 Install Apple certificate and provisioning profile"
@@ -454,6 +455,7 @@ runs:
         echo "✅ Apple certificate and provisioning profile installation completed successfully"
 
     # ================== 🔍 ==================
+
     - name: "🔍 Verify installation"
       id: verify
       shell: bash
@@ -510,6 +512,7 @@ runs:
         echo "✅ Keychain cleanup completed successfully"
 
     # ================== 📊 ==================
+
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash

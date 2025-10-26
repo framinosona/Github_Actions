@@ -25,31 +25,14 @@ runs:
   using: "composite"
   steps:
     # ================== ℹ️ ==================
+
     - name: "ℹ️ Gather environment information"
       shell: bash
       run: |
-        echo "::group::ℹ️ Environment Information"
         echo "::debug::Operating System: $(uname -a)"
         echo "::debug::GitHub Runner OS: $RUNNER_OS"
         echo "::debug::GitHub Runner Version: $RUNNER_VERSION"
         echo "::debug::Shell: $SHELL"
-        echo "::endgroup::"
-
-    # ================== 🔒 ==================
-
-    - name: "🔒 Mask sensitive data"
-      shell: bash
-      run: |
-        # No sensitive inputs to mask in this action
-        echo "✅ No sensitive data to mask"
-
-    # ================== 📁 ==================
-
-    - name: "📁 Normalize file paths"
-      shell: bash
-      run: |
-        # This action IS the normalization action, no additional normalization needed
-        echo "✅ No file paths to normalize"
 
     # ================== ✅ ==================
 
@@ -113,24 +96,8 @@ runs:
       env:
         INPUT_ARGUMENTS: ${{ inputs.arguments }}
 
-    # ================== 🔍 ==================
-    - name: "🔍 Verify normalization results"
-      shell: bash
-      run: |
-        echo "::group::🔍 Verifying Normalization Results"
+    # ================== 📊 ==================
 
-        # Verify that output was generated
-        if [ -z "${{ steps.normalize.outputs.normalized }}" ]; then
-          echo "::warning::Normalization resulted in empty output"
-        else
-          echo "::debug::Normalization completed with valid output"
-          echo "::debug::Output length: $(printf '%s' '${{ steps.normalize.outputs.normalized }}' | wc -c)"
-        fi
-
-        echo "✅ Normalization verification completed"
-        echo "::endgroup::"
-
-    # ================== 🔍 ===================
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash

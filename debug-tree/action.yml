@@ -19,7 +19,9 @@ inputs:
 runs:
   using: "composite"
   steps:
+
     # ================== 📁 ==================
+
     - name: "📁 Normalize path"
       id: normalize-path
       uses: framinosona/github_actions/normalize-path@main
@@ -27,6 +29,7 @@ runs:
         path: ${{ inputs.path }}
 
     # ================== ✅ ==================
+
     - name: "✅ Validate input : booleans"
       shell: bash
       run: |
@@ -49,6 +52,7 @@ runs:
         fi
 
     # ================== 🚀 ==================
+
     - name: "🌳 Show directory tree"
       shell: bash
       run: |

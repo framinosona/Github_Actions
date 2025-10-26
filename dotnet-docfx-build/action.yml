@@ -127,18 +127,19 @@ outputs:
 runs:
   using: "composite"
   steps:
+
     # ================== ℹ️ ==================
+
     - name: "ℹ️ Gather environment information"
       shell: bash
       run: |
-        echo "::group::ℹ️ Environment Information"
         echo "::debug::Operating System: $(uname -a)"
         echo "::debug::GitHub Runner OS: $RUNNER_OS"
         echo "::debug::GitHub Runner Version: $RUNNER_VERSION"
         echo "::debug::.NET SDK Version: $(dotnet --version || echo 'Not installed')"
-        echo "::endgroup::"
 
     # ================== 🔒 ==================
+
     - name: "🔒 Mask sensitive data"
       shell: bash
       run: |
@@ -166,6 +167,7 @@ runs:
         path: ${{ inputs.filter }}
 
     # ================== ✅ ==================
+
     - name: "✅ Validate input : booleans"
       shell: bash
       run: |
@@ -299,6 +301,7 @@ runs:
         echo "✅ Xref input validation completed successfully"
 
     # ================== 🏗️  ==================
+
     - name: "🏗️ Build argument list"
       id: build-args
       shell: bash
@@ -380,6 +383,7 @@ runs:
         echo "✅ Arguments built successfully"
 
     # ================== 🚀 ==================
+
     - name: "📦 Install DocFX tool"
       uses: "framinosona/github_actions/dotnet-tool-install@main"
       with:
@@ -398,6 +402,7 @@ runs:
         show-summary: "${{ inputs.show-summary }}"
 
     # ================== 🔍 ==================
+
     - name: "🔍 Verify documentation generation"
       id: verify-build
       shell: bash
@@ -430,7 +435,8 @@ runs:
           echo "build-success=false" >> $GITHUB_OUTPUT
         fi
 
-    # ================== �📊 ==================
+    # ================== 📊 ==================
+
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash

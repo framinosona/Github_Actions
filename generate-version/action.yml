@@ -116,18 +116,18 @@ runs:
   using: "composite"
   steps:
     # ================== ℹ️ ==================
+
     - name: "ℹ️ Gather environment information"
       shell: bash
       run: |
-        echo "::group::ℹ️ Environment Information"
         echo "::debug::Operating System: $(uname -a)"
         echo "::debug::GitHub Runner OS: $RUNNER_OS"
         echo "::debug::GitHub Runner Version: $RUNNER_VERSION"
         echo "::debug::Git Version: $(git --version || echo 'Not installed')"
         echo "::debug::jq Version: $(jq --version || echo 'Not installed')"
-        echo "::endgroup::"
 
     # ================== 🔒 ==================
+
     - name: "🔒 Mask sensitive data"
       shell: bash
       run: |
@@ -135,6 +135,7 @@ runs:
         echo "✅ No sensitive data to mask"
 
     # ================== 📁 ==================
+
     - name: "📁 Normalize config-file path"
       id: normalize-config-file
       uses: framinosona/github_actions/normalize-path@main
@@ -342,6 +343,7 @@ runs:
         echo "✅ Output JSON validation completed successfully"
 
     # ================== 🔍 ==================
+
     - name: "🔍 Fetch Git history"
       shell: bash
       run: |
@@ -647,6 +649,7 @@ runs:
         echo "✅ Version generation completed successfully"
 
     # ================== 🔍 ==================
+
     - name: "🔍 Verify generated versions"
       id: verify
       shell: bash

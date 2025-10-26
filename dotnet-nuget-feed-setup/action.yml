@@ -65,17 +65,17 @@ runs:
   steps:
 
     # ================== ℹ️ ==================
+
     - name: "ℹ️ Gather environment information"
       shell: bash
       run: |
-        echo "::group::ℹ️ Environment Information"
         echo "::debug::Operating System: $(uname -a)"
         echo "::debug::GitHub Runner OS: $RUNNER_OS"
         echo "::debug::GitHub Runner Version: $RUNNER_VERSION"
         echo "::debug::.NET SDK Version: $(dotnet --version || echo 'Not installed')"
-        echo "::endgroup::"
 
     # ================== 🔒 ==================
+
     - name: "🔒 Mask sensitive data"
       shell: bash
       run: |
@@ -86,6 +86,7 @@ runs:
         echo "✅ Masked sensitive inputs"
 
     # ================== 📁 ==================
+
     - name: "📁 Normalize configfile path"
       id: normalize-configfile
       uses: framinosona/github_actions/normalize-path@main
@@ -93,6 +94,7 @@ runs:
         path: ${{ inputs.configfile }}
 
     # ================== ✅ ==================
+
     - name: "✅ Validate input : store-password-in-clear-text"
       id: validate-store-password-in-clear-text
       shell: bash
@@ -219,6 +221,7 @@ runs:
         echo "✅ Valid authentication types validation completed successfully"
 
     # ================== 🏗️ ==================
+
     - name: "🏗️ Build argument list"
       id: build-args
       shell: bash
@@ -260,6 +263,7 @@ runs:
         echo "::debug::Argument list built successfully: $ARGUMENTS"
 
     # ================== 🚀 ==================
+
     - name: "🔄 Execute NuGet source setup"
       id: run-dotnet
       uses: "framinosona/github_actions/dotnet@main"
@@ -271,6 +275,7 @@ runs:
         show-summary: ${{ inputs.show-summary }}
 
     # ================== 🔍 ==================
+
     - name: "🔍 Verify source was added"
       id: verify-source
       shell: bash
@@ -301,6 +306,7 @@ runs:
         echo "source-added=$SOURCE_ADDED" >> $GITHUB_OUTPUT
 
     # ================== 📊 ==================
+
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash
