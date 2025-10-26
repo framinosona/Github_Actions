@@ -41,19 +41,56 @@ outputs:
   exit-code:
     description: "Exit code of the gh-sbom command"
     value: ${{ steps.generate-sbom.outputs.exit-code }}
+  generation-successful:
+    description: "Whether the SBOM generation was successful"
+    value: ${{ steps.verify-sbom.outputs.generation-successful }}
+  file-created:
+    description: "Whether the output file was successfully created"
+    value: ${{ steps.verify-sbom.outputs.file-created }}
+  file-size:
+    description: "Size of the created SBOM file in bytes"
+    value: ${{ steps.verify-sbom.outputs.file-size }}
+  file-valid:
+    description: "Whether the generated SBOM file appears to be valid"
+    value: ${{ steps.verify-sbom.outputs.file-valid }}
+  has-components:
+    description: "Whether the SBOM contains components"
+    value: ${{ steps.verify-sbom.outputs.has-components }}
 
 runs:
   using: "composite"
   steps:
+    # ================== ℹ️ ==================
+    - name: "ℹ️ Gather environment information"
+      shell: bash
+      run: |
+        echo "::group::ℹ️ Environment Information"
+        echo "::debug::Operating System: $(uname -a)"
+        echo "::debug::GitHub Runner OS: $RUNNER_OS"
+        echo "::debug::GitHub Runner Version: $RUNNER_VERSION"
+        echo "::debug::GitHub CLI Version: $(gh --version || echo 'Not installed')"
+        echo "::debug::jq Version: $(jq --version || echo 'Not installed')"
+        echo "::endgroup::"
+
+    # ================== 🔒 ==================
+
     - name: "🔒 Mask sensitive data"
       shell: bash
       run: |
-        # Mask sensitive data FIRST
         if [ -n "${{ inputs.github-token }}" ]; then
           echo "::add-mask::${{ inputs.github-token }}"
         fi
 
         echo "::debug::Masked sensitive inputs"
+
+    # ================== 📁 ==================
+    - name: "📁 Normalize output-file path"
+      id: normalize-output-file
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.output-file }}
+
+    # ================== ✅ ==================
 
     - name: "✅ Validate input : booleans"
       shell: bash
@@ -101,24 +138,24 @@ runs:
       if: ${{ inputs.output-file != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating output-file input: ${{ inputs.output-file }}"
+        echo "::debug::Validating output-file input: ${{ steps.normalize-output-file.outputs.normalized }}"
 
         # Validate output directory exists
-        output_dir=$(dirname "${{ inputs.output-file }}")
+        output_dir=$(dirname "${{ steps.normalize-output-file.outputs.normalized }}")
         if [ "$output_dir" != "." ] && [ ! -d "$output_dir" ]; then
-          echo "::error file=${{ inputs.output-file }}::Output directory does not exist: $output_dir"
+          echo "::error file=${{ steps.normalize-output-file.outputs.normalized }}::Output directory does not exist: $output_dir"
           exit 1
         fi
 
         # Validate file extension matches format
         case "${{ inputs.format }}" in
           spdx)
-            if [[ ! "${{ inputs.output-file }}" =~ \.(json|spdx)$ ]]; then
+            if [[ ! "${{ steps.normalize-output-file.outputs.normalized }}" =~ \.(json|spdx)$ ]]; then
               echo "::warning::SPDX format typically uses .json or .spdx extension"
             fi
             ;;
           cyclonedx)
-            if [[ ! "${{ inputs.output-file }}" =~ \.(json|xml)$ ]]; then
+            if [[ ! "${{ steps.normalize-output-file.outputs.normalized }}" =~ \.(json|xml)$ ]]; then
               echo "::warning::CycloneDX format typically uses .json or .xml extension"
             fi
             ;;
@@ -177,6 +214,8 @@ runs:
         echo "arguments=$ARGUMENTS" >> $GITHUB_OUTPUT
         echo "✅ Argument list built successfully: $ARGUMENTS"
 
+    # ================== 🏗️ ==================
+
     - name: "🔧 Setup gh-sbom extension"
       shell: bash
       run: |
@@ -197,6 +236,8 @@ runs:
         fi
 
         echo "✅ gh-sbom extension setup completed successfully"
+
+    # ================== 🚀 ==================
 
     - name: "📦 Generate SBOM"
       id: generate-sbom
@@ -219,8 +260,8 @@ runs:
         # Execute gh sbom command
         set +e
         if [ -n "${{ inputs.output-file }}" ]; then
-          echo "::debug::Saving SBOM to file: ${{ inputs.output-file }}"
-          gh sbom "${ARGS[@]}" > "${{ inputs.output-file }}"
+          echo "::debug::Saving SBOM to file: ${{ steps.normalize-output-file.outputs.normalized }}"
+          gh sbom "${ARGS[@]}" > "${{ steps.normalize-output-file.outputs.normalized }}"
           exit_code=$?
         else
           echo "::debug::Outputting SBOM to stdout"
@@ -234,14 +275,14 @@ runs:
         echo "exit-code=$exit_code" >> $GITHUB_OUTPUT
 
         if [ -n "${{ inputs.output-file }}" ]; then
-          echo "output-file=${{ inputs.output-file }}" >> $GITHUB_OUTPUT
+          echo "output-file=${{ steps.normalize-output-file.outputs.normalized }}" >> $GITHUB_OUTPUT
 
           # Count components if file was created successfully
-          if [ $exit_code -eq 0 ] && [ -f "${{ inputs.output-file }}" ]; then
+          if [ $exit_code -eq 0 ] && [ -f "${{ steps.normalize-output-file.outputs.normalized }}" ]; then
             if [ "${{ inputs.format }}" = "spdx" ]; then
-              component_count=$(jq '.packages | length' "${{ inputs.output-file }}" 2>/dev/null || echo "0")
+              component_count=$(jq '.packages | length' "${{ steps.normalize-output-file.outputs.normalized }}" 2>/dev/null || echo "0")
             else
-              component_count=$(jq '.components | length' "${{ inputs.output-file }}" 2>/dev/null || echo "0")
+              component_count=$(jq '.components | length' "${{ steps.normalize-output-file.outputs.normalized }}" 2>/dev/null || echo "0")
             fi
             echo "component-count=$component_count" >> $GITHUB_OUTPUT
             echo "::debug::Found $component_count components"
@@ -260,13 +301,75 @@ runs:
           exit $exit_code
         fi
 
+    # ================== � ==================
+    - name: "🔍 Verify SBOM generation"
+      id: verify-sbom
+      shell: bash
+      run: |
+        echo "::debug::Verifying SBOM generation results..."
 
+        # Verify exit code
+        if [ "${{ steps.generate-sbom.outputs.exit-code }}" = "0" ]; then
+          echo "✅ SBOM generation completed successfully"
+          echo "generation-successful=true" >> $GITHUB_OUTPUT
+        else
+          echo "❌ SBOM generation failed with exit code ${{ steps.generate-sbom.outputs.exit-code }}"
+          echo "generation-successful=false" >> $GITHUB_OUTPUT
+        fi
+
+        # Verify output file if requested
+        if [ -n "${{ inputs.output-file }}" ]; then
+          if [ -f "${{ steps.normalize-output-file.outputs.normalized }}" ]; then
+            file_size=$(wc -c < "${{ steps.normalize-output-file.outputs.normalized }}" 2>/dev/null || echo "0")
+            echo "✅ SBOM file created: ${{ steps.normalize-output-file.outputs.normalized }} ($file_size bytes)"
+            echo "file-created=true" >> $GITHUB_OUTPUT
+            echo "file-size=$file_size" >> $GITHUB_OUTPUT
+
+            # Validate SBOM content (basic JSON structure check)
+            if command -v jq >/dev/null 2>&1; then
+              if jq empty "${{ steps.normalize-output-file.outputs.normalized }}" >/dev/null 2>&1; then
+                echo "✅ SBOM file appears to be valid JSON"
+                echo "file-valid=true" >> $GITHUB_OUTPUT
+              else
+                echo "⚠️ SBOM file exists but may not be valid JSON"
+                echo "file-valid=false" >> $GITHUB_OUTPUT
+              fi
+            else
+              echo "⚠️ jq not available for JSON validation"
+              echo "file-valid=unknown" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "❌ SBOM file was not created: ${{ steps.normalize-output-file.outputs.normalized }}"
+            echo "file-created=false" >> $GITHUB_OUTPUT
+            echo "file-size=0" >> $GITHUB_OUTPUT
+            echo "file-valid=false" >> $GITHUB_OUTPUT
+          fi
+        else
+          echo "⏭️ No output file requested - SBOM sent to stdout"
+          echo "file-created=not-requested" >> $GITHUB_OUTPUT
+          echo "file-size=0" >> $GITHUB_OUTPUT
+          echo "file-valid=not-applicable" >> $GITHUB_OUTPUT
+        fi
+
+        # Verify component count
+        component_count="${{ steps.generate-sbom.outputs.component-count }}"
+        if [ "$component_count" -gt 0 ]; then
+          echo "✅ Found $component_count components in SBOM"
+          echo "has-components=true" >> $GITHUB_OUTPUT
+        else
+          echo "⚠️ No components found in SBOM or count unavailable"
+          echo "has-components=false" >> $GITHUB_OUTPUT
+        fi
+
+        echo "::notice::SBOM generation verification completed"
+
+    # ================== �📊 ==================
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash
       run: |
         cat >> $GITHUB_STEP_SUMMARY << 'EOF'
-        <details><summary>🔗 Github SBOM</summary>
+        <details><summary>� Generate SBOM: ${{ inputs.format }}</summary>
 
         ## 🔧 Input Parameters
         | Parameter | Value |
@@ -274,7 +377,7 @@ runs:
         | 📝 Repository | `${{ inputs.repository || 'current repository' }}` |
         | 📋 Format | `${{ inputs.format }}` |
         | 📄 Include License | `${{ inputs.include-license }}` |
-        | 💾 Output File | `${{ inputs.output-file || 'stdout' }}` |
+        | 💾 Output File | `${{ steps.normalize-output-file.outputs.normalized || 'stdout' }}` |
 
         ## 📤 Action Results
         | Metric | Value |
@@ -283,7 +386,11 @@ runs:
         | 📁 Output File | `${{ steps.generate-sbom.outputs.output-file || 'stdout' }}` |
         | 📊 Component Count | `${{ steps.generate-sbom.outputs.component-count }}` |
         | ✅ Exit Code | `${{ steps.generate-sbom.outputs.exit-code }}` |
-        | 📈 Status | `${{ steps.generate-sbom.outputs.exit-code == '0' && '✅ Success' || '❌ Failed' }}` |
+        | 📈 Generation Status | `${{ steps.verify-sbom.outputs.generation-successful == 'true' && '✅ Success' || '❌ Failed' }}` |
+        | 📁 File Created | `${{ steps.verify-sbom.outputs.file-created }}` |
+        | 📏 File Size | `${{ steps.verify-sbom.outputs.file-size }} bytes` |
+        | ✅ File Valid | `${{ steps.verify-sbom.outputs.file-valid }}` |
+        | 📦 Has Components | `${{ steps.verify-sbom.outputs.has-components }}` |
 
         ## ⚙️ Process Details
         | Step | Status |
@@ -292,6 +399,7 @@ runs:
         | 🏗️ Argument Building | `${{ steps.build-args.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
         | 🔧 Extension Setup | `✅ Completed` |
         | 📦 Generate SBOM | `${{ steps.generate-sbom.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | 🔍 SBOM Verification | `${{ steps.verify-sbom.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
 
         </details>
         EOF
