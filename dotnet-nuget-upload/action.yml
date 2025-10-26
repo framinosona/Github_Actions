@@ -61,14 +61,28 @@ outputs:
   executed-command:
     description: "The actual command that was executed"
     value: ${{ steps.run-dotnet.outputs.executed-command }}
+  upload-success:
+    description: "Whether the package upload was successful"
+    value: ${{ steps.verify-upload.outputs.upload-success }}
 
 runs:
   using: "composite"
   steps:
+    # ================== ℹ️ ==================
+    - name: "ℹ️ Gather environment information"
+      shell: bash
+      run: |
+        echo "::group::ℹ️ Environment Information"
+        echo "::debug::Operating System: $(uname -a)"
+        echo "::debug::GitHub Runner OS: $RUNNER_OS"
+        echo "::debug::GitHub Runner Version: $RUNNER_VERSION"
+        echo "::debug::.NET SDK Version: $(dotnet --version || echo 'Not installed')"
+        echo "::endgroup::"
+
+    # ================== 🔒 ==================
     - name: "🔒 Mask sensitive data"
       shell: bash
       run: |
-        # Mask sensitive data FIRST
         if [ -n "${{ inputs.api-key }}" ]; then
           echo "::add-mask::${{ inputs.api-key }}"
         fi
@@ -78,6 +92,14 @@ runs:
 
         echo "✅ Masked sensitive inputs"
 
+    # ================== 📁 ==================
+    - name: "📁 Normalize package path"
+      id: normalize-package-path
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.package-path }}
+
+    # ================== ✅ ==================
     - name: "✅ Validate input : booleans"
       shell: bash
       run: |
@@ -101,10 +123,10 @@ runs:
     - name: "✅ Validate input : package-path"
       shell: bash
       run: |
-        echo "::debug::Validating package-path input: ${{ inputs.package-path }}"
+        echo "::debug::Validating package-path input: ${{ steps.normalize-package-path.outputs.normalized }}"
 
         # Validate package path is not empty
-        if [ -z "${{ inputs.package-path }}" ]; then
+        if [ -z "${{ steps.normalize-package-path.outputs.normalized }}" ]; then
           echo "::error::Package path cannot be empty"
           exit 1
         fi
@@ -125,6 +147,7 @@ runs:
 
         echo "::debug::Timeout validation completed successfully"
 
+    # ================== 🏗️ ==================
     - name: "🏗️ Build argument list"
       id: build-args
       shell: bash
@@ -132,7 +155,7 @@ runs:
         echo "::debug::Building argument list for NuGet package upload"
 
         # Start with base arguments
-        ARGUMENTS="push '${{ inputs.package-path }}'"
+        ARGUMENTS="push '${{ steps.normalize-package-path.outputs.normalized }}'"
 
         # Key-value options
         for param in source api-key symbol-source symbol-api-key; do
@@ -170,6 +193,7 @@ runs:
         echo "arguments=$ARGUMENTS" >> $GITHUB_OUTPUT
         echo "::debug::Argument list built successfully: $ARGUMENTS"
 
+    # ================== 🚀 ==================
     - name: "🔄 Execute NuGet package upload"
       id: run-dotnet
       uses: "framinosona/github_actions/dotnet@main"
@@ -180,17 +204,36 @@ runs:
         verbosity: ${{ inputs.verbosity }}
         show-summary: ${{ inputs.show-summary }}
 
+    # ================== � ==================
+    - name: "🔍 Verify package upload"
+      id: verify-upload
+      shell: bash
+      run: |
+        echo "::debug::Verifying package upload results..."
+
+        # Check if the dotnet push command succeeded
+        if [ "${{ steps.run-dotnet.outputs.exit-code }}" = "0" ]; then
+          echo "✅ Package upload completed successfully"
+          echo "upload-success=true" >> $GITHUB_OUTPUT
+        else
+          echo "❌ Package upload failed with exit code: ${{ steps.run-dotnet.outputs.exit-code }}"
+          echo "upload-success=false" >> $GITHUB_OUTPUT
+        fi
+
+        echo "::notice::Package upload verification completed"
+
+    # ================== �📊 ==================
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash
       run: |
         cat >> $GITHUB_STEP_SUMMARY << 'EOF'
-        <details><summary>📦 NuGet Upload : ${{ inputs.package-path }}</summary>
+        <details><summary>📦 NuGet Upload : ${{ steps.normalize-package-path.outputs.normalized }}</summary>
 
         ## 🔧 NuGet Upload Specific Parameters
         | Parameter | Value |
         |-----------|-------|
-        | 📦 Package Path | `${{ inputs.package-path }}` |
+        | 📦 Package Path | `${{ steps.normalize-package-path.outputs.normalized }}` |
         | 🔗 Source | `${{ inputs.source || 'default' }}` |
         | 🔑 API Key | `${{ inputs.api-key != '' && '***configured***' || 'not provided' }}` |
         | 🔣 Symbol Source | `${{ inputs.symbol-source || 'none' }}` |
@@ -206,11 +249,13 @@ runs:
         | ✅ Input Validation | `✅ Completed` |
         | 🔨 Argument Building | `${{ steps.build-args.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
         | ⚙️ Base Action Execution | `${{ steps.run-dotnet.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | 🔍 Upload Verification | `${{ steps.verify-upload.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
 
         ## 📤 Execution Results
         | Metric | Value |
         |--------|-------|
         | ✅ Exit Code | `${{ steps.run-dotnet.outputs.exit-code }}` |
+        | 📦 Upload Success | `${{ steps.verify-upload.outputs.upload-success }}` |
         | 🔄 Executed Command | `${{ steps.run-dotnet.outputs.executed-command }}` |
 
         </details>
