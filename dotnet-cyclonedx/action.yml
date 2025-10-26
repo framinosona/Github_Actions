@@ -142,14 +142,37 @@ outputs:
   executed-command:
     description: "The actual command that was executed"
     value: ${{ steps.run-dotnet.outputs.executed-command }}
+  sbom-generated:
+    description: "Whether the SBOM file was successfully generated"
+    value: ${{ steps.verify-sbom.outputs.sbom-generated }}
+  sbom-file:
+    description: "Path to the generated SBOM file"
+    value: ${{ steps.verify-sbom.outputs.sbom-file }}
+  sbom-size:
+    description: "Size of the generated SBOM file in bytes"
+    value: ${{ steps.verify-sbom.outputs.sbom-size }}
+  sbom-valid:
+    description: "Whether the generated SBOM appears to be valid"
+    value: ${{ steps.verify-sbom.outputs.sbom-valid }}
 
 runs:
   using: "composite"
   steps:
+    # ================== ℹ️ ==================
+    - name: "ℹ️ Gather environment information"
+      shell: bash
+      run: |
+        echo "::group::ℹ️ Environment Information"
+        echo "::debug::Operating System: $(uname -a)"
+        echo "::debug::GitHub Runner OS: $RUNNER_OS"
+        echo "::debug::GitHub Runner Version: $RUNNER_VERSION"
+        echo "::debug::.NET SDK Version: $(dotnet --version || echo 'Not installed')"
+        echo "::endgroup::"
+
+    # ================== 🔒 ==================
     - name: "🔒 Mask sensitive data"
       shell: bash
       run: |
-        # Mask sensitive data FIRST
         if [ -n "${{ inputs.baseUrlUserPassword }}" ]; then
           echo "::add-mask::${{ inputs.baseUrlUserPassword }}"
         fi
@@ -165,6 +188,32 @@ runs:
 
         echo "✅ Masked sensitive inputs"
 
+    # ================== 📁 ==================
+    - name: "📁 Normalize path"
+      id: normalize-path
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.path }}
+
+    - name: "📁 Normalize filename"
+      id: normalize-filename
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.filename }}
+
+    - name: "📁 Normalize output-base-intermediate-path"
+      id: normalize-base-intermediate-output-path
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.base-intermediate-output-path }}
+
+    - name: "📁 Normalize import-metadata-path"
+      id: normalize-import-metadata-path
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.import-metadata-path }}
+
+    # ================== ✅ ==================
     - name: "✅ Validate input : booleans"
       shell: bash
       run: |
@@ -299,10 +348,10 @@ runs:
       if: ${{ inputs.import-metadata-path != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating import-metadata-path input: ${{ inputs.import-metadata-path }}"
+        echo "::debug::Validating import-metadata-path input: ${{ steps.normalize-import-metadata-path.outputs.normalized }}"
 
-        if [ ! -f "${{ inputs.import-metadata-path }}" ]; then
-          echo "::error file=${{ inputs.import-metadata-path }}::Import metadata file not found: ${{ inputs.import-metadata-path }}"
+        if [ ! -f "${{ steps.normalize-import-metadata-path.outputs.normalized }}" ]; then
+          echo "::error file=${{ steps.normalize-import-metadata-path.outputs.normalized }}::Import metadata file not found: ${{ steps.normalize-import-metadata-path.outputs.normalized }}"
           exit 1
         fi
 
@@ -312,16 +361,17 @@ runs:
       if: ${{ inputs.base-intermediate-output-path != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating base-intermediate-output-path input: ${{ inputs.base-intermediate-output-path }}"
+        echo "::debug::Validating base-intermediate-output-path input: ${{ steps.normalize-base-intermediate-output-path.outputs.normalized }}"
 
-        if [ ! -d "${{ inputs.base-intermediate-output-path }}" ]; then
-          echo "::error file=${{ inputs.base-intermediate-output-path }}::Base intermediate output path not found: ${{ inputs.base-intermediate-output-path }}"
+        if [ ! -d "${{ steps.normalize-base-intermediate-output-path.outputs.normalized }}" ]; then
+          echo "::error file=${{ steps.normalize-base-intermediate-output-path.outputs.normalized }}::Base intermediate output path not found: ${{ steps.normalize-base-intermediate-output-path.outputs.normalized }}"
           exit 1
         fi
 
         echo "✅ Base intermediate output path validation completed successfully"
 
-    - name: "🏗️ Build argument list and set command"
+    # ================== 🏗️  ==================
+    - name: "🏗️ Build argument list"
       id: build-args
       shell: bash
       run: |
@@ -330,20 +380,20 @@ runs:
         ARGUMENTS="run dotnet-cyclonedx"
 
         # Start with path argument if provided
-        if [ -n "${{ inputs.path }}" ]; then
-          ARGUMENTS="$ARGUMENTS '${{ inputs.path }}'"
+        if [ -n "${{ steps.normalize-path.outputs.normalized }}" ]; then
+          ARGUMENTS="$ARGUMENTS '${{ steps.normalize-path.outputs.normalized }}'"
         fi
 
         # Key-value options
         for param in filename url baseUrlUsername baseUrlUserPassword dotnet-command-timeout base-intermediate-output-path import-metadata-path set-name set-version exclude-filter; do
           case $param in
-            filename) value="${{ inputs.filename }}" ;;
+            filename) value="${{ steps.normalize-filename.outputs.normalized }}" ;;
             url) value="${{ inputs.url }}" ;;
             baseUrlUsername) value="${{ inputs.baseUrlUsername }}" ;;
             baseUrlUserPassword) value="${{ inputs.baseUrlUserPassword }}" ;;
             dotnet-command-timeout) value="${{ inputs.dotnet-command-timeout }}" ;;
-            base-intermediate-output-path) value="${{ inputs.base-intermediate-output-path }}" ;;
-            import-metadata-path) value="${{ inputs.import-metadata-path }}" ;;
+            base-intermediate-output-path) value="${{ steps.normalize-base-intermediate-output-path.outputs.normalized }}" ;;
+            import-metadata-path) value="${{ steps.normalize-import-metadata-path.outputs.normalized }}" ;;
             set-name) value="${{ inputs.set-name }}" ;;
             set-version) value="${{ inputs.set-version }}" ;;
             exclude-filter) value="${{ inputs.exclude-filter }}" ;;
@@ -395,6 +445,7 @@ runs:
         echo "arguments=$ARGUMENTS" >> $GITHUB_OUTPUT
         echo "✅ Argument list built successfully: $ARGUMENTS"
 
+    # ================== 🚀 ==================
     - name: "📦 Install CycloneDX .NET Global Tool"
       id: install-tool
       uses: "framinosona/github_actions/dotnet-tool-install@main"
@@ -404,7 +455,7 @@ runs:
         create-manifest-if-needed: "true"
         show-summary: ${{ inputs.show-summary }}
 
-    - name: "🔄 Execute CycloneDX"
+    - name: "🚀 Execute CycloneDX"
       id: run-dotnet
       uses: "framinosona/github_actions/dotnet@main"
       with:
@@ -416,6 +467,71 @@ runs:
         output: ${{ inputs.output }}
         show-summary: ${{ inputs.show-summary }}
 
+    # ================== � ==================
+    - name: "🔍 Verify SBOM generation"
+      id: verify-sbom
+      shell: bash
+      run: |
+        echo "::debug::Verifying CycloneDX SBOM generation..."
+
+        # Determine the expected output directory and filename
+        OUTPUT_DIR="${{ inputs.output }}"
+        if [ -z "$OUTPUT_DIR" ]; then
+          OUTPUT_DIR="."
+        fi
+
+        FILENAME="${{ steps.normalize-filename.outputs.normalized }}"
+        if [ -z "$FILENAME" ]; then
+          # Default filename based on output format
+          case "${{ inputs.output-format }}" in
+            Json|UnsafeJson) FILENAME="bom.json" ;;
+            Xml) FILENAME="bom.xml" ;;
+            Auto) FILENAME="bom.xml" ;;  # Default for Auto
+            *) FILENAME="bom.xml" ;;
+          esac
+        fi
+
+        SBOM_FILE="$OUTPUT_DIR/$FILENAME"
+
+        # Check if SBOM file was generated
+        if [ -f "$SBOM_FILE" ]; then
+          FILE_SIZE=$(wc -c < "$SBOM_FILE" 2>/dev/null || echo "0")
+          echo "✅ SBOM file generated: $SBOM_FILE ($FILE_SIZE bytes)"
+          echo "sbom-generated=true" >> $GITHUB_OUTPUT
+          echo "sbom-file=$SBOM_FILE" >> $GITHUB_OUTPUT
+          echo "sbom-size=$FILE_SIZE" >> $GITHUB_OUTPUT
+
+          # Validate SBOM content (basic check for XML/JSON structure)
+          if [[ "$SBOM_FILE" == *.xml ]]; then
+            if grep -q "<bom" "$SBOM_FILE" 2>/dev/null; then
+              echo "✅ SBOM appears to be valid XML"
+              echo "sbom-valid=true" >> $GITHUB_OUTPUT
+            else
+              echo "⚠️ SBOM file exists but may not be valid XML"
+              echo "sbom-valid=false" >> $GITHUB_OUTPUT
+            fi
+          elif [[ "$SBOM_FILE" == *.json ]]; then
+            if command -v jq >/dev/null 2>&1 && jq empty "$SBOM_FILE" >/dev/null 2>&1; then
+              echo "✅ SBOM appears to be valid JSON"
+              echo "sbom-valid=true" >> $GITHUB_OUTPUT
+            else
+              echo "⚠️ SBOM file exists but may not be valid JSON"
+              echo "sbom-valid=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "sbom-valid=unknown" >> $GITHUB_OUTPUT
+          fi
+        else
+          echo "❌ SBOM file not found: $SBOM_FILE"
+          echo "sbom-generated=false" >> $GITHUB_OUTPUT
+          echo "sbom-file=" >> $GITHUB_OUTPUT
+          echo "sbom-size=0" >> $GITHUB_OUTPUT
+          echo "sbom-valid=false" >> $GITHUB_OUTPUT
+        fi
+
+        echo "::notice::SBOM generation verification completed"
+
+    # ================== �📊 ==================
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash
@@ -426,7 +542,7 @@ runs:
         ## 🔧 CycloneDX Specific Parameters
         | Parameter | Value |
         |-----------|-------|
-        | 📄 Filename | `${{ inputs.filename || 'auto-generated' }}` |
+        | 📄 Filename | `${{ steps.normalize-filename.outputs.normalized || 'auto-generated' }}` |
         | 📋 Output Format | `${{ inputs.output-format }}` |
         | 🚫 Exclude Dev Dependencies | `${{ inputs.exclude-dev }}` |
         | 🧪 Exclude Test Projects | `${{ inputs.exclude-test-projects }}` |
@@ -446,11 +562,16 @@ runs:
         | 📦 Tool Installation | `${{ steps.install-tool.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
         | 🏗️ Argument Building | `${{ steps.build-args.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
         | 🔧 SBOM Generation | `${{ steps.run-dotnet.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | 🔍 SBOM Verification | `${{ steps.verify-sbom.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
 
         ## 📤 Execution Results
         | Metric | Value |
         |--------|-------|
         | ✅ Exit Code | `${{ steps.run-dotnet.outputs.exit-code }}` |
+        | 📄 SBOM Generated | `${{ steps.verify-sbom.outputs.sbom-generated }}` |
+        | 📁 SBOM File | `${{ steps.verify-sbom.outputs.sbom-file || 'not generated' }}` |
+        | 📏 SBOM Size | `${{ steps.verify-sbom.outputs.sbom-size }} bytes` |
+        | ✅ SBOM Valid | `${{ steps.verify-sbom.outputs.sbom-valid }}` |
         | 🚀 Tool Installation | `${{ steps.install-tool.outputs.has-been-installed == 'true' && '✅ Installed' || steps.install-tool.outputs.is-already-installed == 'true' && '⚠️ Already Installed' || '❌ Failed' }}` |
         | 🔧 Generated Command | `dotnet tool ${{ steps.build-args.outputs.arguments }}` |
 
