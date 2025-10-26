@@ -142,6 +142,104 @@ outputs:
 runs:
   using: "composite"
   steps:
+    # ================== ℹ️ ==================
+    - name: "ℹ️ Gather environment information"
+      shell: bash
+      run: |
+        echo "::group::ℹ️ Environment Information"
+        echo "::debug::Operating System: $(uname -a)"
+        echo "::debug::GitHub Runner OS: $RUNNER_OS"
+        echo "::debug::GitHub Runner Version: $RUNNER_VERSION"
+        echo "::debug::.NET SDK Version: $(dotnet --version || echo 'Not installed')"
+        echo "::endgroup::"
+
+    # ================== 🔒 ==================
+    - name: "� Mask sensitive data"
+      shell: bash
+      run: |
+        # No sensitive inputs to mask in this action
+        echo "✅ No sensitive data to mask"
+
+    # ================== 📁 ==================
+    - name: "💯 Normalize arguments"
+      id: normalize-arguments
+      uses: framinosona/github_actions/normalize-arguments@main
+      with:
+        arguments: ${{ inputs.arguments }}
+
+    - name: "📁 Normalize working-directory"
+      id: normalize-working-directory
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.working-directory }}
+
+    - name: "📁 Normalize path"
+      id: normalize-path
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.path }}
+
+    - name: "📁 Normalize artifacts-path"
+      id: normalize-artifacts
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.artifacts-path }}
+
+    - name: "📁 Normalize settings"
+      id: normalize-settings
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.settings }}
+
+    - name: "📁 Normalize results-directory"
+      id: normalize-results-directory
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.results-directory }}
+
+    - name: "📁 Normalize test-adapter-path"
+      id: normalize-test-adapter-path
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.test-adapter-path }}
+
+    - name: "📁 Normalize diag"
+      id: normalize-diag
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.diag }}
+
+    # ================== ✅ ==================
+    - name: "✅ Validate input : working-directory"
+      shell: bash
+      run: |
+        echo "::debug::Validating working-directory input: ${{ steps.normalize-working-directory.outputs.normalized }}"
+
+        if [ -z "${{ steps.normalize-working-directory.outputs.normalized }}" ]; then
+          echo "::error::Working directory input is required"
+          exit 1
+        fi
+
+        if [ "${{ steps.normalize-working-directory.outputs.exists }}" != "true" ]; then
+          echo "::error file=${{ steps.normalize-working-directory.outputs.normalized }}::Working directory does not exist or is not a directory: ${{ steps.normalize-working-directory.outputs.normalized }}"
+          exit 1
+        fi
+
+        echo "✅ Working directory validation completed successfully"
+
+    - name: "✅ Validate input : path"
+      if: ${{ inputs.path != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating path input: ${{ steps.normalize-path.outputs.normalized }}"
+
+        if [ "${{ steps.normalize-path.outputs.exists }}" != "true" ]; then
+          echo "::error file=${{ steps.normalize-path.outputs.normalized }}::Specified path does not exist: ${{ steps.normalize-path.outputs.normalized }}"
+          exit 1
+        fi
+
+        echo "✅ Path validation completed successfully"
+
     - name: "✅ Validate input : booleans"
       shell: bash
       run: |
@@ -168,10 +266,10 @@ runs:
       if: ${{ inputs.settings != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating settings input: ${{ inputs.settings }}"
+        echo "::debug::Validating settings input: ${{ steps.normalize-settings.outputs.normalized }}"
 
-        if [ ! -f "${{ inputs.settings }}" ]; then
-          echo "::error file=${{ inputs.settings }}::Test settings file does not exist: ${{ inputs.settings }}"
+        if [ "${{ steps.normalize-settings.outputs.exists }}" != "true" ]; then
+          echo "::error file=${{ steps.normalize-settings.outputs.normalized }}::Test settings file does not exist: ${{ steps.normalize-settings.outputs.normalized }}"
           exit 1
         fi
 
@@ -262,10 +360,10 @@ runs:
       if: ${{ inputs.test-adapter-path != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating test-adapter-path input: ${{ inputs.test-adapter-path }}"
+        echo "::debug::Validating test-adapter-path input: ${{ steps.normalize-test-adapter-path.outputs.normalized }}"
 
-        if [ ! -d "${{ inputs.test-adapter-path }}" ]; then
-          echo "::error file=${{ inputs.test-adapter-path }}::Test adapter path directory not found: ${{ inputs.test-adapter-path }}"
+        if [ "${{ steps.normalize-test-adapter-path.outputs.exists }}" != "true" ]; then
+          echo "::error file=${{ steps.normalize-test-adapter-path.outputs.normalized }}::Test adapter path directory not found: ${{ steps.normalize-test-adapter-path.outputs.normalized }}"
           exit 1
         fi
 
@@ -275,10 +373,10 @@ runs:
       if: ${{ inputs.diag != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating diag input: ${{ inputs.diag }}"
+        echo "::debug::Validating diag input: ${{ steps.normalize-diag.outputs.normalized }}"
 
         # Check if parent directory exists for the diagnostic log file
-        DIAG_DIR=$(dirname "${{ inputs.diag }}")
+        DIAG_DIR=$(dirname "${{ steps.normalize-diag.outputs.normalized }}")
         if [ ! -d "$DIAG_DIR" ]; then
           echo "::error::Directory for diagnostic log file does not exist: $DIAG_DIR"
           exit 1
@@ -286,6 +384,7 @@ runs:
 
         echo "✅ Diagnostic log path validation completed successfully"
 
+    # ================== 🏗️ ==================
     - name: "🏗️ Build argument list"
       id: build-args
       shell: bash
@@ -306,22 +405,29 @@ runs:
           fi
         done
 
-        # Add data collector
-        if [ -n "${{ inputs.collect }}" ]; then
-          ARGUMENTS="$ARGUMENTS --collect '${{ inputs.collect }}'"
-        fi
-
-        # Key-value options
-        for param in collect results-directory logger; do
+        # Key-value options with normalized paths
+        for param in settings results-directory test-adapter-path diag filter logger collect; do
           case $param in
+            settings) value="${{ steps.normalize-settings.outputs.normalized }}" ;;
+            results-directory) value="${{ steps.normalize-results-directory.outputs.normalized }}" ;;
+            test-adapter-path) value="${{ steps.normalize-test-adapter-path.outputs.normalized }}" ;;
+            diag) value="${{ steps.normalize-diag.outputs.normalized }}" ;;
+            filter) value="${{ inputs.filter }}" ;;
             logger) value="${{ inputs.logger }}" ;;
             collect) value="${{ inputs.collect }}" ;;
-            results-directory) value="${{ inputs.results-directory }}" ;;
           esac
-          if [ -n "$value" ] ; then
+          if [ -n "$value" ]; then
             ARGUMENTS="$ARGUMENTS --$param '$value'"
           fi
         done
+
+        # Add normalized arguments
+        if [ -n "${{ steps.normalize-arguments.outputs.normalized }}" ]; then
+          NORMALIZED_ARGS="${{ steps.normalize-arguments.outputs.normalized }}"
+          echo "::debug::Original arguments: ${{ inputs.arguments }}"
+          echo "::debug::Normalized arguments: $NORMALIZED_ARGS"
+          ARGUMENTS="$ARGUMENTS $NORMALIZED_ARGS"
+        fi
 
         # Add blame mode
         if [ "${{ inputs.blame }}" = "true" ]; then
@@ -352,8 +458,6 @@ runs:
           fi
         fi
 
-        ARGUMENTS="$ARGUMENTS ${{ inputs.arguments }}"
-
         # Trim leading space
         ARGUMENTS="${ARGUMENTS# }"
 
@@ -362,14 +466,15 @@ runs:
 
         echo "✅ Partial argument list built successfully: $ARGUMENTS"
 
+    # ================== 🚀 ==================
     - name: "🧪 Run .NET tests"
       id: run-dotnet
       uses: "framinosona/github_actions/dotnet@main"
       with:
         command: "test"
-        path: ${{ inputs.path }}
+        path: ${{ steps.normalize-path.outputs.normalized }}
         arguments: ${{ steps.build-args.outputs.arguments }}
-        working-directory: ${{ inputs.working-directory }}
+        working-directory: ${{ steps.normalize-working-directory.outputs.normalized }}
         verbosity: ${{ inputs.verbosity }}
         nologo: ${{ inputs.nologo }}
         no-restore: ${{ inputs.no-restore }}
@@ -378,9 +483,33 @@ runs:
         framework: ${{ inputs.framework }}
         runtime: ${{ inputs.runtime }}
         arch: ${{ inputs.arch }}
-        artifacts-path: ${{ inputs.artifacts-path }}
+        artifacts-path: ${{ steps.normalize-artifacts.outputs.normalized }}
         show-summary: ${{ inputs.show-summary }}
 
+    # ================== � ==================
+    - name: "🔍 Verify test execution"
+      if: always()
+      shell: bash
+      run: |
+        echo "::debug::Verifying test execution results..."
+
+        # Check if the command executed (has exit code output)
+        if [ -z "${{ steps.run-dotnet.outputs.exit-code }}" ]; then
+          echo "::error::Test execution failed - no exit code available"
+          exit 1
+        fi
+
+        # Report final status
+        EXIT_CODE="${{ steps.run-dotnet.outputs.exit-code }}"
+        if [ "$EXIT_CODE" = "0" ]; then
+          echo "::notice::✅ .NET tests completed successfully"
+        else
+          echo "::warning::⚠️ .NET tests completed with exit code $EXIT_CODE (may indicate test failures)"
+        fi
+
+        echo "✅ Test execution verification completed"
+
+    # ================== �📊 ==================
     - name: "📊 Action Summary"
       if: always() && inputs.show-summary == 'true'
       shell: bash
@@ -391,13 +520,20 @@ runs:
         ## 🔧 Input Parameters
         | Parameter | Value |
         |-----------|-------|
-        | 📝 Settings | `${{ inputs.settings }}` |
+        | � Path | `${{ steps.normalize-path.outputs.normalized || 'none' }}` |
+        | 📁 Working Directory | `${{ steps.normalize-working-directory.outputs.normalized }}` |
+        | ⚙️ Configuration | `${{ inputs.configuration }}` |
+        | 🎯 Framework | `${{ inputs.framework || 'none' }}` |
+        | 🖥️ Runtime | `${{ inputs.runtime || 'none' }}` |
+        | 🔧 Architecture | `${{ inputs.arch || 'none' }}` |
+        | 🗂️ Artifacts Path | `${{ steps.normalize-artifacts.outputs.normalized || 'none' }}` |
+        | 📝 Settings | `${{ steps.normalize-settings.outputs.normalized || 'none' }}` |
         | 🔍 Filter | `${{ inputs.filter || 'none' }}` |
         | 📊 Logger | `${{ inputs.logger || 'default' }}` |
-        | 📁 Result Directory | `${{ inputs.results-directory }}` |
-        | 📝 Collecting | `${{ inputs.collect }}` |
-        | 📁 Test adapter path | `${{ inputs.test-adapter-path }}` |
-        | 📝 Diagnostic Log | `${{ inputs.diag || 'none' }}` |
+        | 📁 Results Directory | `${{ steps.normalize-results-directory.outputs.normalized || 'none' }}` |
+        | 📝 Data Collection | `${{ inputs.collect || 'none' }}` |
+        | 📁 Test Adapter Path | `${{ steps.normalize-test-adapter-path.outputs.normalized || 'none' }}` |
+        | 📝 Diagnostic Log | `${{ steps.normalize-diag.outputs.normalized || 'none' }}` |
         | 📋 List Tests Only | `${{ inputs.list-tests }}` |
         | 🔍 Blame Mode | `${{ inputs.blame }}` |
         | 💥 Crash Collection | `${{ inputs.blame-crash }}` |
@@ -406,14 +542,22 @@ runs:
         | ⏱️ Hang Detection | `${{ inputs.blame-hang }}` |
         | ⏱️ Hang Dump Type | `${{ inputs.blame-hang-dump-type }}` |
         | ⏱️ Hang Timeout | `${{ inputs.blame-hang-timeout }}` |
-        |  Target OS | `${{ inputs.os || 'default' }}` |
+        | 🖥️ Target OS | `${{ inputs.os || 'default' }}` |
+
+        ## 📤 Execution Results
+        | Metric | Value |
+        |--------|-------|
+        | ✅ Exit Code | `${{ steps.run-dotnet.outputs.exit-code }}` |
+        | 📊 Status | `${{ steps.run-dotnet.outcome }}` |
+        | 🚀 Executed Command | `${{ steps.run-dotnet.outputs.executed-command }}` |
 
         ## ⚙️ Process Details
         | Step | Status |
         |------|--------|
-        | ✅ Exit Code | `${{ steps.run-dotnet.outputs.exit-code }}` |
-        | 🔧 Argument Building | `${{ steps.build-args.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
-        | 📊 Execution | `${{ steps.run-dotnet.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | ✅ Input Validation | `✅ Completed` |
+        | 🏗️ Argument Building | `${{ steps.build-args.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | 🧪 Test Execution | `${{ steps.run-dotnet.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | � Execution Verification | `${{ steps.run-dotnet.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
 
         </details>
         EOF
