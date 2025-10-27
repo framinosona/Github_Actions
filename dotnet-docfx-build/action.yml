@@ -30,6 +30,10 @@ inputs:
     description: "Set log level to error, warning, info, verbose or diagnostic"
     required: false
     default: "info"
+  logFile:
+    description: "Save log as structured JSON to the specified file"
+    required: false
+    default: ""
   verbose:
     description: "Set log level to verbose"
     required: false
@@ -94,10 +98,6 @@ inputs:
     description: "Disable fetching Git related information for articles"
     required: false
     default: "false"
-  log:
-    description: "Save log as structured JSON to the specified file"
-    required: false
-    default: ""
   dryRun:
     description: "Template will not be actually applied to the documents"
     required: false
@@ -114,12 +114,6 @@ outputs:
   executed-command:
     description: "The actual command that was executed"
     value: ${{ steps.run-dotnet.outputs.executed-command }}
-  build-success:
-    description: "Whether the documentation build was successful"
-    value: ${{ steps.verify-build.outputs.build-success }}
-  files-generated:
-    description: "Number of files generated in the output directory"
-    value: ${{ steps.verify-build.outputs.files-generated }}
   has-index:
     description: "Whether an index.html file was generated"
     value: ${{ steps.verify-build.outputs.has-index }}
@@ -160,12 +154,29 @@ runs:
       with:
         path: ${{ inputs.output }}
 
-    - name: "📁 Normalize filter"
-      id: normalize-filter
+    - name: "📁 Normalize logFile"
+      id: normalize-logfile
       uses: framinosona/github_actions/normalize-path@main
       with:
-        path: ${{ inputs.filter }}
+        path: ${{ inputs.logFile }}
 
+    - name: "📁 Normalize debugOutput"
+      id: normalize-debugoutput
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.debugOutput }}
+
+    - name: "📁 Normalize rawModelOutputFolder"
+      id: normalize-rawmodeloutputfolder
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.rawModelOutputFolder }}
+
+    - name: "📁 Normalize viewModelOutputFolder"
+      id: normalize-viewmodeloutputfolder
+      uses: framinosona/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.viewModelOutputFolder }}
     # ================== ✅ ==================
 
     - name: "✅ Validate input : booleans"
@@ -337,12 +348,12 @@ runs:
           case $param in
             output) value="${{ steps.normalize-output.outputs.normalized }}" ;;
             template) value="${{ inputs.template }}" ;;
-            debugOutput) value="${{ inputs.debugOutput }}" ;;
-            rawModelOutputFolder) value="${{ inputs.rawModelOutputFolder }}" ;;
-            viewModelOutputFolder) value="${{ inputs.viewModelOutputFolder }}" ;;
+            debugOutput) value="${{ steps.normalize-debugoutput.outputs.normalized }}" ;;
+            rawModelOutputFolder) value="${{ steps.normalize-rawmodeloutputfolder.outputs.normalized }}" ;;
+            viewModelOutputFolder) value="${{ steps.normalize-viewmodeloutputfolder.outputs.normalized }}" ;;
             markdownEngineProperties) value="${{ inputs.markdownEngineProperties }}" ;;
             postProcessors) value="${{ inputs.postProcessors }}" ;;
-            log) value="${{ inputs.log }}" ;;
+            log) value="${{ steps.normalize-log.outputs.normalized }}" ;;
           esac
           if [ -n "$value" ]; then
             ARGS="$ARGS --$param '$value'"
@@ -512,7 +523,7 @@ branding:
 #     -n, --hostname                     Specify the hostname of the hosted website (e.g., 'localhost' or '*')
 #     -p, --port                         Specify the port of the hosted website
 #         --open-browser                 Open a web browser when the hosted website starts
-#         --open-file <RELATIVE_PATH>    Open a file in a web browser when the hosted website starts
+#         --open-file <RELATIVE_PATH>     Open a file in a web browser when the hosted website starts
 #         --debug                        Run in debug mode. With debug mode, raw model and view model will be exported automatically when it encounters error when applying templates. If not specified, it is false
 #         --debugOutput                  The output folder for files generated for debugging purpose when in debug mode. If not specified, it is ${TempPath}/docfx
 #         --exportRawModel               If set to true, data model to run template script will be extracted in .raw.model.json extension
