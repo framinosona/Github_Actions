@@ -292,7 +292,7 @@ runs:
         fi
 
         # Key-value options (only add if not empty)
-        for param in filter globalNamespaceId output config log property; do
+        for param in filter globalNamespaceId output log property; do
           case $param in
             filter) value="${{ steps.normalize-filter.outputs.normalized }}" ;;
             globalNamespaceId) value="${{ inputs.globalNamespaceId }}" ;;
