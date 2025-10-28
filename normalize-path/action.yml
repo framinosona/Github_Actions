@@ -62,7 +62,7 @@ runs:
             # Check each reserved character individually
             [[ "$INPUT_PATH" == *"<"* ]] && INVALID_CHARS="${INVALID_CHARS}<, "
             [[ "$INPUT_PATH" == *">"* ]] && INVALID_CHARS="${INVALID_CHARS}>, "
-            [[ "$INPUT_PATH" == *":"* ]] && INVALID_CHARS="${INVALID_CHARS}:, "
+            # [[ "$INPUT_PATH" == *":"* ]] && INVALID_CHARS="${INVALID_CHARS}:, " # this is okay, part of a normal path on Windows (D:...)
             [[ "$INPUT_PATH" == *"\""* ]] && INVALID_CHARS="${INVALID_CHARS}\", "
             [[ "$INPUT_PATH" == *"|"* ]] && INVALID_CHARS="${INVALID_CHARS}|, "
             [[ "$INPUT_PATH" == *"?"* ]] && INVALID_CHARS="${INVALID_CHARS}?, "
