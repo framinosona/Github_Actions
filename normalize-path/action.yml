@@ -51,7 +51,7 @@ runs:
         else
           # Check for potentially dangerous paths
           if [[ "${{ inputs.path }}" == *".."* ]]; then
-            echo "::warning::Path contains parent directory references (..), ensure this is intentional"
+            echo "::warning::Path '${{ inputs.path }}' contains parent directory references (..), ensure this is intentional"
           fi
 
           # Check for reserved characters on Windows
@@ -71,7 +71,7 @@ runs:
             if [[ -n "$INVALID_CHARS" ]]; then
               # Remove trailing comma and space
               INVALID_CHARS="${INVALID_CHARS%, }"
-              echo "::warning::Path contains Windows-reserved characters: [$INVALID_CHARS]. These may cause file system operations to fail on Windows."
+              echo "::warning::Path '$INPUT_PATH' contains Windows-reserved characters: [$INVALID_CHARS]. These may cause file system operations to fail on Windows."
             fi
           fi
         fi
