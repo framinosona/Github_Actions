@@ -19,14 +19,14 @@ Install a global .NET tool:
 
 ```yaml
 - name: "Install Entity Framework tools"
-  uses: framinosona/github_actions/dotnet-tool-install@main
+  uses: laerdal/github_actions/dotnet-tool-install@main
   with:
     package-name: "dotnet-ef"
 ```
 
 ```yaml
 - name: "Install specific version"
-  uses: framinosona/github_actions/dotnet-tool-install@main
+  uses: laerdal/github_actions/dotnet-tool-install@main
   with:
     package-name: "dotnet-sonarscanner"
     version: "5.7.2"
@@ -34,7 +34,7 @@ Install a global .NET tool:
 
 ```yaml
 - name: "Install local tool"
-  uses: framinosona/github_actions/dotnet-tool-install@main
+  uses: laerdal/github_actions/dotnet-tool-install@main
   with:
     package-name: "dotnet-format"
     global: "false"
@@ -46,7 +46,7 @@ Complete tool installation with custom configuration:
 
 ```yaml
 - name: "Advanced tool installation"
-  uses: framinosona/github_actions/dotnet-tool-install@main
+  uses: laerdal/github_actions/dotnet-tool-install@main
   with:
     package-name: "dotnet-sonarscanner"
     version: "5.7.2"
@@ -107,7 +107,7 @@ jobs:
 
       - name: "🔧 Install Entity Framework CLI"
         id: ef-tools
-        uses: framinosona/github_actions/dotnet-tool-install@main
+        uses: laerdal/github_actions/dotnet-tool-install@main
         with:
           package-name: "dotnet-ef"
           global: "true"
@@ -115,7 +115,7 @@ jobs:
           show-summary: "true"
 
       - name: "📊 Install SonarScanner"
-        uses: framinosona/github_actions/dotnet-tool-install@main
+        uses: laerdal/github_actions/dotnet-tool-install@main
         with:
           package-name: "dotnet-sonarscanner"
           version: "5.7.2"
@@ -123,21 +123,21 @@ jobs:
           skip-if-exists: "true"
 
       - name: "🎨 Install Code Formatter"
-        uses: framinosona/github_actions/dotnet-tool-install@main
+        uses: laerdal/github_actions/dotnet-tool-install@main
         with:
           package-name: "dotnet-format"
           global: "false"
           tool-path: "./tools"
 
       - name: "📈 Install Coverage Tools"
-        uses: framinosona/github_actions/dotnet-tool-install@main
+        uses: laerdal/github_actions/dotnet-tool-install@main
         with:
           package-name: "dotnet-reportgenerator-globaltool"
           global: "true"
           prerelease: "false"
 
       - name: "🔍 Install Security Scanner"
-        uses: framinosona/github_actions/dotnet-tool-install@main
+        uses: laerdal/github_actions/dotnet-tool-install@main
         with:
           package-name: "security-scan"
           source: "https://myget.org/F/security-tools/api/v3/index.json"
@@ -189,7 +189,7 @@ jobs:
           dotnet-version: "8.0.x"
 
       - name: "🔧 Install cross-platform tools"
-        uses: framinosona/github_actions/dotnet-tool-install@main
+        uses: laerdal/github_actions/dotnet-tool-install@main
         with:
           package-name: "dotnet-ef"
           global: "true"
@@ -232,10 +232,10 @@ jobs:
 
 | Action | Purpose | Repository |
 |--------|---------|------------|
-| 🔨 **dotnet** | Build .NET projects | `framinosona/github_actions/dotnet` |
-| 🧪 **dotnet-test** | Run .NET tests | `framinosona/github_actions/dotnet-test` |
-| 📦 **dotnet-nuget-upload** | Publish NuGet packages | `framinosona/github_actions/dotnet-nuget-upload` |
-| 🔧 **dotnet-nuget-feed-setup** | Configure NuGet feeds | `framinosona/github_actions/dotnet-nuget-feed-setup` |
+| 🔨 **dotnet** | Build .NET projects | `laerdal/github_actions/dotnet` |
+| 🧪 **dotnet-test** | Run .NET tests | `laerdal/github_actions/dotnet-test` |
+| 📦 **dotnet-nuget-upload** | Publish NuGet packages | `laerdal/github_actions/dotnet-nuget-upload` |
+| 🔧 **dotnet-nuget-feed-setup** | Configure NuGet feeds | `laerdal/github_actions/dotnet-nuget-feed-setup` |
 
 ## 💡 Examples
 
@@ -244,21 +244,21 @@ jobs:
 ```yaml
 # Entity Framework CLI tools
 - name: "Install EF Core CLI"
-  uses: framinosona/github_actions/dotnet-tool-install@main
+  uses: laerdal/github_actions/dotnet-tool-install@main
   with:
     package-name: "dotnet-ef"
     global: "true"
 
 # Code formatting tools
 - name: "Install dotnet-format"
-  uses: framinosona/github_actions/dotnet-tool-install@main
+  uses: laerdal/github_actions/dotnet-tool-install@main
   with:
     package-name: "dotnet-format"
     global: "true"
 
 # SonarScanner for code analysis
 - name: "Install SonarScanner"
-  uses: framinosona/github_actions/dotnet-tool-install@main
+  uses: laerdal/github_actions/dotnet-tool-install@main
   with:
     package-name: "dotnet-sonarscanner"
     version: "5.7.2"
@@ -266,7 +266,7 @@ jobs:
 
 # Report Generator for coverage
 - name: "Install ReportGenerator"
-  uses: framinosona/github_actions/dotnet-tool-install@main
+  uses: laerdal/github_actions/dotnet-tool-install@main
   with:
     package-name: "dotnet-reportgenerator-globaltool"
     global: "true"
@@ -277,7 +277,7 @@ jobs:
 ```yaml
 # Install specific version
 - name: "Install specific EF version"
-  uses: framinosona/github_actions/dotnet-tool-install@main
+  uses: laerdal/github_actions/dotnet-tool-install@main
   with:
     package-name: "dotnet-ef"
     version: "7.0.5"
@@ -285,7 +285,7 @@ jobs:
 
 # Install prerelease version
 - name: "Install prerelease tool"
-  uses: framinosona/github_actions/dotnet-tool-install@main
+  uses: laerdal/github_actions/dotnet-tool-install@main
   with:
     package-name: "dotnet-format"
     version: "6.0.0-preview.1"
@@ -294,7 +294,7 @@ jobs:
 
 # Install latest stable
 - name: "Install latest stable"
-  uses: framinosona/github_actions/dotnet-tool-install@main
+  uses: laerdal/github_actions/dotnet-tool-install@main
   with:
     package-name: "dotnet-sonarscanner"
     global: "true"
@@ -305,7 +305,7 @@ jobs:
 ```yaml
 # Install to specific directory
 - name: "Install to custom path"
-  uses: framinosona/github_actions/dotnet-tool-install@main
+  uses: laerdal/github_actions/dotnet-tool-install@main
   with:
     package-name: "dotnet-format"
     global: "false"
@@ -313,7 +313,7 @@ jobs:
 
 # Install for local use only
 - name: "Install local tool"
-  uses: framinosona/github_actions/dotnet-tool-install@main
+  uses: laerdal/github_actions/dotnet-tool-install@main
   with:
     package-name: "dotnet-ef"
     global: "false"
@@ -324,7 +324,7 @@ jobs:
 ```yaml
 # Install from custom NuGet source
 - name: "Install from MyGet"
-  uses: framinosona/github_actions/dotnet-tool-install@main
+  uses: laerdal/github_actions/dotnet-tool-install@main
   with:
     package-name: "custom-analyzer"
     source: "https://www.myget.org/F/mycompany/api/v3/index.json"
@@ -332,7 +332,7 @@ jobs:
 
 # Install from Azure Artifacts
 - name: "Install from Azure Artifacts"
-  uses: framinosona/github_actions/dotnet-tool-install@main
+  uses: laerdal/github_actions/dotnet-tool-install@main
   with:
     package-name: "internal-tool"
     source: "https://pkgs.dev.azure.com/myorg/_packaging/myFeed/nuget/v3/index.json"
@@ -346,7 +346,7 @@ jobs:
 ```yaml
 # Skip if tool already exists
 - name: "Install if not exists"
-  uses: framinosona/github_actions/dotnet-tool-install@main
+  uses: laerdal/github_actions/dotnet-tool-install@main
   with:
     package-name: "dotnet-ef"
     global: "true"
@@ -355,7 +355,7 @@ jobs:
 # Install based on file existence
 - name: "Install EF if migrations exist"
   if: hashFiles('**/Migrations/*.cs') != ''
-  uses: framinosona/github_actions/dotnet-tool-install@main
+  uses: laerdal/github_actions/dotnet-tool-install@main
   with:
     package-name: "dotnet-ef"
     global: "true"
@@ -363,7 +363,7 @@ jobs:
 # Install based on project type
 - name: "Install Web API tools"
   if: contains(steps.detect-project.outputs.type, 'web')
-  uses: framinosona/github_actions/dotnet-tool-install@main
+  uses: laerdal/github_actions/dotnet-tool-install@main
   with:
     package-name: "dotnet-aspnet-codegenerator"
     global: "true"
@@ -374,7 +374,7 @@ jobs:
 ```yaml
 # Install for specific architecture
 - name: "Install x64 tool"
-  uses: framinosona/github_actions/dotnet-tool-install@main
+  uses: laerdal/github_actions/dotnet-tool-install@main
   with:
     package-name: "performance-profiler"
     architecture: "x64"
@@ -383,7 +383,7 @@ jobs:
 # Install ARM64 tool for Apple Silicon
 - name: "Install ARM64 tool"
   if: runner.arch == 'ARM64'
-  uses: framinosona/github_actions/dotnet-tool-install@main
+  uses: laerdal/github_actions/dotnet-tool-install@main
   with:
     package-name: "native-analyzer"
     architecture: "arm64"
@@ -403,7 +403,7 @@ strategy:
 
 steps:
   - name: "Install ${{ matrix.tool.name }}"
-    uses: framinosona/github_actions/dotnet-tool-install@main
+    uses: laerdal/github_actions/dotnet-tool-install@main
     with:
       package-name: ${{ matrix.tool.name }}
       version: ${{ matrix.tool.version }}
@@ -425,7 +425,7 @@ The action integrates with .NET tool manifests (`.config/dotnet-tools.json`):
   run: dotnet new tool-manifest
 
 - name: "Install tool to manifest"
-  uses: framinosona/github_actions/dotnet-tool-install@main
+  uses: laerdal/github_actions/dotnet-tool-install@main
   with:
     package-name: "dotnet-ef"
     global: "false"
@@ -439,7 +439,7 @@ The action integrates with .NET tool manifests (`.config/dotnet-tools.json`):
   run: dotnet tool restore
 
 - name: "Install additional tool"
-  uses: framinosona/github_actions/dotnet-tool-install@main
+  uses: laerdal/github_actions/dotnet-tool-install@main
   with:
     package-name: "dotnet-format"
     global: "false"
@@ -483,7 +483,7 @@ The action integrates with .NET tool manifests (`.config/dotnet-tools.json`):
 
 ```yaml
 - name: "Debug tool installation"
-  uses: framinosona/github_actions/dotnet-tool-install@main
+  uses: laerdal/github_actions/dotnet-tool-install@main
   with:
     package-name: "dotnet-ef"
     global: "true"
@@ -508,7 +508,7 @@ The action integrates with .NET tool manifests (`.config/dotnet-tools.json`):
   run: dotnet tool list --global
 
 - name: "Install specific version"
-  uses: framinosona/github_actions/dotnet-tool-install@main
+  uses: laerdal/github_actions/dotnet-tool-install@main
   with:
     package-name: "dotnet-ef"
     version: "7.0.5"
@@ -532,7 +532,7 @@ The action integrates with .NET tool manifests (`.config/dotnet-tools.json`):
       --store-password-in-clear-text
 
 - name: "Install from authenticated source"
-  uses: framinosona/github_actions/dotnet-tool-install@main
+  uses: laerdal/github_actions/dotnet-tool-install@main
   with:
     package-name: "private-tool"
     source: "https://nuget.example.com/v3/index.json"
@@ -548,7 +548,7 @@ The action integrates with .NET tool manifests (`.config/dotnet-tools.json`):
 ```yaml
 - name: "Install tool"
   id: install
-  uses: framinosona/github_actions/dotnet-tool-install@main
+  uses: laerdal/github_actions/dotnet-tool-install@main
   with:
     package-name: "dotnet-ef"
     global: "true"
@@ -568,7 +568,7 @@ Enable comprehensive debugging:
 
 ```yaml
 - name: "Debug tool installation"
-  uses: framinosona/github_actions/dotnet-tool-install@main
+  uses: laerdal/github_actions/dotnet-tool-install@main
   with:
     package-name: "dotnet-ef"
     global: "true"
@@ -592,7 +592,7 @@ Enable comprehensive debugging:
     key: dotnet-tools-${{ hashFiles('.config/dotnet-tools.json') }}
 
 - name: "Install tools with cache"
-  uses: framinosona/github_actions/dotnet-tool-install@main
+  uses: laerdal/github_actions/dotnet-tool-install@main
   with:
     package-name: "dotnet-ef"
     global: "true"
@@ -612,7 +612,7 @@ Enable comprehensive debugging:
     dotnet tool uninstall --global dotnet-ef || true
 
 - name: "Install fresh tool"
-  uses: framinosona/github_actions/dotnet-tool-install@main
+  uses: laerdal/github_actions/dotnet-tool-install@main
   with:
     package-name: "dotnet-ef"
     global: "true"
@@ -623,7 +623,7 @@ Enable comprehensive debugging:
 ```yaml
 - name: "Install and validate tool"
   id: install
-  uses: framinosona/github_actions/dotnet-tool-install@main
+  uses: laerdal/github_actions/dotnet-tool-install@main
   with:
     package-name: "dotnet-ef"
     global: "true"

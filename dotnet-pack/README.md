@@ -20,7 +20,7 @@ Pack a project with default settings:
 ```yaml
 - name: "Pack project"
   id: pack
-  uses: framinosona/github_actions/dotnet-pack@main
+  uses: laerdal/github_actions/dotnet-pack@main
   with:
     path: "./src/MyProject.csproj"
 ```
@@ -30,7 +30,7 @@ Pack with custom output directory:
 ```yaml
 - name: "Pack to directory"
   id: pack
-  uses: framinosona/github_actions/dotnet-pack@main
+  uses: laerdal/github_actions/dotnet-pack@main
   with:
     path: "./src/MyProject.csproj"
     output: "./packages"
@@ -41,7 +41,7 @@ Pack with symbols and source:
 ```yaml
 - name: "Pack with symbols"
   id: pack
-  uses: framinosona/github_actions/dotnet-pack@main
+  uses: laerdal/github_actions/dotnet-pack@main
   with:
     path: "./src/MyProject.csproj"
     include-symbols: "true"
@@ -55,7 +55,7 @@ Full configuration with all available options:
 ```yaml
 - name: "Advanced pack"
   id: pack
-  uses: framinosona/github_actions/dotnet-pack@main
+  uses: laerdal/github_actions/dotnet-pack@main
   with:
     path: "./src/MyProject.csproj"
     arguments: "--property:PackageIcon=icon.png"
@@ -115,21 +115,21 @@ jobs:
           dotnet-version: "8.0.x"
 
       - name: "🔨 Build project"
-        uses: framinosona/github_actions/dotnet@main
+        uses: laerdal/github_actions/dotnet@main
         with:
           command: "build"
           configuration: "Release"
           verbosity: "minimal"
 
       - name: "🧪 Run tests"
-        uses: framinosona/github_actions/dotnet-test@main
+        uses: laerdal/github_actions/dotnet-test@main
         with:
           configuration: "Release"
           verbosity: "minimal"
 
       - name: "📦 Pack project"
         id: pack
-        uses: framinosona/github_actions/dotnet-pack@main
+        uses: laerdal/github_actions/dotnet-pack@main
         with:
           path: "./src/MyProject.csproj"
           configuration: "Release"
@@ -149,7 +149,7 @@ jobs:
 
       - name: "🚀 Push to NuGet"
         if: github.ref == 'refs/heads/main' && steps.pack.outputs.package-count > '0'
-        uses: framinosona/github_actions/dotnet-nuget-upload@main
+        uses: laerdal/github_actions/dotnet-nuget-upload@main
         with:
           packages: ${{ steps.pack.outputs.packages }}
           api-key: ${{ secrets.NUGET_API_KEY }}
@@ -191,10 +191,10 @@ jobs:
 
 | Action | Purpose | Repository |
 |--------|---------|------------|
-| 🔧 **dotnet** | Core .NET command execution | `framinosona/github_actions/dotnet` |
-| 🧪 **dotnet-test** | Run .NET tests | `framinosona/github_actions/dotnet-test` |
-| 📤 **dotnet-nuget-upload** | Upload packages to NuGet | `framinosona/github_actions/dotnet-nuget-upload` |
-| 🔢 **generate-version** | Generate version numbers | `framinosona/github_actions/generate-version` |
+| 🔧 **dotnet** | Core .NET command execution | `laerdal/github_actions/dotnet` |
+| 🧪 **dotnet-test** | Run .NET tests | `laerdal/github_actions/dotnet-test` |
+| 📤 **dotnet-nuget-upload** | Upload packages to NuGet | `laerdal/github_actions/dotnet-nuget-upload` |
+| 🔢 **generate-version** | Generate version numbers | `laerdal/github_actions/generate-version` |
 
 ## 💡 Examples
 
@@ -202,7 +202,7 @@ jobs:
 
 ```yaml
 - name: "Pack project"
-  uses: framinosona/github_actions/dotnet-pack@main
+  uses: laerdal/github_actions/dotnet-pack@main
   with:
     path: "./src/MyLibrary.csproj"
     configuration: "Release"
@@ -212,7 +212,7 @@ jobs:
 
 ```yaml
 - name: "Pack solution with symbols"
-  uses: framinosona/github_actions/dotnet-pack@main
+  uses: laerdal/github_actions/dotnet-pack@main
   with:
     path: "./MySolution.sln"
     configuration: "Release"
@@ -225,7 +225,7 @@ jobs:
 
 ```yaml
 - name: "Pack prerelease"
-  uses: framinosona/github_actions/dotnet-pack@main
+  uses: laerdal/github_actions/dotnet-pack@main
   with:
     path: "./src/MyProject.csproj"
     version-suffix: "preview-${{ github.run_number }}"
@@ -239,7 +239,7 @@ jobs:
   strategy:
     matrix:
       project: ["./src/Core", "./src/Extensions", "./src/Tools"]
-  uses: framinosona/github_actions/dotnet-pack@main
+  uses: laerdal/github_actions/dotnet-pack@main
   with:
     path: ${{ matrix.project }}
     configuration: "Release"
@@ -250,7 +250,7 @@ jobs:
 
 ```yaml
 - name: "Pack with custom properties"
-  uses: framinosona/github_actions/dotnet-pack@main
+  uses: laerdal/github_actions/dotnet-pack@main
   with:
     path: "./src/MyProject.csproj"
     arguments: |

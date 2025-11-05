@@ -98,31 +98,31 @@ runs:
 
     - name: "💯 Normalize arguments"
       id: normalize-arguments
-      uses: framinosona/github_actions/normalize-arguments@main
+      uses: laerdal/github_actions/normalize-arguments@main
       with:
         arguments: ${{ inputs.arguments }}
 
     - name: "📁 Normalize output"
       id: normalize-output
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.output }}
 
     - name: "📁 Normalize artifacts-path"
       id: normalize-artifacts-path
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.artifacts-path }}
 
     - name: "📁 Normalize working-directory"
       id: normalize-working-directory
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.working-directory }}
 
     - name: "📁 Normalize path"
       id: normalize-path
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.path }}
 

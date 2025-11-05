@@ -18,14 +18,14 @@ Generate metadata with default settings:
 
 ```yaml
 - name: "Generate API metadata"
-  uses: framinosona/github_actions/dotnet-docfx-metadata@main
+  uses: laerdal/github_actions/dotnet-docfx-metadata@main
   with:
     config: "docfx.json"
 ```
 
 ```yaml
 - name: "Generate from specific projects"
-  uses: framinosona/github_actions/dotnet-docfx-metadata@main
+  uses: laerdal/github_actions/dotnet-docfx-metadata@main
   with:
     config: "docs/docfx.json"
     projects: "./src/**/*.csproj"
@@ -33,7 +33,7 @@ Generate metadata with default settings:
 
 ```yaml
 - name: "Generate with verbose output"
-  uses: framinosona/github_actions/dotnet-docfx-metadata@main
+  uses: laerdal/github_actions/dotnet-docfx-metadata@main
   with:
     config: "docfx.json"
     log-level: "verbose"
@@ -45,7 +45,7 @@ Full configuration with all available options:
 
 ```yaml
 - name: "Advanced metadata generation"
-  uses: framinosona/github_actions/dotnet-docfx-metadata@main
+  uses: laerdal/github_actions/dotnet-docfx-metadata@main
   with:
     config: "docs/docfx.json"
     projects: "./src/**/*.csproj"
@@ -105,13 +105,13 @@ jobs:
           dotnet-version: "8.0.x"
 
       - name: "📦 Restore dependencies"
-        uses: framinosona/github_actions/dotnet@main
+        uses: laerdal/github_actions/dotnet@main
         with:
           command: "restore"
 
       - name: "📖 Generate API metadata"
         id: generate-metadata
-        uses: framinosona/github_actions/dotnet-docfx-metadata@main
+        uses: laerdal/github_actions/dotnet-docfx-metadata@main
         with:
           config: "docs/docfx.json"
           projects: "./src/**/*.csproj"
@@ -122,7 +122,7 @@ jobs:
           show-summary: "true"
 
       - name: "📚 Build documentation site"
-        uses: framinosona/github_actions/dotnet-docfx-build@main
+        uses: laerdal/github_actions/dotnet-docfx-build@main
         with:
           config: "docs/docfx.json"
           output: "./dist/docs"
@@ -169,10 +169,10 @@ jobs:
 
 | Action | Purpose | Repository |
 |--------|---------|------------|
-| 📚 **dotnet-docfx-build** | Build documentation sites | `framinosona/github_actions/dotnet-docfx-build` |
-| 📄 **dotnet-docfx-pdf** | Generate PDF documentation | `framinosona/github_actions/dotnet-docfx-pdf` |
-| 🔧 **dotnet-tool-install** | Install .NET tools | `framinosona/github_actions/dotnet-tool-install` |
-| 🚀 **dotnet** | Execute .NET CLI commands | `framinosona/github_actions/dotnet` |
+| 📚 **dotnet-docfx-build** | Build documentation sites | `laerdal/github_actions/dotnet-docfx-build` |
+| 📄 **dotnet-docfx-pdf** | Generate PDF documentation | `laerdal/github_actions/dotnet-docfx-pdf` |
+| 🔧 **dotnet-tool-install** | Install .NET tools | `laerdal/github_actions/dotnet-tool-install` |
+| 🚀 **dotnet** | Execute .NET CLI commands | `laerdal/github_actions/dotnet` |
 
 ## 💡 Examples
 
@@ -180,14 +180,14 @@ jobs:
 
 ```yaml
 - name: "Generate metadata for all projects"
-  uses: framinosona/github_actions/dotnet-docfx-metadata@main
+  uses: laerdal/github_actions/dotnet-docfx-metadata@main
   with:
     config: "docfx.json"
     projects: "./src/**/*.csproj"
     output: "./api"
 
 - name: "Generate metadata for specific project"
-  uses: framinosona/github_actions/dotnet-docfx-metadata@main
+  uses: laerdal/github_actions/dotnet-docfx-metadata@main
   with:
     projects: "./src/MyLibrary/MyLibrary.csproj"
     output: "./docs/MyLibrary/api"
@@ -197,7 +197,7 @@ jobs:
 
 ```yaml
 - name: "Generate filtered metadata"
-  uses: framinosona/github_actions/dotnet-docfx-metadata@main
+  uses: laerdal/github_actions/dotnet-docfx-metadata@main
   with:
     config: "docfx.json"
     filter: "./docs/api-filter.yml"
@@ -214,7 +214,7 @@ strategy:
 
 steps:
   - name: "Generate metadata for ${{ matrix.framework }}"
-    uses: framinosona/github_actions/dotnet-docfx-metadata@main
+    uses: laerdal/github_actions/dotnet-docfx-metadata@main
     with:
       config: "docfx-${{ matrix.framework }}.json"
       output: "./api/${{ matrix.framework }}"
@@ -224,7 +224,7 @@ steps:
 
 ```yaml
 - name: "Generate debug metadata"
-  uses: framinosona/github_actions/dotnet-docfx-metadata@main
+  uses: laerdal/github_actions/dotnet-docfx-metadata@main
   with:
     config: "docfx.json"
     log-level: "diagnostic"
@@ -294,7 +294,7 @@ attributeRules:
 
 ```yaml
 - name: "Install DocFX"
-  uses: framinosona/github_actions/dotnet-tool-install@main
+  uses: laerdal/github_actions/dotnet-tool-install@main
   with:
     tool-name: "docfx"
     global: "true"
@@ -311,7 +311,7 @@ attributeRules:
   run: find . -name "*.csproj" -type f
 
 - name: "Generate metadata"
-  uses: framinosona/github_actions/dotnet-docfx-metadata@main
+  uses: laerdal/github_actions/dotnet-docfx-metadata@main
   with:
     projects: "./src/**/*.csproj"
 ```
@@ -324,18 +324,18 @@ attributeRules:
 
 ```yaml
 - name: "Restore dependencies"
-  uses: framinosona/github_actions/dotnet@main
+  uses: laerdal/github_actions/dotnet@main
   with:
     command: "restore"
 
 - name: "Build projects"
-  uses: framinosona/github_actions/dotnet@main
+  uses: laerdal/github_actions/dotnet@main
   with:
     command: "build"
     configuration: "Release"
 
 - name: "Generate metadata"
-  uses: framinosona/github_actions/dotnet-docfx-metadata@main
+  uses: laerdal/github_actions/dotnet-docfx-metadata@main
   with:
     config: "docfx.json"
 ```
@@ -374,7 +374,7 @@ attributeRules:
 
 ```yaml
 - name: "Generate with custom config"
-  uses: framinosona/github_actions/dotnet-docfx-metadata@main
+  uses: laerdal/github_actions/dotnet-docfx-metadata@main
   with:
     config: "custom-docfx.json"
     name-for-cref: "Qualified"
@@ -386,7 +386,7 @@ attributeRules:
 
 ```yaml
 - name: "Generate metadata for multi-target"
-  uses: framinosona/github_actions/dotnet-docfx-metadata@main
+  uses: laerdal/github_actions/dotnet-docfx-metadata@main
   with:
     projects: "./src/MultiTarget.csproj"
     output: "./docs/api/multitarget"

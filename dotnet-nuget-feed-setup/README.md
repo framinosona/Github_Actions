@@ -19,7 +19,7 @@ Add a public NuGet source:
 
 ```yaml
 - name: "Add MyGet feed"
-  uses: framinosona/github_actions/dotnet-nuget-feed-setup@main
+  uses: laerdal/github_actions/dotnet-nuget-feed-setup@main
   with:
     name: "MyGet"
     source: "https://www.myget.org/F/myfeed/api/v3/index.json"
@@ -27,7 +27,7 @@ Add a public NuGet source:
 
 ```yaml
 - name: "Add GitHub Packages"
-  uses: framinosona/github_actions/dotnet-nuget-feed-setup@main
+  uses: laerdal/github_actions/dotnet-nuget-feed-setup@main
   with:
     name: "github"
     source: "https://nuget.pkg.github.com/myorg/index.json"
@@ -37,7 +37,7 @@ Add a public NuGet source:
 
 ```yaml
 - name: "Add Azure DevOps feed"
-  uses: framinosona/github_actions/dotnet-nuget-feed-setup@main
+  uses: laerdal/github_actions/dotnet-nuget-feed-setup@main
   with:
     name: "AzureDevOps"
     source: "https://pkgs.dev.azure.com/myorg/_packaging/myfeed/nuget/v3/index.json"
@@ -51,7 +51,7 @@ Complete feed setup with advanced authentication and configuration:
 
 ```yaml
 - name: "Enterprise feed setup"
-  uses: framinosona/github_actions/dotnet-nuget-feed-setup@main
+  uses: laerdal/github_actions/dotnet-nuget-feed-setup@main
   with:
     name: "EnterpriseFeed"
     source: "https://nuget.company.com/v3/index.json"
@@ -112,7 +112,7 @@ jobs:
 
       - name: "🔗 Add company private feed"
         id: company-feed
-        uses: framinosona/github_actions/dotnet-nuget-feed-setup@main
+        uses: laerdal/github_actions/dotnet-nuget-feed-setup@main
         with:
           name: "CompanyPrivate"
           source: "https://nuget.company.com/v3/index.json"
@@ -121,7 +121,7 @@ jobs:
           show-summary: "true"
 
       - name: "🔗 Add prerelease feed"
-        uses: framinosona/github_actions/dotnet-nuget-feed-setup@main
+        uses: laerdal/github_actions/dotnet-nuget-feed-setup@main
         with:
           name: "Prerelease"
           source: "https://prerelease.nuget.company.com/v3/index.json"
@@ -130,7 +130,7 @@ jobs:
           valid-authentication-types: "basic"
 
       - name: "🔗 Add GitHub Packages"
-        uses: framinosona/github_actions/dotnet-nuget-feed-setup@main
+        uses: laerdal/github_actions/dotnet-nuget-feed-setup@main
         with:
           name: "GitHub"
           source: "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
@@ -139,7 +139,7 @@ jobs:
 
       - name: "🔗 Add Azure DevOps artifacts"
         if: github.ref == 'refs/heads/main'
-        uses: framinosona/github_actions/dotnet-nuget-feed-setup@main
+        uses: laerdal/github_actions/dotnet-nuget-feed-setup@main
         with:
           name: "AzureArtifacts"
           source: "https://pkgs.dev.azure.com/myorg/_packaging/production/nuget/v3/index.json"
@@ -157,7 +157,7 @@ jobs:
         run: dotnet build --configuration Release --no-restore
 
       - name: "🧪 Run tests"
-        uses: framinosona/github_actions/dotnet-test@main
+        uses: laerdal/github_actions/dotnet-test@main
         with:
           projects: "**/*Tests.csproj"
           configuration: "Release"
@@ -191,7 +191,7 @@ jobs:
           dotnet-version: "8.0.x"
 
       - name: "🔗 Setup ${{ matrix.environment }} feed"
-        uses: framinosona/github_actions/dotnet-nuget-feed-setup@main
+        uses: laerdal/github_actions/dotnet-nuget-feed-setup@main
         with:
           name: "${{ matrix.environment }}"
           source: ${{ matrix.feed-url }}
@@ -233,10 +233,10 @@ jobs:
 
 | Action | Purpose | Repository |
 |--------|---------|------------|
-| 📦 **dotnet-nuget-upload** | Upload NuGet packages | `framinosona/github_actions/dotnet-nuget-upload` |
-| 🔨 **dotnet** | Build .NET projects | `framinosona/github_actions/dotnet` |
-| 🧪 **dotnet-test** | Run .NET tests | `framinosona/github_actions/dotnet-test` |
-| 🔧 **dotnet-tool-install** | Install .NET tools | `framinosona/github_actions/dotnet-tool-install` |
+| 📦 **dotnet-nuget-upload** | Upload NuGet packages | `laerdal/github_actions/dotnet-nuget-upload` |
+| 🔨 **dotnet** | Build .NET projects | `laerdal/github_actions/dotnet` |
+| 🧪 **dotnet-test** | Run .NET tests | `laerdal/github_actions/dotnet-test` |
+| 🔧 **dotnet-tool-install** | Install .NET tools | `laerdal/github_actions/dotnet-tool-install` |
 
 ## 💡 Examples
 
@@ -245,14 +245,14 @@ jobs:
 ```yaml
 # NuGet.org (public - no auth needed)
 - name: "Add NuGet.org"
-  uses: framinosona/github_actions/dotnet-nuget-feed-setup@main
+  uses: laerdal/github_actions/dotnet-nuget-feed-setup@main
   with:
     name: "nuget.org"
     source: "https://api.nuget.org/v3/index.json"
 
 # GitHub Packages
 - name: "Add GitHub Packages"
-  uses: framinosona/github_actions/dotnet-nuget-feed-setup@main
+  uses: laerdal/github_actions/dotnet-nuget-feed-setup@main
   with:
     name: "github"
     source: "https://nuget.pkg.github.com/myorg/index.json"
@@ -261,7 +261,7 @@ jobs:
 
 # Azure DevOps Artifacts
 - name: "Add Azure DevOps"
-  uses: framinosona/github_actions/dotnet-nuget-feed-setup@main
+  uses: laerdal/github_actions/dotnet-nuget-feed-setup@main
   with:
     name: "azure-artifacts"
     source: "https://pkgs.dev.azure.com/myorg/_packaging/myfeed/nuget/v3/index.json"
@@ -270,7 +270,7 @@ jobs:
 
 # MyGet Feed
 - name: "Add MyGet"
-  uses: framinosona/github_actions/dotnet-nuget-feed-setup@main
+  uses: laerdal/github_actions/dotnet-nuget-feed-setup@main
   with:
     name: "myget"
     source: "https://www.myget.org/F/myfeed/api/v3/index.json"
@@ -283,7 +283,7 @@ jobs:
 ```yaml
 # Basic authentication
 - name: "Basic auth feed"
-  uses: framinosona/github_actions/dotnet-nuget-feed-setup@main
+  uses: laerdal/github_actions/dotnet-nuget-feed-setup@main
   with:
     name: "basic-feed"
     source: "https://nuget.company.com/v3/index.json"
@@ -293,7 +293,7 @@ jobs:
 
 # Windows integrated authentication
 - name: "Windows auth feed"
-  uses: framinosona/github_actions/dotnet-nuget-feed-setup@main
+  uses: laerdal/github_actions/dotnet-nuget-feed-setup@main
   with:
     name: "windows-feed"
     source: "https://internal.company.com/nuget"
@@ -303,7 +303,7 @@ jobs:
 
 # API Key authentication
 - name: "API key feed"
-  uses: framinosona/github_actions/dotnet-nuget-feed-setup@main
+  uses: laerdal/github_actions/dotnet-nuget-feed-setup@main
   with:
     name: "api-key-feed"
     source: "https://artifactory.company.com/api/nuget/nuget-repo"
@@ -320,7 +320,7 @@ jobs:
 
 # Setup with custom config file
 - name: "Setup with custom config"
-  uses: framinosona/github_actions/dotnet-nuget-feed-setup@main
+  uses: laerdal/github_actions/dotnet-nuget-feed-setup@main
   with:
     name: "custom-feed"
     source: "https://custom.company.com/v3/index.json"
@@ -340,7 +340,7 @@ jobs:
 # Development vs Production feeds
 - name: "Setup development feed"
   if: github.ref == 'refs/heads/develop'
-  uses: framinosona/github_actions/dotnet-nuget-feed-setup@main
+  uses: laerdal/github_actions/dotnet-nuget-feed-setup@main
   with:
     name: "development"
     source: "https://dev-nuget.company.com/v3/index.json"
@@ -349,7 +349,7 @@ jobs:
 
 - name: "Setup production feed"
   if: github.ref == 'refs/heads/main'
-  uses: framinosona/github_actions/dotnet-nuget-feed-setup@main
+  uses: laerdal/github_actions/dotnet-nuget-feed-setup@main
   with:
     name: "production"
     source: "https://prod-nuget.company.com/v3/index.json"
@@ -359,7 +359,7 @@ jobs:
 # Feature branch specific feeds
 - name: "Setup feature feed"
   if: startsWith(github.ref, 'refs/heads/feature/')
-  uses: framinosona/github_actions/dotnet-nuget-feed-setup@main
+  uses: laerdal/github_actions/dotnet-nuget-feed-setup@main
   with:
     name: "feature-preview"
     source: "https://preview.company.com/v3/index.json"
@@ -388,7 +388,7 @@ strategy:
 
 steps:
   - name: "Setup ${{ matrix.feed.name }} feed"
-    uses: framinosona/github_actions/dotnet-nuget-feed-setup@main
+    uses: laerdal/github_actions/dotnet-nuget-feed-setup@main
     with:
       name: ${{ matrix.feed.name }}
       source: ${{ matrix.feed.source }}
@@ -476,7 +476,7 @@ store-password-in-clear-text: "true"
   continue-on-error: true
 
 - name: "Add source"
-  uses: framinosona/github_actions/dotnet-nuget-feed-setup@main
+  uses: laerdal/github_actions/dotnet-nuget-feed-setup@main
   with:
     name: "MyFeed"
     source: "https://example.com/v3/index.json"
@@ -502,7 +502,7 @@ store-password-in-clear-text: "true"
     fi
 
 - name: "Setup with debug"
-  uses: framinosona/github_actions/dotnet-nuget-feed-setup@main
+  uses: laerdal/github_actions/dotnet-nuget-feed-setup@main
   with:
     name: "debug-feed"
     source: "https://example.com/v3/index.json"
@@ -534,7 +534,7 @@ store-password-in-clear-text: "true"
     curl -sSf "$url" > /dev/null && echo "✅ Feed is accessible" || echo "❌ Feed is not accessible"
 
 - name: "Setup validated feed"
-  uses: framinosona/github_actions/dotnet-nuget-feed-setup@main
+  uses: laerdal/github_actions/dotnet-nuget-feed-setup@main
   with:
     name: "validated-feed"
     source: "${{ inputs.source }}"
@@ -555,7 +555,7 @@ store-password-in-clear-text: "true"
     chmod 755 $(dirname "${{ inputs.configfile }}")
 
 - name: "Setup with custom config"
-  uses: framinosona/github_actions/dotnet-nuget-feed-setup@main
+  uses: laerdal/github_actions/dotnet-nuget-feed-setup@main
   with:
     name: "custom-feed"
     source: "https://example.com/v3/index.json"
@@ -578,7 +578,7 @@ Enable comprehensive debugging:
 
 ```yaml
 - name: "Debug feed setup"
-  uses: framinosona/github_actions/dotnet-nuget-feed-setup@main
+  uses: laerdal/github_actions/dotnet-nuget-feed-setup@main
   with:
     name: "debug-feed"
     source: "https://example.com/v3/index.json"
@@ -625,7 +625,7 @@ Enable comprehensive debugging:
     done
 
 - name: "Development feed"
-  uses: framinosona/github_actions/dotnet-nuget-feed-setup@main
+  uses: laerdal/github_actions/dotnet-nuget-feed-setup@main
   with:
     name: "dev-feed"
     source: "https://dev-nuget.company.com/v3/index.json"
@@ -634,7 +634,7 @@ Enable comprehensive debugging:
     configfile: "./configs/development/nuget.config"
 
 - name: "Production feed"
-  uses: framinosona/github_actions/dotnet-nuget-feed-setup@main
+  uses: laerdal/github_actions/dotnet-nuget-feed-setup@main
   with:
     name: "prod-feed"
     source: "https://prod-nuget.company.com/v3/index.json"
@@ -648,7 +648,7 @@ Enable comprehensive debugging:
 ```yaml
 - name: "Setup and monitor feeds"
   id: setup
-  uses: framinosona/github_actions/dotnet-nuget-feed-setup@main
+  uses: laerdal/github_actions/dotnet-nuget-feed-setup@main
   with:
     name: "monitored-feed"
     source: "https://example.com/v3/index.json"
@@ -676,7 +676,7 @@ Enable comprehensive debugging:
 
     # Add with new credentials
 - name: "Setup with new credentials"
-  uses: framinosona/github_actions/dotnet-nuget-feed-setup@main
+  uses: laerdal/github_actions/dotnet-nuget-feed-setup@main
   with:
     name: "rotating-feed"
     source: "https://example.com/v3/index.json"

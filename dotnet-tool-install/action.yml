@@ -126,31 +126,31 @@ runs:
 
     - name: "💯 Normalize arguments"
       id: normalize-arguments
-      uses: framinosona/github_actions/normalize-arguments@main
+      uses: laerdal/github_actions/normalize-arguments@main
       with:
         arguments: ${{ inputs.arguments }}
 
     - name: "📁 Normalize working-directory"
       id: normalize-working-directory
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.working-directory }}
 
     - name: "📁 Normalize tool-path"
       id: normalize-tool-path
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.tool-path }}
 
     - name: "📁 Normalize configfile"
       id: normalize-configfile
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.configfile }}
 
     - name: "📁 Normalize tool-manifest"
       id: normalize-tool-manifest
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.tool-manifest }}
 
@@ -326,7 +326,7 @@ runs:
 
     - name: "🔧 Install .NET tool"
       id: run-dotnet
-      uses: "framinosona/github_actions/dotnet@main"
+      uses: "laerdal/github_actions/dotnet@main"
       with:
         command: "tool"
         working-directory: ${{ steps.normalize-working-directory.outputs.normalized }}

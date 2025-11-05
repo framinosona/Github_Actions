@@ -106,7 +106,7 @@ runs:
 
     - name: "📁 Normalize output-file path"
       id: normalize-output-file
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.output-file }}
 

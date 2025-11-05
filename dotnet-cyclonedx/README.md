@@ -19,14 +19,14 @@ Minimal configuration to generate an SBOM:
 
 ```yaml
 - name: "Generate SBOM"
-  uses: framinosona/github_actions/dotnet-cyclonedx@main
+  uses: laerdal/github_actions/dotnet-cyclonedx@main
   with:
     path: "./src/MyProject.csproj"
 ```
 
 ```yaml
 - name: "Generate JSON SBOM"
-  uses: framinosona/github_actions/dotnet-cyclonedx@main
+  uses: laerdal/github_actions/dotnet-cyclonedx@main
   with:
     path: "./MySolution.sln"
     output-format: "Json"
@@ -34,7 +34,7 @@ Minimal configuration to generate an SBOM:
 
 ```yaml
 - name: "Generate SBOM for entire directory"
-  uses: framinosona/github_actions/dotnet-cyclonedx@main
+  uses: laerdal/github_actions/dotnet-cyclonedx@main
   with:
     working-directory: "./src"
     recursive: "true"
@@ -46,7 +46,7 @@ Full configuration with all available options:
 
 ```yaml
 - name: "Advanced SBOM generation"
-  uses: framinosona/github_actions/dotnet-cyclonedx@main
+  uses: laerdal/github_actions/dotnet-cyclonedx@main
   with:
     path: "./src/MyApp/MyApp.csproj"
     working-directory: "./backend"
@@ -119,13 +119,13 @@ jobs:
           dotnet-version: "8.0.x"
 
       - name: "📦 Restore dependencies"
-        uses: framinosona/github_actions/dotnet@main
+        uses: laerdal/github_actions/dotnet@main
         with:
           command: "restore"
 
       - name: "📄 Generate SBOM"
         id: generate-sbom
-        uses: framinosona/github_actions/dotnet-cyclonedx@main
+        uses: laerdal/github_actions/dotnet-cyclonedx@main
         with:
           path: "./src/MyApp.sln"
           output: "./artifacts/sbom"
@@ -202,9 +202,9 @@ jobs:
 
 | Action | Purpose | Repository |
 |--------|---------|------------|
-| 🚀 **dotnet** | Execute .NET CLI commands | `framinosona/github_actions/dotnet` |
-| 🔧 **dotnet-tool-install** | Install .NET global tools | `framinosona/github_actions/dotnet-tool-install` |
-| 🧪 **dotnet-test** | Enhanced .NET testing | `framinosona/github_actions/dotnet-test` |
+| 🚀 **dotnet** | Execute .NET CLI commands | `laerdal/github_actions/dotnet` |
+| 🔧 **dotnet-tool-install** | Install .NET global tools | `laerdal/github_actions/dotnet-tool-install` |
+| 🧪 **dotnet-test** | Enhanced .NET testing | `laerdal/github_actions/dotnet-test` |
 
 ## 💡 Examples
 
@@ -212,14 +212,14 @@ jobs:
 
 ```yaml
 - name: "Generate XML SBOM"
-  uses: framinosona/github_actions/dotnet-cyclonedx@main
+  uses: laerdal/github_actions/dotnet-cyclonedx@main
   with:
     path: "./src/MyApp.csproj"
     output-format: "Xml"
     filename: "software-bom.xml"
 
 - name: "Generate JSON SBOM"
-  uses: framinosona/github_actions/dotnet-cyclonedx@main
+  uses: laerdal/github_actions/dotnet-cyclonedx@main
   with:
     path: "./src/MyApp.csproj"
     output-format: "Json"
@@ -230,7 +230,7 @@ jobs:
 
 ```yaml
 - name: "Generate SBOM for entire solution"
-  uses: framinosona/github_actions/dotnet-cyclonedx@main
+  uses: laerdal/github_actions/dotnet-cyclonedx@main
   with:
     path: "./MySolution.sln"
     exclude-test-projects: "true"
@@ -248,7 +248,7 @@ strategy:
 
 steps:
   - name: "Generate SBOM for ${{ matrix.framework }}"
-    uses: framinosona/github_actions/dotnet-cyclonedx@main
+    uses: laerdal/github_actions/dotnet-cyclonedx@main
     with:
       path: "./src/MultiTarget.csproj"
       framework: ${{ matrix.framework }}
@@ -260,7 +260,7 @@ steps:
 
 ```yaml
 - name: "Generate SBOM with license information"
-  uses: framinosona/github_actions/dotnet-cyclonedx@main
+  uses: laerdal/github_actions/dotnet-cyclonedx@main
   with:
     path: "./src/MyApp.csproj"
     enable-github-licenses: "true"
@@ -272,7 +272,7 @@ steps:
 
 ```yaml
 - name: "Generate SBOM from private NuGet"
-  uses: framinosona/github_actions/dotnet-cyclonedx@main
+  uses: laerdal/github_actions/dotnet-cyclonedx@main
   with:
     path: "./src/MyApp.csproj"
     url: "https://nuget.company.com/v3/index.json"
@@ -285,7 +285,7 @@ steps:
 
 ```yaml
 - name: "Generate filtered SBOM"
-  uses: framinosona/github_actions/dotnet-cyclonedx@main
+  uses: laerdal/github_actions/dotnet-cyclonedx@main
   with:
     path: "./src/MyApp.csproj"
     exclude-dev: "true"

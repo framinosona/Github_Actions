@@ -19,7 +19,7 @@ Generate a simple status badge:
 
 ```yaml
 - name: "Generate simple badge"
-  uses: framinosona/github_actions/generate-badge@main
+  uses: laerdal/github_actions/generate-badge@main
   with:
     message: "passing"
     color: "green"
@@ -27,7 +27,7 @@ Generate a simple status badge:
 
 ```yaml
 - name: "Generate build status badge"
-  uses: framinosona/github_actions/generate-badge@main
+  uses: laerdal/github_actions/generate-badge@main
   with:
     label: "build"
     message: "passing"
@@ -36,7 +36,7 @@ Generate a simple status badge:
 
 ```yaml
 - name: "Generate version badge with logo"
-  uses: framinosona/github_actions/generate-badge@main
+  uses: laerdal/github_actions/generate-badge@main
   with:
     label: "npm"
     message: "v1.2.3"
@@ -51,7 +51,7 @@ Full configuration with all available options:
 
 ```yaml
 - name: "Advanced styled badge with logo"
-  uses: framinosona/github_actions/generate-badge@main
+  uses: laerdal/github_actions/generate-badge@main
   with:
     label: "coverage"
     message: "95%"
@@ -117,7 +117,7 @@ jobs:
 
       - name: "🧪 Run tests with coverage"
         id: test-results
-        uses: framinosona/github_actions/dotnet-test@main
+        uses: laerdal/github_actions/dotnet-test@main
         with:
           projects: "./tests/**/*.csproj"
           collect: "XPlat Code Coverage"
@@ -132,7 +132,7 @@ jobs:
 
       - name: "🏷️ Generate build status badge"
         id: build-badge
-        uses: framinosona/github_actions/generate-badge@main
+        uses: laerdal/github_actions/generate-badge@main
         with:
           label: "build"
           message: ${{ job.status == 'success' && 'passing' || 'failing' }}
@@ -144,7 +144,7 @@ jobs:
           show-summary: "true"
 
       - name: "📈 Generate coverage badge"
-        uses: framinosona/github_actions/generate-badge@main
+        uses: laerdal/github_actions/generate-badge@main
         with:
           label: "coverage"
           message: "${{ steps.coverage.outputs.percentage }}%"
@@ -155,7 +155,7 @@ jobs:
           output-format: "markdown"
 
       - name: "🔢 Generate version badge"
-        uses: framinosona/github_actions/generate-badge@main
+        uses: laerdal/github_actions/generate-badge@main
         with:
           label: "version"
           message: "v${{ env.VERSION || '1.0.0' }}"
@@ -166,7 +166,7 @@ jobs:
           output-format: "markdown"
 
       - name: "📄 Generate license badge"
-        uses: framinosona/github_actions/generate-badge@main
+        uses: laerdal/github_actions/generate-badge@main
         with:
           label: "license"
           message: "MIT"
@@ -221,10 +221,10 @@ jobs:
 
 | Action | Purpose | Repository |
 |--------|---------|------------|
-| 🧪 **dotnet-test** | Generate test result badges | `framinosona/github_actions/dotnet-test` |
-| 🔢 **generate-version** | Create version badges | `framinosona/github_actions/generate-version` |
-| 🚀 **dotnet** | Build status badges | `framinosona/github_actions/dotnet` |
-| 🏷️ **git-tag** | Tag-based badges | `framinosona/github_actions/git-tag` |
+| 🧪 **dotnet-test** | Generate test result badges | `laerdal/github_actions/dotnet-test` |
+| 🔢 **generate-version** | Create version badges | `laerdal/github_actions/generate-version` |
+| 🚀 **dotnet** | Build status badges | `laerdal/github_actions/dotnet` |
+| 🏷️ **git-tag** | Tag-based badges | `laerdal/github_actions/git-tag` |
 
 ## 💡 Examples
 
@@ -233,7 +233,7 @@ jobs:
 ```yaml
 # Success badge
 - name: "Generate success badge"
-  uses: framinosona/github_actions/generate-badge@main
+  uses: laerdal/github_actions/generate-badge@main
   with:
     label: "build"
     message: "passing"
@@ -242,7 +242,7 @@ jobs:
 
 # Failure badge
 - name: "Generate failure badge"
-  uses: framinosona/github_actions/generate-badge@main
+  uses: laerdal/github_actions/generate-badge@main
   with:
     label: "build"
     message: "failing"
@@ -255,7 +255,7 @@ jobs:
 ```yaml
 # NPM version
 - name: "Generate NPM version badge"
-  uses: framinosona/github_actions/generate-badge@main
+  uses: laerdal/github_actions/generate-badge@main
   with:
     label: "npm"
     message: "v1.2.3"
@@ -265,7 +265,7 @@ jobs:
 
 # Docker version
 - name: "Generate Docker badge"
-  uses: framinosona/github_actions/generate-badge@main
+  uses: laerdal/github_actions/generate-badge@main
   with:
     label: "docker"
     message: "latest"
@@ -279,7 +279,7 @@ jobs:
 ```yaml
 # Dynamic coverage badge
 - name: "Generate coverage badge"
-  uses: framinosona/github_actions/generate-badge@main
+  uses: laerdal/github_actions/generate-badge@main
   with:
     label: "coverage"
     message: "${{ env.COVERAGE_PERCENT }}%"
@@ -293,7 +293,7 @@ jobs:
 ```yaml
 # License badge
 - name: "Generate license badge"
-  uses: framinosona/github_actions/generate-badge@main
+  uses: laerdal/github_actions/generate-badge@main
   with:
     label: "license"
     message: "MIT"
@@ -302,7 +302,7 @@ jobs:
 
 # Social follow badge
 - name: "Generate social badge"
-  uses: framinosona/github_actions/generate-badge@main
+  uses: laerdal/github_actions/generate-badge@main
   with:
     label: "follow"
     message: "@username"
@@ -317,7 +317,7 @@ jobs:
 ```yaml
 # Save as different formats
 - name: "Generate badge in multiple formats"
-  uses: framinosona/github_actions/generate-badge@main
+  uses: laerdal/github_actions/generate-badge@main
   with:
     label: "status"
     message: "active"
@@ -326,7 +326,7 @@ jobs:
     output-format: "markdown"
 
 - name: "Generate SVG badge"
-  uses: framinosona/github_actions/generate-badge@main
+  uses: laerdal/github_actions/generate-badge@main
   with:
     label: "status"
     message: "active"
@@ -348,7 +348,7 @@ strategy:
 
 steps:
   - name: "Generate ${{ matrix.badge.label }} badge"
-    uses: framinosona/github_actions/generate-badge@main
+    uses: laerdal/github_actions/generate-badge@main
     with:
       label: ${{ matrix.badge.label }}
       message: ${{ matrix.badge.message }}
@@ -460,7 +460,7 @@ The action automatically handles URL encoding for special characters:
 ```yaml
 - name: "Debug badge URL"
   id: badge
-  uses: framinosona/github_actions/generate-badge@main
+  uses: laerdal/github_actions/generate-badge@main
   with:
     label: "test with spaces"
     message: "100%"
@@ -501,7 +501,7 @@ color: "green!"           # Invalid character
   run: mkdir -p ./badges
 
 - name: "Generate badge with file output"
-  uses: framinosona/github_actions/generate-badge@main
+  uses: laerdal/github_actions/generate-badge@main
   with:
     label: "status"
     message: "active"
@@ -521,7 +521,7 @@ color: "green!"           # Invalid character
 
 ```yaml
 - name: "Test logo badge"
-  uses: framinosona/github_actions/generate-badge@main
+  uses: laerdal/github_actions/generate-badge@main
   with:
     label: "test"
     message: "logo"
@@ -537,7 +537,7 @@ Enable comprehensive debugging:
 
 ```yaml
 - name: "Debug badge generation"
-  uses: framinosona/github_actions/generate-badge@main
+  uses: laerdal/github_actions/generate-badge@main
   with:
     label: "debug"
     message: "test"
@@ -553,7 +553,7 @@ Enable comprehensive debugging:
 
 ```yaml
 - name: "Generate status badge with conditional color"
-  uses: framinosona/github_actions/generate-badge@main
+  uses: laerdal/github_actions/generate-badge@main
   with:
     label: "tests"
     message: ${{ env.TEST_STATUS }}
@@ -565,7 +565,7 @@ Enable comprehensive debugging:
 
 ```yaml
 - name: "Generate cached badge"
-  uses: framinosona/github_actions/generate-badge@main
+  uses: laerdal/github_actions/generate-badge@main
   with:
     label: "build"
     message: "stable"
@@ -578,7 +578,7 @@ Enable comprehensive debugging:
 ```yaml
 - name: "Generate and modify SVG badge"
   id: svg-badge
-  uses: framinosona/github_actions/generate-badge@main
+  uses: laerdal/github_actions/generate-badge@main
   with:
     label: "custom"
     message: "badge"

@@ -19,7 +19,7 @@ Upload to NuGet.org:
 
 ```yaml
 - name: "Upload to NuGet.org"
-  uses: framinosona/github_actions/dotnet-nuget-upload@main
+  uses: laerdal/github_actions/dotnet-nuget-upload@main
   with:
     package-path: "./artifacts/MyPackage.1.0.0.nupkg"
     api-key: ${{ secrets.NUGET_API_KEY }}
@@ -27,7 +27,7 @@ Upload to NuGet.org:
 
 ```yaml
 - name: "Upload to GitHub Packages"
-  uses: framinosona/github_actions/dotnet-nuget-upload@main
+  uses: laerdal/github_actions/dotnet-nuget-upload@main
   with:
     package-path: "./artifacts/MyPackage.1.0.0.nupkg"
     source: "https://nuget.pkg.github.com/myorg/index.json"
@@ -36,7 +36,7 @@ Upload to NuGet.org:
 
 ```yaml
 - name: "Upload symbols package"
-  uses: framinosona/github_actions/dotnet-nuget-upload@main
+  uses: laerdal/github_actions/dotnet-nuget-upload@main
   with:
     package-path: "./artifacts/MyPackage.1.0.0.snupkg"
     symbol-source: "https://nuget.smbsrc.net/"
@@ -49,7 +49,7 @@ Complete package upload with all configuration options:
 
 ```yaml
 - name: "Advanced package upload"
-  uses: framinosona/github_actions/dotnet-nuget-upload@main
+  uses: laerdal/github_actions/dotnet-nuget-upload@main
   with:
     package-path: "./artifacts/MyPackage.1.0.0.nupkg"
     source: "https://api.nuget.org/v3/index.json"
@@ -122,7 +122,7 @@ jobs:
         run: dotnet build --configuration Release --no-restore
 
       - name: "🧪 Run tests"
-        uses: framinosona/github_actions/dotnet-test@main
+        uses: laerdal/github_actions/dotnet-test@main
         with:
           projects: "**/*Tests.csproj"
           configuration: "Release"
@@ -136,7 +136,7 @@ jobs:
       - name: "📤 Upload to NuGet.org"
         id: nuget-upload
         if: github.event_name == 'release'
-        uses: framinosona/github_actions/dotnet-nuget-upload@main
+        uses: laerdal/github_actions/dotnet-nuget-upload@main
         with:
           package-path: "./artifacts/*.nupkg"
           api-key: ${{ secrets.NUGET_API_KEY }}
@@ -146,7 +146,7 @@ jobs:
 
       - name: "📤 Upload to GitHub Packages"
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
-        uses: framinosona/github_actions/dotnet-nuget-upload@main
+        uses: laerdal/github_actions/dotnet-nuget-upload@main
         with:
           package-path: "./artifacts/*.nupkg"
           source: "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
@@ -155,7 +155,7 @@ jobs:
 
       - name: "📤 Upload symbols"
         if: steps.nuget-upload.outputs.exit-code == '0'
-        uses: framinosona/github_actions/dotnet-nuget-upload@main
+        uses: laerdal/github_actions/dotnet-nuget-upload@main
         with:
           package-path: "./artifacts/*.snupkg"
           symbol-source: "https://nuget.smbsrc.net/"
@@ -164,7 +164,7 @@ jobs:
 
       - name: "🏷️ Generate success badge"
         if: success()
-        uses: framinosona/github_actions/generate-badge@main
+        uses: laerdal/github_actions/generate-badge@main
         with:
           label: "nuget"
           message: "${{ steps.nuget-upload.outputs.package-version }}"
@@ -211,10 +211,10 @@ jobs:
 
 | Action | Purpose | Repository |
 |--------|---------|------------|
-| 🔧 **dotnet-nuget-feed-setup** | Configure NuGet sources | `framinosona/github_actions/dotnet-nuget-feed-setup` |
-| 🔨 **dotnet** | Build .NET projects | `framinosona/github_actions/dotnet` |
-| 🧪 **dotnet-test** | Run .NET tests | `framinosona/github_actions/dotnet-test` |
-| 🔢 **generate-version** | Generate version numbers | `framinosona/github_actions/generate-version` |
+| 🔧 **dotnet-nuget-feed-setup** | Configure NuGet sources | `laerdal/github_actions/dotnet-nuget-feed-setup` |
+| 🔨 **dotnet** | Build .NET projects | `laerdal/github_actions/dotnet` |
+| 🧪 **dotnet-test** | Run .NET tests | `laerdal/github_actions/dotnet-test` |
+| 🔢 **generate-version** | Generate version numbers | `laerdal/github_actions/generate-version` |
 
 ## 💡 Examples
 
@@ -240,7 +240,7 @@ strategy:
 steps:
   - name: "Upload to ${{ matrix.feed.name }}"
     if: ${{ matrix.feed.condition }}
-    uses: framinosona/github_actions/dotnet-nuget-upload@main
+    uses: laerdal/github_actions/dotnet-nuget-upload@main
     with:
       package-path: "./artifacts/*.nupkg"
       source: ${{ matrix.feed.source }}
@@ -255,7 +255,7 @@ steps:
 # Production releases
 - name: "Upload to production feed"
   if: github.event_name == 'release' && !github.event.release.prerelease
-  uses: framinosona/github_actions/dotnet-nuget-upload@main
+  uses: laerdal/github_actions/dotnet-nuget-upload@main
   with:
     package-path: "./artifacts/*.nupkg"
     source: "https://api.nuget.org/v3/index.json"
@@ -265,7 +265,7 @@ steps:
 # Pre-release packages
 - name: "Upload to preview feed"
   if: github.event_name == 'release' && github.event.release.prerelease
-  uses: framinosona/github_actions/dotnet-nuget-upload@main
+  uses: laerdal/github_actions/dotnet-nuget-upload@main
   with:
     package-path: "./artifacts/*.nupkg"
     source: "https://preview.nuget.org/v3/index.json"
@@ -275,7 +275,7 @@ steps:
 # Development builds
 - name: "Upload to development feed"
   if: github.ref == 'refs/heads/develop'
-  uses: framinosona/github_actions/dotnet-nuget-upload@main
+  uses: laerdal/github_actions/dotnet-nuget-upload@main
   with:
     package-path: "./artifacts/*.nupkg"
     source: "https://dev-nuget.company.com/v3/index.json"
@@ -300,7 +300,7 @@ steps:
     done
 
 - name: "Upload main packages"
-  uses: framinosona/github_actions/dotnet-nuget-upload@main
+  uses: laerdal/github_actions/dotnet-nuget-upload@main
   with:
     package-path: "./artifacts/*.nupkg"
     api-key: ${{ secrets.NUGET_API_KEY }}
@@ -309,7 +309,7 @@ steps:
     show-summary: "true"
 
 - name: "Upload symbol packages"
-  uses: framinosona/github_actions/dotnet-nuget-upload@main
+  uses: laerdal/github_actions/dotnet-nuget-upload@main
   with:
     package-path: "./artifacts/*.snupkg"
     symbol-source: "https://nuget.smbsrc.net/"
@@ -339,7 +339,7 @@ steps:
 
 - name: "Upload with conditions"
   id: upload
-  uses: framinosona/github_actions/dotnet-nuget-upload@main
+  uses: laerdal/github_actions/dotnet-nuget-upload@main
   with:
     package-path: "./artifacts/*.nupkg"
     api-key: ${{ secrets.NUGET_API_KEY }}
@@ -420,7 +420,7 @@ api-key: "oy2lki5j3k4l6j7k8l9m0n1p2q3r4s5t"  # Hardcoded
 
 ```yaml
 - name: "Upload with duplicate handling"
-  uses: framinosona/github_actions/dotnet-nuget-upload@main
+  uses: laerdal/github_actions/dotnet-nuget-upload@main
   with:
     package-path: "./artifacts/MyPackage.1.0.0.nupkg"
     api-key: ${{ secrets.NUGET_API_KEY }}
@@ -445,7 +445,7 @@ api-key: "oy2lki5j3k4l6j7k8l9m0n1p2q3r4s5t"  # Hardcoded
     fi
 
 - name: "Test with verbose output"
-  uses: framinosona/github_actions/dotnet-nuget-upload@main
+  uses: laerdal/github_actions/dotnet-nuget-upload@main
   with:
     package-path: "./artifacts/MyPackage.1.0.0.nupkg"
     api-key: ${{ secrets.NUGET_API_KEY }}
@@ -461,7 +461,7 @@ api-key: "oy2lki5j3k4l6j7k8l9m0n1p2q3r4s5t"  # Hardcoded
 
 ```yaml
 - name: "Upload with extended timeout"
-  uses: framinosona/github_actions/dotnet-nuget-upload@main
+  uses: laerdal/github_actions/dotnet-nuget-upload@main
   with:
     package-path: "./artifacts/MyPackage.1.0.0.nupkg"
     api-key: ${{ secrets.NUGET_API_KEY }}
@@ -488,7 +488,7 @@ api-key: "oy2lki5j3k4l6j7k8l9m0n1p2q3r4s5t"  # Hardcoded
     dotnet nuget verify "./artifacts/MyPackage.1.0.0.nupkg" || echo "Package verification failed"
 
 - name: "Upload validated package"
-  uses: framinosona/github_actions/dotnet-nuget-upload@main
+  uses: laerdal/github_actions/dotnet-nuget-upload@main
   with:
     package-path: "./artifacts/MyPackage.1.0.0.nupkg"
     api-key: ${{ secrets.NUGET_API_KEY }}
@@ -502,7 +502,7 @@ Enable comprehensive debugging:
 
 ```yaml
 - name: "Debug package upload"
-  uses: framinosona/github_actions/dotnet-nuget-upload@main
+  uses: laerdal/github_actions/dotnet-nuget-upload@main
   with:
     package-path: "./artifacts/MyPackage.1.0.0.nupkg"
     api-key: ${{ secrets.NUGET_API_KEY }}
@@ -548,7 +548,7 @@ Enable comprehensive debugging:
     done
 
 - name: "Upload with extracted metadata"
-  uses: framinosona/github_actions/dotnet-nuget-upload@main
+  uses: laerdal/github_actions/dotnet-nuget-upload@main
   with:
     package-path: "./artifacts/${{ steps.package-info.outputs.package-id }}.${{ steps.package-info.outputs.version }}.nupkg"
     api-key: ${{ secrets.NUGET_API_KEY }}
@@ -587,7 +587,7 @@ Enable comprehensive debugging:
 
 - name: "Upload symbols if available"
   if: steps.symbols.outputs.symbols-exist == 'true'
-  uses: framinosona/github_actions/dotnet-nuget-upload@main
+  uses: laerdal/github_actions/dotnet-nuget-upload@main
   with:
     package-path: "./artifacts/*.snupkg"
     symbol-source: "https://nuget.smbsrc.net/"

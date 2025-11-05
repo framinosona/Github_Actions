@@ -86,7 +86,7 @@ runs:
 
     - name: "📁 Normalize output-file path"
       id: normalize-output-file
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.output-file }}
 
@@ -411,7 +411,7 @@ branding:
   color: "blue"
 
 # gh sbom --help
-# Usage of /Users/framinosona/.local/share/gh/extensions/gh-sbom/gh-sbom:
+# Usage of /Users/laerdal/.local/share/gh/extensions/gh-sbom/gh-sbom:
 #   --cyclonedx           Use CycloneDX SBOM format. Default is to use SPDX.
 #   --license             Include license information from clearlydefined.io for CycloneDX format (SPDX always includes license information).
 #   --repository string   Repository to query. Current directory used by default.

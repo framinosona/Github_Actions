@@ -18,21 +18,21 @@ Minimal configuration to get started:
 
 ```yaml
 - name: "Build project"
-  uses: framinosona/github_actions/dotnet@main
+  uses: laerdal/github_actions/dotnet@main
   with:
     command: "build"
 ```
 
 ```yaml
 - name: "Run tests"
-  uses: framinosona/github_actions/dotnet@main
+  uses: laerdal/github_actions/dotnet@main
   with:
     command: "test"
 ```
 
 ```yaml
 - name: "Restore packages"
-  uses: framinosona/github_actions/dotnet@main
+  uses: laerdal/github_actions/dotnet@main
   with:
     command: "restore"
 ```
@@ -43,7 +43,7 @@ Full configuration with all available options:
 
 ```yaml
 - name: "Advanced .NET build and publish"
-  uses: framinosona/github_actions/dotnet@main
+  uses: laerdal/github_actions/dotnet@main
   with:
     command: "publish"
     path: "./src/MyApp/MyApp.csproj"
@@ -106,13 +106,13 @@ jobs:
           dotnet-version: "8.0.x"
 
       - name: "📦 Restore dependencies"
-        uses: framinosona/github_actions/dotnet@main
+        uses: laerdal/github_actions/dotnet@main
         with:
           command: "restore"
           verbosity: "minimal"
 
       - name: "🏗️ Build solution"
-        uses: framinosona/github_actions/dotnet@main
+        uses: laerdal/github_actions/dotnet@main
         with:
           command: "build"
           configuration: "Release"
@@ -120,7 +120,7 @@ jobs:
           show-summary: "true"
 
       - name: "🧪 Run tests"
-        uses: framinosona/github_actions/dotnet@main
+        uses: laerdal/github_actions/dotnet@main
         with:
           command: "test"
           configuration: "Release"
@@ -129,7 +129,7 @@ jobs:
 
       - name: "🚀 Publish application"
         if: github.ref == 'refs/heads/main'
-        uses: framinosona/github_actions/dotnet@main
+        uses: laerdal/github_actions/dotnet@main
         with:
           command: "publish"
           path: "./src/WebApp/WebApp.csproj"
@@ -169,11 +169,11 @@ jobs:
 
 | Action | Purpose | Repository |
 |--------|---------|------------|
-| 🧪 **dotnet-test** | Enhanced .NET testing with coverage | `framinosona/github_actions/dotnet-test` |
-| 🔧 **dotnet-tool-install** | Install .NET tools | `framinosona/github_actions/dotnet-tool-install` |
-| 📦 **dotnet-nuget-upload** | Upload NuGet packages | `framinosona/github_actions/dotnet-nuget-upload` |
-| 📚 **dotnet-docfx-build** | Generate documentation | `framinosona/github_actions/dotnet-docfx-build` |
-| 🔍 **dotnet-cyclonedx** | Generate SBOM files | `framinosona/github_actions/dotnet-cyclonedx` |
+| 🧪 **dotnet-test** | Enhanced .NET testing with coverage | `laerdal/github_actions/dotnet-test` |
+| 🔧 **dotnet-tool-install** | Install .NET tools | `laerdal/github_actions/dotnet-tool-install` |
+| 📦 **dotnet-nuget-upload** | Upload NuGet packages | `laerdal/github_actions/dotnet-nuget-upload` |
+| 📚 **dotnet-docfx-build** | Generate documentation | `laerdal/github_actions/dotnet-docfx-build` |
+| 🔍 **dotnet-cyclonedx** | Generate SBOM files | `laerdal/github_actions/dotnet-cyclonedx` |
 
 ## 💡 Examples
 
@@ -181,13 +181,13 @@ jobs:
 
 ```yaml
 - name: "Build Debug"
-  uses: framinosona/github_actions/dotnet@main
+  uses: laerdal/github_actions/dotnet@main
   with:
     command: "build"
     configuration: "Debug"
 
 - name: "Build Release"
-  uses: framinosona/github_actions/dotnet@main
+  uses: laerdal/github_actions/dotnet@main
   with:
     command: "build"
     configuration: "Release"
@@ -202,7 +202,7 @@ strategy:
 
 steps:
   - name: "Test ${{ matrix.framework }}"
-    uses: framinosona/github_actions/dotnet@main
+    uses: laerdal/github_actions/dotnet@main
     with:
       command: "test"
       framework: ${{ matrix.framework }}
@@ -217,7 +217,7 @@ strategy:
 
 steps:
   - name: "Publish for ${{ matrix.runtime }}"
-    uses: framinosona/github_actions/dotnet@main
+    uses: laerdal/github_actions/dotnet@main
     with:
       command: "publish"
       runtime: ${{ matrix.runtime }}
@@ -228,7 +228,7 @@ steps:
 
 ```yaml
 - name: "Create NuGet package"
-  uses: framinosona/github_actions/dotnet@main
+  uses: laerdal/github_actions/dotnet@main
   with:
     command: "pack"
     path: "./src/MyLibrary/MyLibrary.csproj"

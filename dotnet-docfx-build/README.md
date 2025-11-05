@@ -19,14 +19,14 @@ Build documentation with default settings:
 
 ```yaml
 - name: "Build documentation"
-  uses: framinosona/github_actions/dotnet-docfx-build@main
+  uses: laerdal/github_actions/dotnet-docfx-build@main
   with:
     config: "docfx.json"
 ```
 
 ```yaml
 - name: "Build with custom output"
-  uses: framinosona/github_actions/dotnet-docfx-build@main
+  uses: laerdal/github_actions/dotnet-docfx-build@main
   with:
     config: "docs/docfx.json"
     output: "./dist/documentation"
@@ -34,7 +34,7 @@ Build documentation with default settings:
 
 ```yaml
 - name: "Build with specific theme"
-  uses: framinosona/github_actions/dotnet-docfx-build@main
+  uses: laerdal/github_actions/dotnet-docfx-build@main
   with:
     config: "docfx.json"
     template: "modern"
@@ -47,7 +47,7 @@ Full configuration with all available options:
 
 ```yaml
 - name: "Advanced documentation build"
-  uses: framinosona/github_actions/dotnet-docfx-build@main
+  uses: laerdal/github_actions/dotnet-docfx-build@main
   with:
     config: "docs/docfx.json"
     output: "./dist/docs"
@@ -122,7 +122,7 @@ jobs:
           dotnet-version: "8.0.x"
 
       - name: "📖 Generate API metadata"
-        uses: framinosona/github_actions/dotnet-docfx-metadata@main
+        uses: laerdal/github_actions/dotnet-docfx-metadata@main
         with:
           config: "docs/docfx.json"
           projects: "./src/**/*.csproj"
@@ -130,7 +130,7 @@ jobs:
 
       - name: "📚 Build documentation site"
         id: build-docs
-        uses: framinosona/github_actions/dotnet-docfx-build@main
+        uses: laerdal/github_actions/dotnet-docfx-build@main
         with:
           config: "docs/docfx.json"
           output: "./dist/docs"
@@ -203,10 +203,10 @@ jobs:
 
 | Action | Purpose | Repository |
 |--------|---------|------------|
-| 📖 **dotnet-docfx-metadata** | Generate API metadata | `framinosona/github_actions/dotnet-docfx-metadata` |
-| 📄 **dotnet-docfx-pdf** | Generate PDF documentation | `framinosona/github_actions/dotnet-docfx-pdf` |
-| 🔧 **dotnet-tool-install** | Install .NET tools | `framinosona/github_actions/dotnet-tool-install` |
-| 🚀 **dotnet** | Execute .NET CLI commands | `framinosona/github_actions/dotnet` |
+| 📖 **dotnet-docfx-metadata** | Generate API metadata | `laerdal/github_actions/dotnet-docfx-metadata` |
+| 📄 **dotnet-docfx-pdf** | Generate PDF documentation | `laerdal/github_actions/dotnet-docfx-pdf` |
+| 🔧 **dotnet-tool-install** | Install .NET tools | `laerdal/github_actions/dotnet-tool-install` |
+| 🚀 **dotnet** | Execute .NET CLI commands | `laerdal/github_actions/dotnet` |
 
 ## 💡 Examples
 
@@ -214,7 +214,7 @@ jobs:
 
 ```yaml
 - name: "Build documentation site"
-  uses: framinosona/github_actions/dotnet-docfx-build@main
+  uses: laerdal/github_actions/dotnet-docfx-build@main
   with:
     config: "docfx.json"
     output: "./site"
@@ -225,7 +225,7 @@ jobs:
 
 ```yaml
 - name: "Build with multiple templates"
-  uses: framinosona/github_actions/dotnet-docfx-build@main
+  uses: laerdal/github_actions/dotnet-docfx-build@main
   with:
     config: "docfx.json"
     template: "modern,statictoc,pdf"
@@ -237,7 +237,7 @@ jobs:
 
 ```yaml
 - name: "Build with debugging"
-  uses: framinosona/github_actions/dotnet-docfx-build@main
+  uses: laerdal/github_actions/dotnet-docfx-build@main
   with:
     config: "docfx.json"
     debug: "true"
@@ -251,7 +251,7 @@ jobs:
 
 ```yaml
 - name: "Build and serve locally"
-  uses: framinosona/github_actions/dotnet-docfx-build@main
+  uses: laerdal/github_actions/dotnet-docfx-build@main
   with:
     config: "docfx.json"
     serve: "true"
@@ -264,7 +264,7 @@ jobs:
 
 ```yaml
 - name: "Fast parallel build"
-  uses: framinosona/github_actions/dotnet-docfx-build@main
+  uses: laerdal/github_actions/dotnet-docfx-build@main
   with:
     config: "docfx.json"
     max-parallelism: "4"
@@ -277,7 +277,7 @@ jobs:
 
 ```yaml
 - name: "Build for GitHub Pages"
-  uses: framinosona/github_actions/dotnet-docfx-build@main
+  uses: laerdal/github_actions/dotnet-docfx-build@main
   with:
     config: "docs/docfx.json"
     output: "./pages"
@@ -316,7 +316,7 @@ jobs:
 
 ```yaml
 - name: "Install DocFX"
-  uses: framinosona/github_actions/dotnet-tool-install@main
+  uses: laerdal/github_actions/dotnet-tool-install@main
   with:
     tool-name: "docfx"
     global: "true"
@@ -330,7 +330,7 @@ jobs:
 
 ```yaml
 - name: "Debug build issues"
-  uses: framinosona/github_actions/dotnet-docfx-build@main
+  uses: laerdal/github_actions/dotnet-docfx-build@main
   with:
     config: "docfx.json"
     log-level: "diagnostic"
@@ -347,7 +347,7 @@ jobs:
 
 ```yaml
 - name: "Force complete rebuild"
-  uses: framinosona/github_actions/dotnet-docfx-build@main
+  uses: laerdal/github_actions/dotnet-docfx-build@main
   with:
     config: "docfx.json"
     force: "true"
@@ -363,7 +363,7 @@ jobs:
 
 ```yaml
 - name: "Use built-in template"
-  uses: framinosona/github_actions/dotnet-docfx-build@main
+  uses: laerdal/github_actions/dotnet-docfx-build@main
   with:
     config: "docfx.json"
     template: "modern"
@@ -378,7 +378,7 @@ jobs:
 
 ```yaml
 - name: "Optimized build"
-  uses: framinosona/github_actions/dotnet-docfx-build@main
+  uses: laerdal/github_actions/dotnet-docfx-build@main
   with:
     config: "docfx.json"
     max-parallelism: "2"
@@ -415,7 +415,7 @@ When debug mode is enabled, the following files are generated:
 
 ```yaml
 - name: "Build with custom theme"
-  uses: framinosona/github_actions/dotnet-docfx-build@main
+  uses: laerdal/github_actions/dotnet-docfx-build@main
   with:
     config: "docfx.json"
     template: "custom"
@@ -426,13 +426,13 @@ When debug mode is enabled, the following files are generated:
 
 ```yaml
 - name: "Build development version"
-  uses: framinosona/github_actions/dotnet-docfx-build@main
+  uses: laerdal/github_actions/dotnet-docfx-build@main
   with:
     config: "docfx-dev.json"
     output: "./dev-docs"
 
 - name: "Build production version"
-  uses: framinosona/github_actions/dotnet-docfx-build@main
+  uses: laerdal/github_actions/dotnet-docfx-build@main
   with:
     config: "docfx-prod.json"
     output: "./prod-docs"

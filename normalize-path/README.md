@@ -20,7 +20,7 @@ Normalizes file paths according to the runner OS and provides both relative and 
 
 ```yaml
 - name: Normalize project path
-  uses: framinosona/github_actions/normalize-path@main
+  uses: laerdal/github_actions/normalize-path@main
   with:
     path: 'src/components/../utils/helper.js'
 ```
@@ -30,7 +30,7 @@ Normalizes file paths according to the runner OS and provides both relative and 
 ```yaml
 - name: Normalize and validate paths
   id: normalize
-  uses: framinosona/github_actions/normalize-path@main
+  uses: laerdal/github_actions/normalize-path@main
   with:
     path: './docs/../README.md'
     show-summary: 'true'
@@ -47,13 +47,13 @@ Normalizes file paths according to the runner OS and provides both relative and 
 ```yaml
 - name: Normalize source path
   id: src-path
-  uses: framinosona/github_actions/normalize-path@main
+  uses: laerdal/github_actions/normalize-path@main
   with:
     path: 'src/main/../lib/index.ts'
 
 - name: Normalize output path
   id: out-path
-  uses: framinosona/github_actions/normalize-path@main
+  uses: laerdal/github_actions/normalize-path@main
   with:
     path: './dist/bundle.js'
 
@@ -68,7 +68,7 @@ Normalizes file paths according to the runner OS and provides both relative and 
 ```yaml
 - name: Validate configuration file
   id: config
-  uses: framinosona/github_actions/normalize-path@main
+  uses: laerdal/github_actions/normalize-path@main
   with:
     path: 'config/app.json'
 
@@ -107,7 +107,7 @@ Normalizes file paths according to the runner OS and provides both relative and 
 ```yaml
 - name: Normalize complex relative path
   id: cleanup
-  uses: framinosona/github_actions/normalize-path@main
+  uses: laerdal/github_actions/normalize-path@main
   with:
     path: './src/../docs/./api/../guide.md'
 # Output normalized: docs/guide.md
@@ -118,7 +118,7 @@ Normalizes file paths according to the runner OS and provides both relative and 
 ```yaml
 - name: Get absolute path
   id: absolute
-  uses: framinosona/github_actions/normalize-path@main
+  uses: laerdal/github_actions/normalize-path@main
   with:
     path: 'config.json'
 
@@ -132,7 +132,7 @@ Normalizes file paths according to the runner OS and provides both relative and 
 ```yaml
 - name: Check if package.json exists
   id: package
-  uses: framinosona/github_actions/normalize-path@main
+  uses: laerdal/github_actions/normalize-path@main
   with:
     path: 'package.json'
 
@@ -150,13 +150,13 @@ Normalizes file paths according to the runner OS and provides both relative and 
 ```yaml
 - name: Normalize source directory
   id: src
-  uses: framinosona/github_actions/normalize-path@main
+  uses: laerdal/github_actions/normalize-path@main
   with:
     path: './src'
 
 - name: Normalize build directory
   id: build
-  uses: framinosona/github_actions/normalize-path@main
+  uses: laerdal/github_actions/normalize-path@main
   with:
     path: './dist'
 
@@ -172,7 +172,7 @@ Normalizes file paths according to the runner OS and provides both relative and 
 ```yaml
 - name: Normalize wildcard path
   id: wildcard
-  uses: framinosona/github_actions/normalize-path@main
+  uses: laerdal/github_actions/normalize-path@main
   with:
     path: 'src/**/*.js'
 
@@ -294,7 +294,7 @@ This shows:
 ```yaml
 - name: Normalize artifact path
   id: artifact
-  uses: framinosona/github_actions/normalize-path@main
+  uses: laerdal/github_actions/normalize-path@main
   with:
     path: './build/artifacts'
 
@@ -310,7 +310,7 @@ This shows:
 ```yaml
 - name: Normalize Dockerfile path
   id: dockerfile
-  uses: framinosona/github_actions/normalize-path@main
+  uses: laerdal/github_actions/normalize-path@main
   with:
     path: './docker/Dockerfile'
 
@@ -324,7 +324,7 @@ This shows:
 ```yaml
 - name: Normalize cache path
   id: cache-path
-  uses: framinosona/github_actions/normalize-path@main
+  uses: laerdal/github_actions/normalize-path@main
   with:
     path: '~/.npm'
 

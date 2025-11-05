@@ -193,25 +193,25 @@ runs:
 
     - name: "📁 Normalize path"
       id: normalize-path
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.path }}
 
     - name: "📁 Normalize filename"
       id: normalize-filename
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.filename }}
 
     - name: "📁 Normalize output-base-intermediate-path"
       id: normalize-base-intermediate-output-path
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.base-intermediate-output-path }}
 
     - name: "📁 Normalize import-metadata-path"
       id: normalize-import-metadata-path
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.import-metadata-path }}
 
@@ -453,7 +453,7 @@ runs:
 
     - name: "📦 Install CycloneDX .NET Global Tool"
       id: install-tool
-      uses: "framinosona/github_actions/dotnet-tool-install@main"
+      uses: "laerdal/github_actions/dotnet-tool-install@main"
       with:
         tool-name: "CycloneDX"
         global: ${{ inputs.global }}
@@ -462,7 +462,7 @@ runs:
 
     - name: "🚀 Execute CycloneDX"
       id: run-dotnet
-      uses: "framinosona/github_actions/dotnet@main"
+      uses: "laerdal/github_actions/dotnet@main"
       with:
         command: "tool"
         arguments: ${{ steps.build-args.outputs.arguments }}

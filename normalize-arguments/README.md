@@ -18,7 +18,7 @@ Normalizes arguments passed as multi-line or single-line strings into a clean, p
 ```yaml
 - name: Normalize build arguments
   id: args
-  uses: framinosona/github_actions/normalize-arguments@main
+  uses: laerdal/github_actions/normalize-arguments@main
   with:
     arguments: |
       -p:Version_Props_Path=${{ github.workspace }}/${{ env.PROJECT_NAME }}.Output/Version/version.props
@@ -35,7 +35,7 @@ Normalizes arguments passed as multi-line or single-line strings into a clean, p
 ```yaml
 - name: Normalize compiler flags
   id: flags
-  uses: framinosona/github_actions/normalize-arguments@main
+  uses: laerdal/github_actions/normalize-arguments@main
   with:
     arguments: >
       -Wall
@@ -56,7 +56,7 @@ Normalizes arguments passed as multi-line or single-line strings into a clean, p
 ```yaml
 - name: Normalize single argument
   id: single
-  uses: framinosona/github_actions/normalize-arguments@main
+  uses: laerdal/github_actions/normalize-arguments@main
   with:
     arguments: '--nologo'
 
@@ -117,7 +117,7 @@ arguments: '--nologo --verbosity quiet'
 ```yaml
 - name: Setup build arguments
   id: build-args
-  uses: framinosona/github_actions/normalize-arguments@main
+  uses: laerdal/github_actions/normalize-arguments@main
   with:
     arguments: |
       -p:Version=${{ steps.version.outputs.version }}
@@ -137,7 +137,7 @@ arguments: '--nologo --verbosity quiet'
 ```yaml
 - name: Normalize Docker build args
   id: docker-args
-  uses: framinosona/github_actions/normalize-arguments@main
+  uses: laerdal/github_actions/normalize-arguments@main
   with:
     arguments: |
       --build-arg VERSION=${{ github.ref_name }}
@@ -155,7 +155,7 @@ arguments: '--nologo --verbosity quiet'
 ```yaml
 - name: Setup test arguments
   id: test-args
-  uses: framinosona/github_actions/normalize-arguments@main
+  uses: laerdal/github_actions/normalize-arguments@main
   with:
     arguments: |
       --logger:trx
@@ -174,7 +174,7 @@ arguments: '--nologo --verbosity quiet'
 ```yaml
 - name: Base arguments
   id: base-args
-  uses: framinosona/github_actions/normalize-arguments@main
+  uses: laerdal/github_actions/normalize-arguments@main
   with:
     arguments: |
       --configuration Release
@@ -183,7 +183,7 @@ arguments: '--nologo --verbosity quiet'
 - name: Debug arguments (conditional)
   if: github.event_name == 'pull_request'
   id: debug-args
-  uses: framinosona/github_actions/normalize-arguments@main
+  uses: laerdal/github_actions/normalize-arguments@main
   with:
     arguments: |
       --verbosity detailed
@@ -201,7 +201,7 @@ arguments: '--nologo --verbosity quiet'
 ```yaml
 - name: NPM install arguments
   id: npm-args
-  uses: framinosona/github_actions/normalize-arguments@main
+  uses: laerdal/github_actions/normalize-arguments@main
   with:
     arguments: |
       --production
@@ -220,7 +220,7 @@ arguments: '--nologo --verbosity quiet'
 # C++ Compilation
 - name: C++ compiler flags
   id: cpp-flags
-  uses: framinosona/github_actions/normalize-arguments@main
+  uses: laerdal/github_actions/normalize-arguments@main
   with:
     arguments: >
       -Wall -Werror -std=c++17 -O2
@@ -233,7 +233,7 @@ arguments: '--nologo --verbosity quiet'
 # Rust Compilation
 - name: Rust build flags
   id: rust-flags
-  uses: framinosona/github_actions/normalize-arguments@main
+  uses: laerdal/github_actions/normalize-arguments@main
   with:
     arguments: |
       --release
@@ -309,7 +309,7 @@ arguments: >
 ```yaml
 - name: Build arguments with env vars
   id: args
-  uses: framinosona/github_actions/normalize-arguments@main
+  uses: laerdal/github_actions/normalize-arguments@main
   with:
     arguments: |
       -p:Version=${{ env.VERSION }}
@@ -324,7 +324,7 @@ arguments: >
 ```yaml
 - name: Base command args
   id: base
-  uses: framinosona/github_actions/normalize-arguments@main
+  uses: laerdal/github_actions/normalize-arguments@main
   with:
     arguments: |
       --configuration Release
@@ -332,7 +332,7 @@ arguments: >
 
 - name: Additional args
   id: extra
-  uses: framinosona/github_actions/normalize-arguments@main
+  uses: laerdal/github_actions/normalize-arguments@main
   with:
     arguments: |
       --verbosity detailed
@@ -350,7 +350,7 @@ arguments: >
 - name: Production arguments
   if: github.ref == 'refs/heads/main'
   id: prod-args
-  uses: framinosona/github_actions/normalize-arguments@main
+  uses: laerdal/github_actions/normalize-arguments@main
   with:
     arguments: |
       --configuration Release
@@ -359,7 +359,7 @@ arguments: >
 - name: Development arguments
   if: github.ref != 'refs/heads/main'
   id: dev-args
-  uses: framinosona/github_actions/normalize-arguments@main
+  uses: laerdal/github_actions/normalize-arguments@main
   with:
     arguments: |
       --configuration Debug

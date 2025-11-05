@@ -1,7 +1,7 @@
 # 🚀 GitHub Actions Collection
 
-[![CI/CD Pipeline](https://framinosona.github.io/Github_Actions/version-badge.svg)](https://github.com/framinosona/Github_Actions/actions/workflows/ci.yml)
-[![Documentation](https://img.shields.io/badge/docs-github--pages-blue)](https://framinosona.github.io/Github_Actions/)
+[![CI/CD Pipeline](https://laerdal.github.io/Github_Actions/version-badge.svg)](https://github.com/laerdal/Github_Actions/actions/workflows/ci.yml)
+[![Documentation](https://img.shields.io/badge/docs-github--pages-blue)](https://laerdal.github.io/Github_Actions/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE.md)
 
 A comprehensive collection of reusable GitHub Actions for .NET development, documentation generation, versioning, and CI/CD automation.
@@ -130,13 +130,13 @@ jobs:
 
       - name: Generate Version
         id: version
-        uses: framinosona/Github_Actions/generate-version@main
+        uses: laerdal/Github_Actions/generate-version@main
         with:
           major: '1'
           minor: '0'
 
       - name: Create Release
-        uses: framinosona/Github_Actions/github-release@main
+        uses: laerdal/Github_Actions/github-release@main
         with:
           tag: ${{ steps.version.outputs.VERSION_FULL }}
           title: 'Release ${{ steps.version.outputs.VERSION_FULL }}'
@@ -161,20 +161,20 @@ jobs:
 
       - name: Generate Version
         id: version
-        uses: framinosona/Github_Actions/generate-version@main
+        uses: laerdal/Github_Actions/generate-version@main
         with:
           major: '2'
           minor: '1'
           output-txt: 'version.txt'
 
       - name: Create Git Tag
-        uses: framinosona/Github_Actions/git-tag@main
+        uses: laerdal/Github_Actions/git-tag@main
         with:
           tag: ${{ steps.version.outputs.VERSION_FULL }}
           message: 'Release ${{ steps.version.outputs.VERSION_FULL }}'
 
       - name: Generate Badge
-        uses: framinosona/Github_Actions/generate-badge@main
+        uses: laerdal/Github_Actions/generate-badge@main
         with:
           label: 'version'
           message: ${{ steps.version.outputs.VERSION_FULL }}
@@ -182,12 +182,12 @@ jobs:
           output-format: 'svg'
 
       - name: Build Documentation
-        uses: framinosona/Github_Actions/dotnet-docfx-build@main
+        uses: laerdal/Github_Actions/dotnet-docfx-build@main
         with:
           metadata: '{"_appTitle":"My Project"}'
 
       - name: Create Release
-        uses: framinosona/Github_Actions/github-release@main
+        uses: laerdal/Github_Actions/github-release@main
         with:
           tag: ${{ steps.version.outputs.VERSION_FULL }}
           assets: |
@@ -198,7 +198,7 @@ jobs:
 
 ## 📚 Documentation
 
-Complete documentation is available at: **[https://framinosona.github.io/Github_Actions/](https://framinosona.github.io/Github_Actions/)**
+Complete documentation is available at: **[https://laerdal.github.io/Github_Actions/](https://laerdal.github.io/Github_Actions/)**
 
 ### Action Documentation
 
@@ -260,6 +260,6 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 **⭐ Star this repository if you find it useful!**
 
-[📚 Documentation](https://framinosona.github.io/Github_Actions/) • [🐛 Report Bug](https://github.com/framinosona/Github_Actions/issues) • [💡 Request Feature](https://github.com/framinosona/Github_Actions/issues)
+[📚 Documentation](https://laerdal.github.io/Github_Actions/) • [🐛 Report Bug](https://github.com/laerdal/Github_Actions/issues) • [💡 Request Feature](https://github.com/laerdal/Github_Actions/issues)
 
 </div>

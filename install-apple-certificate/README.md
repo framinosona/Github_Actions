@@ -19,7 +19,7 @@ Install a certificate from base64 encoded data:
 
 ```yaml
 - name: "Install Apple Certificate"
-  uses: framinosona/github_actions/install-apple-certificate@main
+  uses: laerdal/github_actions/install-apple-certificate@main
   with:
     certificate-data: ${{ secrets.APPLE_CERTIFICATE_DATA }}
     certificate-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -27,7 +27,7 @@ Install a certificate from base64 encoded data:
 
 ```yaml
 - name: "Install certificate and provisioning profile"
-  uses: framinosona/github_actions/install-apple-certificate@main
+  uses: laerdal/github_actions/install-apple-certificate@main
   with:
     certificate-data: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE }}
     certificate-password: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
@@ -37,7 +37,7 @@ Install a certificate from base64 encoded data:
 
 ```yaml
 - name: "Install from files"
-  uses: framinosona/github_actions/install-apple-certificate@main
+  uses: laerdal/github_actions/install-apple-certificate@main
   with:
     certificate-path: "certificates/ios_distribution.p12"
     certificate-password: ${{ secrets.CERTIFICATE_PASSWORD }}
@@ -50,7 +50,7 @@ Full configuration with all available options:
 
 ```yaml
 - name: "Complete iOS setup"
-  uses: framinosona/github_actions/install-apple-certificate@main
+  uses: laerdal/github_actions/install-apple-certificate@main
   with:
     certificate-data: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE }}
     certificate-password: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
@@ -100,7 +100,7 @@ jobs:
 
       - name: "🍎 Install Apple Certificate"
         id: certificate
-        uses: framinosona/github_actions/install-apple-certificate@main
+        uses: laerdal/github_actions/install-apple-certificate@main
         with:
           certificate-data: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE }}
           certificate-password: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
@@ -202,9 +202,9 @@ jobs:
 
 | Action | Purpose | Repository |
 |--------|---------|------------|
-| 🔢 **generate-version** | Version generation for builds | `framinosona/github_actions/generate-version` |
-| 🏷️ **git-tag** | Create build tags | `framinosona/github_actions/git-tag` |
-| 🚀 **github-release** | Create releases with binaries | `framinosona/github_actions/github-release` |
+| 🔢 **generate-version** | Version generation for builds | `laerdal/github_actions/generate-version` |
+| 🏷️ **git-tag** | Create build tags | `laerdal/github_actions/git-tag` |
+| 🚀 **github-release** | Create releases with binaries | `laerdal/github_actions/github-release` |
 
 ## 💡 Examples
 
@@ -212,7 +212,7 @@ jobs:
 
 ```yaml
 - name: "Install development certificate"
-  uses: framinosona/github_actions/install-apple-certificate@main
+  uses: laerdal/github_actions/install-apple-certificate@main
   with:
     certificate-data: ${{ secrets.IOS_DEV_CERTIFICATE }}
     certificate-password: ${{ secrets.IOS_CERT_PASSWORD }}
@@ -221,7 +221,7 @@ jobs:
     keychain-name: "dev.keychain"
 
 - name: "Install distribution certificate"
-  uses: framinosona/github_actions/install-apple-certificate@main
+  uses: laerdal/github_actions/install-apple-certificate@main
   with:
     certificate-data: ${{ secrets.IOS_DIST_CERTIFICATE }}
     certificate-password: ${{ secrets.IOS_CERT_PASSWORD }}
@@ -234,7 +234,7 @@ jobs:
 
 ```yaml
 - name: "Install macOS developer certificate"
-  uses: framinosona/github_actions/install-apple-certificate@main
+  uses: laerdal/github_actions/install-apple-certificate@main
   with:
     certificate-data: ${{ secrets.MACOS_DEVELOPER_CERTIFICATE }}
     certificate-password: ${{ secrets.MACOS_CERT_PASSWORD }}
@@ -256,7 +256,7 @@ jobs:
 ```yaml
 - name: "Setup persistent keychain"
   id: keychain
-  uses: framinosona/github_actions/install-apple-certificate@main
+  uses: laerdal/github_actions/install-apple-certificate@main
   with:
     certificate-data: ${{ secrets.CERTIFICATE_DATA }}
     certificate-password: ${{ secrets.CERTIFICATE_PASSWORD }}
@@ -280,7 +280,7 @@ jobs:
 
 ```yaml
 - name: "Install development certificate"
-  uses: framinosona/github_actions/install-apple-certificate@main
+  uses: laerdal/github_actions/install-apple-certificate@main
   with:
     certificate-data: ${{ secrets.DEV_CERTIFICATE }}
     certificate-password: ${{ secrets.DEV_CERT_PASSWORD }}
@@ -290,7 +290,7 @@ jobs:
     delete-keychain: "false"
 
 - name: "Install distribution certificate"
-  uses: framinosona/github_actions/install-apple-certificate@main
+  uses: laerdal/github_actions/install-apple-certificate@main
   with:
     certificate-data: ${{ secrets.DIST_CERTIFICATE }}
     certificate-password: ${{ secrets.DIST_CERT_PASSWORD }}
@@ -304,7 +304,7 @@ jobs:
 
 ```yaml
 - name: "Install certificate for environment"
-  uses: framinosona/github_actions/install-apple-certificate@main
+  uses: laerdal/github_actions/install-apple-certificate@main
   with:
     certificate-data: ${{ github.ref == 'refs/heads/main' && secrets.PRODUCTION_CERT || secrets.DEVELOPMENT_CERT }}
     certificate-password: ${{ secrets.CERTIFICATE_PASSWORD }}
@@ -465,7 +465,7 @@ Enable verbose output for troubleshooting:
 
 ```yaml
 - name: "Debug certificate installation"
-  uses: framinosona/github_actions/install-apple-certificate@main
+  uses: laerdal/github_actions/install-apple-certificate@main
   with:
     certificate-data: ${{ secrets.CERTIFICATE_DATA }}
     certificate-password: ${{ secrets.CERTIFICATE_PASSWORD }}
@@ -492,7 +492,7 @@ Verify installation manually:
 
 ```yaml
 - name: "Install with custom keychain"
-  uses: framinosona/github_actions/install-apple-certificate@main
+  uses: laerdal/github_actions/install-apple-certificate@main
   with:
     certificate-data: ${{ secrets.CERTIFICATE_DATA }}
     certificate-password: ${{ secrets.CERTIFICATE_PASSWORD }}
@@ -513,7 +513,7 @@ strategy:
 
 steps:
   - name: "Install certificate for ${{ matrix.team.id }}"
-    uses: framinosona/github_actions/install-apple-certificate@main
+    uses: laerdal/github_actions/install-apple-certificate@main
     with:
       certificate-data: ${{ secrets[matrix.team.cert] }}
       certificate-password: ${{ secrets.CERTIFICATE_PASSWORD }}

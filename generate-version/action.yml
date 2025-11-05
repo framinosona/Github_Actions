@@ -138,25 +138,25 @@ runs:
 
     - name: "📁 Normalize config-file path"
       id: normalize-config-file
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.config-file }}
 
     - name: "📁 Normalize output-txt path"
       id: normalize-output-txt
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.output-txt }}
 
     - name: "📁 Normalize output-props path"
       id: normalize-output-props
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.output-props }}
 
     - name: "📁 Normalize output-json path"
       id: normalize-output-json
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.output-json }}
 

@@ -91,7 +91,7 @@ body:
       placeholder: |
         ```yaml
         - name: Example step
-          uses: framinosona/github-actions/action-name@v1
+          uses: laerdal/github-actions/action-name@v1
           with:
             existing-input: value
             new-feature-input: new-value

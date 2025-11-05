@@ -164,49 +164,49 @@ runs:
 
     - name: "💯 Normalize arguments"
       id: normalize-arguments
-      uses: framinosona/github_actions/normalize-arguments@main
+      uses: laerdal/github_actions/normalize-arguments@main
       with:
         arguments: ${{ inputs.arguments }}
 
     - name: "📁 Normalize working-directory"
       id: normalize-working-directory
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.working-directory }}
 
     - name: "📁 Normalize path"
       id: normalize-path
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.path }}
 
     - name: "📁 Normalize artifacts-path"
       id: normalize-artifacts
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.artifacts-path }}
 
     - name: "📁 Normalize settings"
       id: normalize-settings
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.settings }}
 
     - name: "📁 Normalize results-directory"
       id: normalize-results-directory
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.results-directory }}
 
     - name: "📁 Normalize test-adapter-path"
       id: normalize-test-adapter-path
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.test-adapter-path }}
 
     - name: "📁 Normalize diag"
       id: normalize-diag
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.diag }}
 
@@ -473,7 +473,7 @@ runs:
 
     - name: "🧪 Run .NET tests"
       id: run-dotnet
-      uses: "framinosona/github_actions/dotnet@main"
+      uses: "laerdal/github_actions/dotnet@main"
       with:
         command: "test"
         path: ${{ steps.normalize-path.outputs.normalized }}

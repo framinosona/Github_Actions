@@ -112,13 +112,13 @@ At the begining of the steps in this section, include the following:
 ```yaml
 - name: "💯 Normalize arguments"
   id: normalize-arguments
-  uses: framinosona/github_actions/normalize-path@main
+  uses: laerdal/github_actions/normalize-path@main
   with:
     path: ${{ inputs.arguments }}
 
 - name: "📁 Normalize output"
   id: normalize-output
-  uses: framinosona/github_actions/normalize-path@main
+  uses: laerdal/github_actions/normalize-path@main
   with:
     path: ${{ inputs.output }}
 ```
@@ -134,7 +134,7 @@ At the begining of the steps in this section, include the following:
 # ================== ✅ ==================
 ```
 
-Validation should be skipped for inputs that are sent directly, as-is, to an underlying tool belonging to framinosona/github_actions (e.g., dotnet, nuget, etc.), as those tools will handle validation themselves.
+Validation should be skipped for inputs that are sent directly, as-is, to an underlying tool belonging to laerdal/github_actions (e.g., dotnet, nuget, etc.), as those tools will handle validation themselves.
 
 Can be 1 big validation step or multiple smaller steps.
 Boolean validations is often bundled into a single step would be :
@@ -382,9 +382,9 @@ fi
 ```
 
 ### 🔧 Tool Management
-- **Reuse existing actions**: Use `framinosona/github_actions/dotnet-tool-install@main` for .NET tools, `framinosona/github_actions/dotnet@main` for .NET CLI commands, `framinosona/github_actions/normalize-arguments@main` for argument normalization, etc.
+- **Reuse existing actions**: Use `laerdal/github_actions/dotnet-tool-install@main` for .NET tools, `laerdal/github_actions/dotnet@main` for .NET CLI commands, `laerdal/github_actions/normalize-arguments@main` for argument normalization, etc.
 - **Tool installation**: Check if tool exists before installing
-- **Cross-platform**: Ensure compatibility with Windows, Linux, and macOS, use `framinosona/github_actions/normalize-path@main` for path normalization
+- **Cross-platform**: Ensure compatibility with Windows, Linux, and macOS, use `laerdal/github_actions/normalize-path@main` for path normalization
 
 ## 📊 Output Standards
 

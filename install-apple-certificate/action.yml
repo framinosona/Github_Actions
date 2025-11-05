@@ -112,13 +112,13 @@ runs:
 
     - name: "📁 Normalize certificate-path"
       id: normalize-certificate-path
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.certificate-path }}
 
     - name: "📁 Normalize provisioning-profile-path"
       id: normalize-provisioning-profile-path
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.provisioning-profile-path }}
 

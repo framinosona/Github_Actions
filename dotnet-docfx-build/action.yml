@@ -144,37 +144,37 @@ runs:
 
     - name: "📁 Normalize config"
       id: normalize-config
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.config }}
 
     - name: "📁 Normalize output"
       id: normalize-output
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.output }}
 
     - name: "📁 Normalize logFile"
       id: normalize-logfile
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.logFile }}
 
     - name: "📁 Normalize debugOutput"
       id: normalize-debugoutput
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.debugOutput }}
 
     - name: "📁 Normalize rawModelOutputFolder"
       id: normalize-rawmodeloutputfolder
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.rawModelOutputFolder }}
 
     - name: "📁 Normalize viewModelOutputFolder"
       id: normalize-viewmodeloutputfolder
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.viewModelOutputFolder }}
     # ================== ✅ ==================
@@ -396,7 +396,7 @@ runs:
     # ================== 🚀 ==================
 
     - name: "📦 Install DocFX tool"
-      uses: "framinosona/github_actions/dotnet-tool-install@main"
+      uses: "laerdal/github_actions/dotnet-tool-install@main"
       with:
         tool-name: "docfx"
         global: ${{ inputs.global }}
@@ -405,7 +405,7 @@ runs:
 
     - name: "📚 Generate documentation with DocFX"
       id: run-dotnet
-      uses: "framinosona/github_actions/dotnet@main"
+      uses: "laerdal/github_actions/dotnet@main"
       with:
         command: "tool"
         working-directory: ${{ inputs.working-directory }}

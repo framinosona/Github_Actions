@@ -19,7 +19,7 @@ Create a simple release with a tag:
 
 ```yaml
 - name: "Create Release"
-  uses: framinosona/github_actions/github-release@main
+  uses: laerdal/github_actions/github-release@main
   with:
     tag: "v1.0.0"
     title: "Version 1.0.0"
@@ -28,7 +28,7 @@ Create a simple release with a tag:
 
 ```yaml
 - name: "Create release with assets"
-  uses: framinosona/github_actions/github-release@main
+  uses: laerdal/github_actions/github-release@main
   with:
     tag: "v1.2.3"
     title: "Version 1.2.3 - Bug Fixes"
@@ -41,7 +41,7 @@ Create a simple release with a tag:
 
 ```yaml
 - name: "Auto-generated release"
-  uses: framinosona/github_actions/github-release@main
+  uses: laerdal/github_actions/github-release@main
   with:
     tag: ${{ github.ref_name }}
     generate-notes: "true"
@@ -54,7 +54,7 @@ Full configuration with all available options:
 
 ```yaml
 - name: "Advanced release creation"
-  uses: framinosona/github_actions/github-release@main
+  uses: laerdal/github_actions/github-release@main
   with:
     tag: "v1.2.3"
     title: "Release v1.2.3 - Major Update"
@@ -126,12 +126,12 @@ jobs:
           dotnet-version: "8.0.x"
 
       - name: "📦 Restore dependencies"
-        uses: framinosona/github_actions/dotnet@main
+        uses: laerdal/github_actions/dotnet@main
         with:
           command: "restore"
 
       - name: "🔨 Build application"
-        uses: framinosona/github_actions/dotnet@main
+        uses: laerdal/github_actions/dotnet@main
         with:
           command: "build"
           configuration: "Release"
@@ -153,7 +153,7 @@ jobs:
 
       - name: "🚀 Create GitHub Release"
         id: release
-        uses: framinosona/github_actions/github-release@main
+        uses: laerdal/github_actions/github-release@main
         with:
           tag: ${{ github.ref_name }}
           title: "Release ${{ github.ref_name }}"
@@ -214,10 +214,10 @@ jobs:
 
 | Action | Purpose | Repository |
 |--------|---------|------------|
-| 🔢 **generate-version** | Generate semantic versions | `framinosona/github_actions/generate-version` |
-| 🏷️ **git-tag** | Create and manage Git tags | `framinosona/github_actions/git-tag` |
-| 🚀 **dotnet** | Build .NET applications | `framinosona/github_actions/dotnet` |
-| 🎯 **generate-badge** | Generate release badges | `framinosona/github_actions/generate-badge` |
+| 🔢 **generate-version** | Generate semantic versions | `laerdal/github_actions/generate-version` |
+| 🏷️ **git-tag** | Create and manage Git tags | `laerdal/github_actions/git-tag` |
+| 🚀 **dotnet** | Build .NET applications | `laerdal/github_actions/dotnet` |
+| 🎯 **generate-badge** | Generate release badges | `laerdal/github_actions/generate-badge` |
 
 ## 💡 Examples
 
@@ -226,13 +226,13 @@ jobs:
 ```yaml
 - name: "Generate version"
   id: version
-  uses: framinosona/github_actions/generate-version@main
+  uses: laerdal/github_actions/generate-version@main
   with:
     major: "1"
     minor: "0"
 
 - name: "Create tag"
-  uses: framinosona/github_actions/git-tag@main
+  uses: laerdal/github_actions/git-tag@main
   with:
     tag: ${{ steps.version.outputs.version }}
     prefix: "v"
@@ -245,7 +245,7 @@ jobs:
     echo "Built app" > dist/app.txt
 
 - name: "Create release"
-  uses: framinosona/github_actions/github-release@main
+  uses: laerdal/github_actions/github-release@main
   with:
     tag: "v${{ steps.version.outputs.version }}"
     title: "Release ${{ steps.version.outputs.version }}"
@@ -257,7 +257,7 @@ jobs:
 
 ```yaml
 - name: "Create draft release"
-  uses: framinosona/github_actions/github-release@main
+  uses: laerdal/github_actions/github-release@main
   with:
     tag: "v2.0.0-beta.1"
     title: "Beta Release 2.0.0"
@@ -279,7 +279,7 @@ jobs:
 
 ```yaml
 - name: "Release with community discussion"
-  uses: framinosona/github_actions/github-release@main
+  uses: laerdal/github_actions/github-release@main
   with:
     tag: "v1.5.0"
     title: "Community Release v1.5.0"
@@ -295,7 +295,7 @@ jobs:
 ```yaml
 - name: "Create release on main branch"
   if: github.ref == 'refs/heads/main'
-  uses: framinosona/github_actions/github-release@main
+  uses: laerdal/github_actions/github-release@main
   with:
     tag: "nightly-${{ github.run_number }}"
     title: "Nightly Build ${{ github.run_number }}"
@@ -310,7 +310,7 @@ jobs:
 
 ```yaml
 - name: "Create release in different repository"
-  uses: framinosona/github_actions/github-release@main
+  uses: laerdal/github_actions/github-release@main
   with:
     repo: "myorg/releases-repo"
     tag: "app-v${{ env.VERSION }}"
@@ -327,7 +327,7 @@ jobs:
 
 ```yaml
 - name: "Release from annotated tag"
-  uses: framinosona/github_actions/github-release@main
+  uses: laerdal/github_actions/github-release@main
   with:
     tag: ${{ github.ref_name }}
     notes-from-tag: "true"
@@ -503,7 +503,7 @@ Enable debug output:
 
 ```yaml
 - name: "Debug release creation"
-  uses: framinosona/github_actions/github-release@main
+  uses: laerdal/github_actions/github-release@main
   with:
     tag: "debug-v1.0.0"
     title: "Debug Release"
@@ -542,7 +542,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: "Create release"
-        uses: framinosona/github_actions/github-release@main
+        uses: laerdal/github_actions/github-release@main
         with:
           tag: ${{ github.ref_name }}
           generate-notes: "true"
@@ -572,7 +572,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: "Create release"
-        uses: framinosona/github_actions/github-release@main
+        uses: laerdal/github_actions/github-release@main
         with:
           tag: ${{ github.event.inputs.version }}
           title: "Release ${{ github.event.inputs.version }}"
@@ -595,7 +595,7 @@ strategy:
 
 steps:
   - name: "Create platform release"
-    uses: framinosona/github_actions/github-release@main
+    uses: laerdal/github_actions/github-release@main
     with:
       tag: "v1.0.0"
       title: "Multi-platform Release"

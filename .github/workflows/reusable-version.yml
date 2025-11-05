@@ -179,7 +179,7 @@ jobs:
 
       - name: "🔢 Generate version"
         id: version
-        uses: framinosona/github_actions/generate-version@main
+        uses: laerdal/github_actions/generate-version@main
         with:
           config-file: ${{ inputs.config-file }}
           major: ${{ inputs.major }}

@@ -19,12 +19,12 @@ Generate an SPDX SBOM for the current repository:
 
 ```yaml
 - name: "Generate SBOM"
-  uses: framinosona/github_actions/gh-sbom@main
+  uses: laerdal/github_actions/gh-sbom@main
 ```
 
 ```yaml
 - name: "Generate CycloneDX SBOM with licenses"
-  uses: framinosona/github_actions/gh-sbom@main
+  uses: laerdal/github_actions/gh-sbom@main
   with:
     format: "cyclonedx"
     include-license: "true"
@@ -33,7 +33,7 @@ Generate an SPDX SBOM for the current repository:
 
 ```yaml
 - name: "Generate SBOM for specific repository"
-  uses: framinosona/github_actions/gh-sbom@main
+  uses: laerdal/github_actions/gh-sbom@main
   with:
     repository: "owner/repo-name"
     format: "spdx"
@@ -47,7 +47,7 @@ Full configuration with all available options:
 
 ```yaml
 - name: "Advanced SBOM generation"
-  uses: framinosona/github_actions/gh-sbom@main
+  uses: laerdal/github_actions/gh-sbom@main
   with:
     repository: "advanced-security/gh-sbom"
     format: "cyclonedx"
@@ -105,7 +105,7 @@ jobs:
 
       - name: "📋 Generate SPDX SBOM"
         id: spdx-sbom
-        uses: framinosona/github_actions/gh-sbom@main
+        uses: laerdal/github_actions/gh-sbom@main
         with:
           format: "spdx"
           output-file: "sbom-spdx.json"
@@ -113,7 +113,7 @@ jobs:
 
       - name: "📋 Generate CycloneDX SBOM with licenses"
         id: cyclonedx-sbom
-        uses: framinosona/github_actions/gh-sbom@main
+        uses: laerdal/github_actions/gh-sbom@main
         with:
           format: "cyclonedx"
           include-license: "true"
@@ -161,7 +161,7 @@ jobs:
 
 | Action | Purpose | Repository |
 |--------|---------|------------|
-| 📋 **dotnet-cyclonedx** | Generate .NET SBOMs | `framinosona/github_actions/dotnet-cyclonedx` |
+| 📋 **dotnet-cyclonedx** | Generate .NET SBOMs | `laerdal/github_actions/dotnet-cyclonedx` |
 | 🛡️ **Security Actions** | GitHub security tooling | Various security actions |
 
 ## 💡 Examples
@@ -170,7 +170,7 @@ jobs:
 
 ```yaml
 - name: "Generate SPDX SBOM for current repo"
-  uses: framinosona/github_actions/gh-sbom@main
+  uses: laerdal/github_actions/gh-sbom@main
   with:
     format: "spdx"
     output-file: "sbom.spdx.json"
@@ -186,7 +186,7 @@ jobs:
 
   steps:
     - name: "Generate ${{ matrix.format }} SBOM"
-      uses: framinosona/github_actions/gh-sbom@main
+      uses: laerdal/github_actions/gh-sbom@main
       with:
         format: ${{ matrix.format }}
         include-license: ${{ matrix.format == 'cyclonedx' && 'true' || 'false' }}
@@ -207,7 +207,7 @@ jobs:
 
   steps:
     - name: "Generate SBOM for ${{ matrix.repo }}"
-      uses: framinosona/github_actions/gh-sbom@main
+      uses: laerdal/github_actions/gh-sbom@main
       with:
         repository: ${{ matrix.repo }}
         format: "spdx"
@@ -219,7 +219,7 @@ jobs:
 
 ```yaml
 - name: "Enterprise SBOM workflow"
-  uses: framinosona/github_actions/gh-sbom@main
+  uses: laerdal/github_actions/gh-sbom@main
   with:
     repository: ${{ github.repository }}
     format: "cyclonedx"
@@ -255,7 +255,7 @@ jobs:
 
 - name: "Generate SBOM on dependency changes"
   if: steps.check-changes.outputs.needs-sbom == 'true'
-  uses: framinosona/github_actions/gh-sbom@main
+  uses: laerdal/github_actions/gh-sbom@main
   with:
     format: "spdx"
     output-file: "updated-sbom.json"
@@ -353,7 +353,7 @@ permissions:
 
 ```yaml
 - name: "Generate SBOM for private repo"
-  uses: framinosona/github_actions/gh-sbom@main
+  uses: laerdal/github_actions/gh-sbom@main
   with:
     repository: "private-org/private-repo"
     github-token: ${{ secrets.PRIVATE_REPO_TOKEN }}
@@ -369,7 +369,7 @@ permissions:
 
 ```yaml
 - name: "Generate SBOM for large repo"
-  uses: framinosona/github_actions/gh-sbom@main
+  uses: laerdal/github_actions/gh-sbom@main
   with:
     format: "spdx"  # Server-side generation
     output-file: "large-repo-sbom.json"
@@ -420,7 +420,7 @@ Enable comprehensive debugging:
 
 ```yaml
 - name: "Debug SBOM generation"
-  uses: framinosona/github_actions/gh-sbom@main
+  uses: laerdal/github_actions/gh-sbom@main
   with:
     format: "spdx"
     output-file: "debug-sbom.json"
@@ -445,7 +445,7 @@ Enable comprehensive debugging:
 
 ```yaml
 - name: "Generate SBOM on GitHub Enterprise"
-  uses: framinosona/github_actions/gh-sbom@main
+  uses: laerdal/github_actions/gh-sbom@main
   with:
     repository: "enterprise-org/enterprise-repo"
     format: "spdx"

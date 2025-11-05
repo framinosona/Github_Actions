@@ -96,13 +96,13 @@ runs:
 
     - name: "📁 Normalize config path"
       id: normalize-config
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.config }}
 
     - name: "📁 Normalize output path"
       id: normalize-output
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.output }}
 
@@ -217,7 +217,7 @@ runs:
     # ================== 🚀 ==================
 
     - name: "📦 Install DocFX tool"
-      uses: "framinosona/github_actions/dotnet-tool-install@main"
+      uses: "laerdal/github_actions/dotnet-tool-install@main"
       with:
         tool-name: "docfx"
         global: ${{ inputs.global }}
@@ -226,7 +226,7 @@ runs:
 
     - name: "📄 Generate PDF with DocFX"
       id: run-dotnet
-      uses: "framinosona/github_actions/dotnet@main"
+      uses: "laerdal/github_actions/dotnet@main"
       with:
         command: "tool"
         working-directory: ${{ inputs.working-directory }}

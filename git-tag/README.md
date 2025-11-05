@@ -19,14 +19,14 @@ Create a simple tag:
 
 ```yaml
 - name: "Create Tag"
-  uses: framinosona/github_actions/git-tag@main
+  uses: laerdal/github_actions/git-tag@main
   with:
     tag: "v1.0.0"
 ```
 
 ```yaml
 - name: "Create annotated tag with push"
-  uses: framinosona/github_actions/git-tag@main
+  uses: laerdal/github_actions/git-tag@main
   with:
     tag: "1.0.0"
     prefix: "v"
@@ -38,7 +38,7 @@ Create a simple tag:
 
 ```yaml
 - name: "Create tag from version action"
-  uses: framinosona/github_actions/git-tag@main
+  uses: laerdal/github_actions/git-tag@main
   with:
     tag: ${{ steps.version.outputs.VERSION_CORE }}
     prefix: "v"
@@ -51,7 +51,7 @@ Full configuration with all available options:
 
 ```yaml
 - name: "Advanced tag creation"
-  uses: framinosona/github_actions/git-tag@main
+  uses: laerdal/github_actions/git-tag@main
   with:
     tag: "1.0.0"
     message: "Release version 1.0.0 with comprehensive features"
@@ -115,7 +115,7 @@ jobs:
 
       - name: "🔢 Generate version"
         id: version
-        uses: framinosona/github_actions/generate-version@main
+        uses: laerdal/github_actions/generate-version@main
         with:
           major: "1"
           minor: "0"
@@ -125,7 +125,7 @@ jobs:
 
       - name: "🏷️ Create release tag"
         id: tag
-        uses: framinosona/github_actions/git-tag@main
+        uses: laerdal/github_actions/git-tag@main
         with:
           tag: ${{ steps.version.outputs.version-short }}
           prefix: "v"
@@ -147,7 +147,7 @@ jobs:
           dotnet-version: "8.0.x"
 
       - name: "🔨 Build with version"
-        uses: framinosona/github_actions/dotnet@main
+        uses: laerdal/github_actions/dotnet@main
         with:
           command: "build"
           configuration: "Release"
@@ -155,7 +155,7 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
 
       - name: "🚀 Create GitHub release"
-        uses: framinosona/github_actions/github-release@main
+        uses: laerdal/github_actions/github-release@main
         with:
           tag: ${{ steps.tag.outputs.tag-name }}
           title: "Release ${{ steps.tag.outputs.tag-name }}"
@@ -209,10 +209,10 @@ jobs:
 
 | Action | Purpose | Repository |
 |--------|---------|------------|
-| 🔢 **generate-version** | Generate semantic versions | `framinosona/github_actions/generate-version` |
-| 🚀 **github-release** | Create GitHub releases | `framinosona/github_actions/github-release` |
-| 🎯 **generate-badge** | Generate version badges | `framinosona/github_actions/generate-badge` |
-| 🔧 **dotnet** | Build with version metadata | `framinosona/github_actions/dotnet` |
+| 🔢 **generate-version** | Generate semantic versions | `laerdal/github_actions/generate-version` |
+| 🚀 **github-release** | Create GitHub releases | `laerdal/github_actions/github-release` |
+| 🎯 **generate-badge** | Generate version badges | `laerdal/github_actions/generate-badge` |
+| 🔧 **dotnet** | Build with version metadata | `laerdal/github_actions/dotnet` |
 
 ## 💡 Examples
 
@@ -221,14 +221,14 @@ jobs:
 ```yaml
 - name: "Generate version"
   id: version
-  uses: framinosona/github_actions/generate-version@main
+  uses: laerdal/github_actions/generate-version@main
   with:
     major: "1"
     minor: "0"
 
 - name: "Create release tag"
   id: tag
-  uses: framinosona/github_actions/git-tag@main
+  uses: laerdal/github_actions/git-tag@main
   with:
     tag: ${{ steps.version.outputs.version-short }}
     prefix: "v"
@@ -241,7 +241,7 @@ jobs:
     push: "true"
 
 - name: "Create GitHub release"
-  uses: framinosona/github_actions/github-release@main
+  uses: laerdal/github_actions/github-release@main
   with:
     tag: ${{ steps.tag.outputs.tag-name }}
     title: "Release ${{ steps.tag.outputs.tag-name }}"
@@ -267,14 +267,14 @@ jobs:
 
       - name: "Generate version"
         id: version
-        uses: framinosona/github_actions/generate-version@main
+        uses: laerdal/github_actions/generate-version@main
         with:
           major: "1"
           minor: "0"
 
       - name: "Create tag"
         id: tag
-        uses: framinosona/github_actions/git-tag@main
+        uses: laerdal/github_actions/git-tag@main
         with:
           tag: ${{ steps.version.outputs.version-short }}
           prefix: "v"
@@ -292,7 +292,7 @@ jobs:
 
 ```yaml
 - name: "Create development tag"
-  uses: framinosona/github_actions/git-tag@main
+  uses: laerdal/github_actions/git-tag@main
   with:
     tag: ${{ github.run_number }}
     prefix: "dev-"
@@ -306,7 +306,7 @@ jobs:
 
 ```yaml
 - name: "Update latest tag"
-  uses: framinosona/github_actions/git-tag@main
+  uses: laerdal/github_actions/git-tag@main
   with:
     tag: "latest"
     message: "Latest stable version"
@@ -333,7 +333,7 @@ strategy:
 
 steps:
   - name: "Create environment tag"
-    uses: framinosona/github_actions/git-tag@main
+    uses: laerdal/github_actions/git-tag@main
     with:
       tag: ${{ env.VERSION }}
       prefix: ${{ matrix.prefix }}
@@ -346,7 +346,7 @@ steps:
 ```yaml
 - name: "Create tag on main branch only"
   if: github.ref == 'refs/heads/main'
-  uses: framinosona/github_actions/git-tag@main
+  uses: laerdal/github_actions/git-tag@main
   with:
     tag: ${{ env.RELEASE_VERSION }}
     prefix: "v"
@@ -354,7 +354,7 @@ steps:
 
 - name: "Create pre-release tag on other branches"
   if: github.ref != 'refs/heads/main'
-  uses: framinosona/github_actions/git-tag@main
+  uses: laerdal/github_actions/git-tag@main
   with:
     tag: ${{ env.RELEASE_VERSION }}-${{ github.ref_name }}
     prefix: "pre-"
@@ -365,7 +365,7 @@ steps:
 
 ```yaml
 - name: "Create rollback tag"
-  uses: framinosona/github_actions/git-tag@main
+  uses: laerdal/github_actions/git-tag@main
   with:
     tag: "rollback-${{ github.run_number }}"
     message: "Rollback point before deployment"
@@ -381,7 +381,7 @@ Simple pointers to commits:
 
 ```yaml
 - name: "Create lightweight tag"
-  uses: framinosona/github_actions/git-tag@main
+  uses: laerdal/github_actions/git-tag@main
   with:
     tag: "checkpoint-1"
     annotated: "false"
@@ -393,7 +393,7 @@ Full Git objects with metadata:
 
 ```yaml
 - name: "Create annotated tag"
-  uses: framinosona/github_actions/git-tag@main
+  uses: laerdal/github_actions/git-tag@main
   with:
     tag: "v1.0.0"
     annotated: "true"
@@ -416,21 +416,21 @@ Full Git objects with metadata:
 ```yaml
 # Option 1: Fail if tag exists (default)
 - name: "Create unique tag"
-  uses: framinosona/github_actions/git-tag@main
+  uses: laerdal/github_actions/git-tag@main
   with:
     tag: "v1.0.0"
     fail-if-exists: "true"
 
 # Option 2: Continue if tag exists
 - name: "Create tag (allow existing)"
-  uses: framinosona/github_actions/git-tag@main
+  uses: laerdal/github_actions/git-tag@main
   with:
     tag: "v1.0.0"
     fail-if-exists: "false"
 
 # Option 3: Force update existing tag
 - name: "Force update tag"
-  uses: framinosona/github_actions/git-tag@main
+  uses: laerdal/github_actions/git-tag@main
   with:
     tag: "v1.0.0"
     force: "true"
@@ -470,7 +470,7 @@ The action validates:
 
 ```yaml
 - name: "Create tag with custom author"
-  uses: framinosona/github_actions/git-tag@main
+  uses: laerdal/github_actions/git-tag@main
   with:
     tag: "v1.0.0"
     git-user-name: "Release Bot"
@@ -577,7 +577,7 @@ target: ${{ env.DEPLOY_SHA }}
     echo "clean-tag=$TAG_NAME" >> $GITHUB_OUTPUT
 
 - name: "Create tag with clean name"
-  uses: framinosona/github_actions/git-tag@main
+  uses: laerdal/github_actions/git-tag@main
   with:
     tag: ${{ steps.clean-tag.outputs.clean-tag }}
 ```
@@ -597,7 +597,7 @@ target: ${{ env.DEPLOY_SHA }}
   run: git fetch --all
 
 - name: "Create tag"
-  uses: framinosona/github_actions/git-tag@main
+  uses: laerdal/github_actions/git-tag@main
   with:
     tag: "v1.0.0"
     target: "origin/main"
@@ -609,7 +609,7 @@ Enable verbose output:
 
 ```yaml
 - name: "Debug tag creation"
-  uses: framinosona/github_actions/git-tag@main
+  uses: laerdal/github_actions/git-tag@main
   with:
     tag: "debug-tag"
     show-summary: "true"
@@ -636,7 +636,7 @@ Verify tag creation:
 ```yaml
 - name: "Create docker tag"
   id: tag
-  uses: framinosona/github_actions/git-tag@main
+  uses: laerdal/github_actions/git-tag@main
   with:
     tag: ${{ env.VERSION }}
     prefix: "docker-"
@@ -652,7 +652,7 @@ Verify tag creation:
 ```yaml
 - name: "Create artifact tag"
   id: tag
-  uses: framinosona/github_actions/git-tag@main
+  uses: laerdal/github_actions/git-tag@main
   with:
     tag: ${{ github.run_number }}
     prefix: "artifact-"
@@ -668,7 +668,7 @@ Verify tag creation:
 
 ```yaml
 - name: "Create deployment tag"
-  uses: framinosona/github_actions/git-tag@main
+  uses: laerdal/github_actions/git-tag@main
   with:
     tag: ${{ env.ENVIRONMENT }}-${{ env.VERSION }}
     message: "Deployed to ${{ env.ENVIRONMENT }} at ${{ env.DEPLOY_TIME }}"

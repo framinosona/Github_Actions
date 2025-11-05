@@ -89,7 +89,7 @@ runs:
 
     - name: "📁 Normalize configfile path"
       id: normalize-configfile
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.configfile }}
 
@@ -266,7 +266,7 @@ runs:
 
     - name: "🔄 Execute NuGet source setup"
       id: run-dotnet
-      uses: "framinosona/github_actions/dotnet@main"
+      uses: "laerdal/github_actions/dotnet@main"
       with:
         command: "nuget"
         arguments: ${{ steps.build-args.outputs.arguments }}

@@ -21,14 +21,14 @@ Run tests with default settings:
 
 ```yaml
 - name: "Run tests"
-  uses: framinosona/github_actions/dotnet-test@main
+  uses: laerdal/github_actions/dotnet-test@main
   with:
     projects: "./tests/**/*.csproj"
 ```
 
 ```yaml
 - name: "Run tests with coverage"
-  uses: framinosona/github_actions/dotnet-test@main
+  uses: laerdal/github_actions/dotnet-test@main
   with:
     projects: "./tests/**/*.csproj"
     collect: "XPlat Code Coverage"
@@ -37,7 +37,7 @@ Run tests with default settings:
 
 ```yaml
 - name: "Run filtered tests"
-  uses: framinosona/github_actions/dotnet-test@main
+  uses: laerdal/github_actions/dotnet-test@main
   with:
     projects: "./tests/**/*.csproj"
     filter: "Category=Unit&Priority=High"
@@ -50,7 +50,7 @@ Full configuration with all available options:
 
 ```yaml
 - name: "Advanced test execution"
-  uses: framinosona/github_actions/dotnet-test@main
+  uses: laerdal/github_actions/dotnet-test@main
   with:
     projects: "./tests/**/*.csproj"
     configuration: "Release"
@@ -130,12 +130,12 @@ jobs:
             8.0.x
 
       - name: "📦 Restore dependencies"
-        uses: framinosona/github_actions/dotnet@main
+        uses: laerdal/github_actions/dotnet@main
         with:
           command: "restore"
 
       - name: "🔨 Build projects"
-        uses: framinosona/github_actions/dotnet@main
+        uses: laerdal/github_actions/dotnet@main
         with:
           command: "build"
           configuration: ${{ matrix.configuration }}
@@ -144,7 +144,7 @@ jobs:
 
       - name: "🧪 Run unit tests"
         id: unit-tests
-        uses: framinosona/github_actions/dotnet-test@main
+        uses: laerdal/github_actions/dotnet-test@main
         with:
           projects: "./tests/unit/**/*.csproj"
           configuration: ${{ matrix.configuration }}
@@ -160,7 +160,7 @@ jobs:
 
       - name: "🔗 Run integration tests"
         id: integration-tests
-        uses: framinosona/github_actions/dotnet-test@main
+        uses: laerdal/github_actions/dotnet-test@main
         with:
           projects: "./tests/integration/**/*.csproj"
           configuration: ${{ matrix.configuration }}
@@ -242,9 +242,9 @@ jobs:
 
 | Action | Purpose | Repository |
 |--------|---------|------------|
-| 🚀 **dotnet** | Execute .NET CLI commands | `framinosona/github_actions/dotnet` |
-| 📊 **generate-badge** | Generate test result badges | `framinosona/github_actions/generate-badge` |
-| 🔧 **dotnet-tool-install** | Install .NET tools | `framinosona/github_actions/dotnet-tool-install` |
+| 🚀 **dotnet** | Execute .NET CLI commands | `laerdal/github_actions/dotnet` |
+| 📊 **generate-badge** | Generate test result badges | `laerdal/github_actions/generate-badge` |
+| 🔧 **dotnet-tool-install** | Install .NET tools | `laerdal/github_actions/dotnet-tool-install` |
 
 ## 💡 Examples
 
@@ -252,7 +252,7 @@ jobs:
 
 ```yaml
 - name: "Run unit tests with coverage"
-  uses: framinosona/github_actions/dotnet-test@main
+  uses: laerdal/github_actions/dotnet-test@main
   with:
     projects: "./tests/unit/**/*.csproj"
     filter: "Category=Unit"
@@ -265,7 +265,7 @@ jobs:
 
 ```yaml
 - name: "Run integration tests"
-  uses: framinosona/github_actions/dotnet-test@main
+  uses: laerdal/github_actions/dotnet-test@main
   with:
     projects: "./tests/integration/**/*.csproj"
     filter: "Category=Integration"
@@ -285,7 +285,7 @@ strategy:
 
 steps:
   - name: "Test on ${{ matrix.framework }}"
-    uses: framinosona/github_actions/dotnet-test@main
+    uses: laerdal/github_actions/dotnet-test@main
     with:
       projects: "./tests/**/*.csproj"
       framework: ${{ matrix.framework }}
@@ -297,7 +297,7 @@ steps:
 
 ```yaml
 - name: "Run tests with blame analysis"
-  uses: framinosona/github_actions/dotnet-test@main
+  uses: laerdal/github_actions/dotnet-test@main
   with:
     projects: "./tests/**/*.csproj"
     blame: "true"
@@ -313,7 +313,7 @@ steps:
 
 ```yaml
 - name: "Run performance tests"
-  uses: framinosona/github_actions/dotnet-test@main
+  uses: laerdal/github_actions/dotnet-test@main
   with:
     projects: "./tests/performance/**/*.csproj"
     filter: "Category=Performance"
@@ -378,7 +378,7 @@ collect: "XPlat Code Coverage;Format=cobertura,opencover;Include=[*]*;Exclude=[*
   run: find . -name "*.csproj" -exec grep -l "Microsoft.NET.Test.Sdk" {} \;
 
 - name: "Run tests"
-  uses: framinosona/github_actions/dotnet-test@main
+  uses: laerdal/github_actions/dotnet-test@main
   with:
     projects: "./tests/**/*.csproj"
     list-tests: "true"
@@ -392,18 +392,18 @@ collect: "XPlat Code Coverage;Format=cobertura,opencover;Include=[*]*;Exclude=[*
 
 ```yaml
 - name: "Restore dependencies"
-  uses: framinosona/github_actions/dotnet@main
+  uses: laerdal/github_actions/dotnet@main
   with:
     command: "restore"
 
 - name: "Build projects"
-  uses: framinosona/github_actions/dotnet@main
+  uses: laerdal/github_actions/dotnet@main
   with:
     command: "build"
     configuration: "Release"
 
 - name: "Run tests"
-  uses: framinosona/github_actions/dotnet-test@main
+  uses: laerdal/github_actions/dotnet-test@main
   with:
     projects: "./tests/**/*.csproj"
     no-build: "true"
@@ -418,7 +418,7 @@ collect: "XPlat Code Coverage;Format=cobertura,opencover;Include=[*]*;Exclude=[*
 
 ```yaml
 - name: "Run tests with hang detection"
-  uses: framinosona/github_actions/dotnet-test@main
+  uses: laerdal/github_actions/dotnet-test@main
   with:
     projects: "./tests/**/*.csproj"
     blame: "true"
@@ -435,7 +435,7 @@ collect: "XPlat Code Coverage;Format=cobertura,opencover;Include=[*]*;Exclude=[*
 
 ```yaml
 - name: "Run tests with coverage"
-  uses: framinosona/github_actions/dotnet-test@main
+  uses: laerdal/github_actions/dotnet-test@main
   with:
     projects: "./tests/**/*.csproj"
     collect: "XPlat Code Coverage"
@@ -483,7 +483,7 @@ collect: "XPlat Code Coverage;Format=cobertura,opencover;Include=[*]*;Exclude=[*
 
 ```yaml
 - name: "Test multiple frameworks"
-  uses: framinosona/github_actions/dotnet-test@main
+  uses: laerdal/github_actions/dotnet-test@main
   with:
     projects: "./tests/**/*.csproj"
     framework: "net6.0;net8.0"

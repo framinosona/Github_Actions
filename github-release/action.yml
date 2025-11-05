@@ -126,13 +126,13 @@ runs:
 
     - name: "📁 Normalize notes-file path"
       id: normalize-notes-file
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.notes-file }}
 
     - name: "📁 Normalize assets paths"
       id: normalize-assets
-      uses: framinosona/github_actions/normalize-arguments@main
+      uses: laerdal/github_actions/normalize-arguments@main
       with:
         arguments: ${{ inputs.assets }}
 

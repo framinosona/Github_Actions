@@ -19,7 +19,7 @@ Generate PDF documentation:
 
 ```yaml
 - name: "Generate PDF documentation"
-  uses: framinosona/github_actions/dotnet-docfx-pdf@main
+  uses: laerdal/github_actions/dotnet-docfx-pdf@main
   with:
     config: "docfx.json"
     output: "_site"
@@ -27,7 +27,7 @@ Generate PDF documentation:
 
 ```yaml
 - name: "Generate with custom output"
-  uses: framinosona/github_actions/dotnet-docfx-pdf@main
+  uses: laerdal/github_actions/dotnet-docfx-pdf@main
   with:
     config: "docs/docfx.json"
     output: "pdf-output"
@@ -36,7 +36,7 @@ Generate PDF documentation:
 
 ```yaml
 - name: "Generate with specific DocFX version"
-  uses: framinosona/github_actions/dotnet-docfx-pdf@main
+  uses: laerdal/github_actions/dotnet-docfx-pdf@main
   with:
     config: "docfx.json"
     docfx-version: "2.70.0"
@@ -49,7 +49,7 @@ Complete PDF generation with all configuration options:
 
 ```yaml
 - name: "Advanced PDF generation"
-  uses: framinosona/github_actions/dotnet-docfx-pdf@main
+  uses: laerdal/github_actions/dotnet-docfx-pdf@main
   with:
     config: "docs/docfx.json"
     output: "documentation/pdf"
@@ -110,7 +110,7 @@ jobs:
           dotnet-version: "8.0.x"
 
       - name: "🔧 Install DocFX"
-        uses: framinosona/github_actions/dotnet-tool-install@main
+        uses: laerdal/github_actions/dotnet-tool-install@main
         with:
           package-name: "docfx"
           version: "2.70.0"
@@ -118,7 +118,7 @@ jobs:
 
       - name: "📊 Generate API metadata"
         id: metadata
-        uses: framinosona/github_actions/dotnet-docfx-metadata@main
+        uses: laerdal/github_actions/dotnet-docfx-metadata@main
         with:
           config: "docs/docfx.json"
           output: "docs/api"
@@ -127,7 +127,7 @@ jobs:
 
       - name: "🔨 Build documentation site"
         id: build
-        uses: framinosona/github_actions/dotnet-docfx-build@main
+        uses: laerdal/github_actions/dotnet-docfx-build@main
         with:
           config: "docs/docfx.json"
           output: "docs/_site"
@@ -137,7 +137,7 @@ jobs:
 
       - name: "📄 Generate PDF documentation"
         id: pdf
-        uses: framinosona/github_actions/dotnet-docfx-pdf@main
+        uses: laerdal/github_actions/dotnet-docfx-pdf@main
         with:
           config: "docs/docfx.json"
           output: "docs/pdf"
@@ -174,7 +174,7 @@ jobs:
 
       - name: "🏷️ Generate documentation badge"
         if: success()
-        uses: framinosona/github_actions/generate-badge@main
+        uses: laerdal/github_actions/generate-badge@main
         with:
           label: "docs"
           message: "PDF ready"
@@ -210,7 +210,7 @@ jobs:
 
       - name: "📄 Generate PDF for ${{ matrix.version }}"
         id: generate
-        uses: framinosona/github_actions/dotnet-docfx-pdf@main
+        uses: laerdal/github_actions/dotnet-docfx-pdf@main
         with:
           config: ${{ matrix.config }}
           output: ${{ matrix.output }}
@@ -253,10 +253,10 @@ jobs:
 
 | Action | Purpose | Repository |
 |--------|---------|------------|
-| 📊 **dotnet-docfx-metadata** | Generate API metadata | `framinosona/github_actions/dotnet-docfx-metadata` |
-| 🔨 **dotnet-docfx-build** | Build HTML documentation | `framinosona/github_actions/dotnet-docfx-build` |
-| 🔧 **dotnet-tool-install** | Install DocFX tool | `framinosona/github_actions/dotnet-tool-install` |
-| 🚀 **dotnet** | Build .NET projects | `framinosona/github_actions/dotnet` |
+| 📊 **dotnet-docfx-metadata** | Generate API metadata | `laerdal/github_actions/dotnet-docfx-metadata` |
+| 🔨 **dotnet-docfx-build** | Build HTML documentation | `laerdal/github_actions/dotnet-docfx-build` |
+| 🔧 **dotnet-tool-install** | Install DocFX tool | `laerdal/github_actions/dotnet-tool-install` |
+| 🚀 **dotnet** | Build .NET projects | `laerdal/github_actions/dotnet` |
 
 ## 💡 Examples
 
@@ -282,7 +282,7 @@ jobs:
           dotnet-version: "8.0.x"
 
       - name: "Generate PDF"
-        uses: framinosona/github_actions/dotnet-docfx-pdf@main
+        uses: laerdal/github_actions/dotnet-docfx-pdf@main
         with:
           config: "docfx.json"
           output: "pdf-output"
@@ -316,18 +316,18 @@ jobs:
           dotnet-version: "8.0.x"
 
       - name: "Generate metadata"
-        uses: framinosona/github_actions/dotnet-docfx-metadata@main
+        uses: laerdal/github_actions/dotnet-docfx-metadata@main
         with:
           config: "docs/docfx.json"
 
       - name: "Build site"
-        uses: framinosona/github_actions/dotnet-docfx-build@main
+        uses: laerdal/github_actions/dotnet-docfx-build@main
         with:
           config: "docs/docfx.json"
 
       - name: "Generate PDF"
         id: pdf
-        uses: framinosona/github_actions/dotnet-docfx-pdf@main
+        uses: laerdal/github_actions/dotnet-docfx-pdf@main
         with:
           config: "docs/docfx.json"
           output: "docs/pdf"
@@ -367,7 +367,7 @@ strategy:
 
 steps:
   - name: "Generate ${{ matrix.language }} PDF"
-    uses: framinosona/github_actions/dotnet-docfx-pdf@main
+    uses: laerdal/github_actions/dotnet-docfx-pdf@main
     with:
       config: ${{ matrix.config }}
       output: ${{ matrix.output }}
@@ -404,7 +404,7 @@ jobs:
 
       - name: "Generate weekly PDF"
         id: weekly
-        uses: framinosona/github_actions/dotnet-docfx-pdf@main
+        uses: laerdal/github_actions/dotnet-docfx-pdf@main
         with:
           config: "docs/docfx.json"
           output: "weekly-docs"
@@ -572,7 +572,7 @@ Your `docfx.json` should include PDF-specific configuration:
     fi
 
 - name: "Generate PDF with verification"
-  uses: framinosona/github_actions/dotnet-docfx-pdf@main
+  uses: laerdal/github_actions/dotnet-docfx-pdf@main
   with:
     config: "docfx.json"
     show-summary: "true"
@@ -607,7 +607,7 @@ Your `docfx.json` should include PDF-specific configuration:
     fi
 
 - name: "Generate with debug"
-  uses: framinosona/github_actions/dotnet-docfx-pdf@main
+  uses: laerdal/github_actions/dotnet-docfx-pdf@main
   with:
     config: "docfx.json"
     log-level: "diagnostic"
@@ -639,7 +639,7 @@ Your `docfx.json` should include PDF-specific configuration:
     fi
 
 - name: "Generate PDF with dependencies"
-  uses: framinosona/github_actions/dotnet-docfx-pdf@main
+  uses: laerdal/github_actions/dotnet-docfx-pdf@main
   with:
     config: "docfx.json"
     log-level: "verbose"
@@ -662,7 +662,7 @@ Your `docfx.json` should include PDF-specific configuration:
     du -sh docs/ 2>/dev/null || echo "docs/ not found"
 
 - name: "Generate PDF with optimization"
-  uses: framinosona/github_actions/dotnet-docfx-pdf@main
+  uses: laerdal/github_actions/dotnet-docfx-pdf@main
   with:
     config: "docfx.json"
     log-level: "error"  # Reduce memory usage
@@ -677,7 +677,7 @@ Enable comprehensive debugging:
 
 ```yaml
 - name: "Debug PDF generation"
-  uses: framinosona/github_actions/dotnet-docfx-pdf@main
+  uses: laerdal/github_actions/dotnet-docfx-pdf@main
   with:
     config: "docfx.json"
     log-level: "diagnostic"
@@ -735,7 +735,7 @@ ls -la _pdf/
     EOF
 
 - name: "Generate PDF with styling"
-  uses: framinosona/github_actions/dotnet-docfx-pdf@main
+  uses: laerdal/github_actions/dotnet-docfx-pdf@main
   with:
     config: "docfx.json"
     output: "styled-pdf"
@@ -758,13 +758,13 @@ ls -la _pdf/
     done
 
 - name: "User guide PDF"
-  uses: framinosona/github_actions/dotnet-docfx-pdf@main
+  uses: laerdal/github_actions/dotnet-docfx-pdf@main
   with:
     config: "user-guide/docfx.json"
     output: "pdfs/user-guide"
 
 - name: "API documentation PDF"
-  uses: framinosona/github_actions/dotnet-docfx-pdf@main
+  uses: laerdal/github_actions/dotnet-docfx-pdf@main
   with:
     config: "api-docs/docfx.json"
     output: "pdfs/api-docs"
@@ -784,7 +784,7 @@ ls -la _pdf/
 
 - name: "Generate PDF if needed"
   if: steps.check-changes.outputs.needs-pdf == 'true'
-  uses: framinosona/github_actions/dotnet-docfx-pdf@main
+  uses: laerdal/github_actions/dotnet-docfx-pdf@main
   with:
     config: "docfx.json"
     show-summary: "true"

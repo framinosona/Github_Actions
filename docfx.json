@@ -27,7 +27,7 @@
       "_enableNewTab": true,
       "_disableContribution": false,
       "_gitContribute": {
-        "repo": "https://github.com/framinosona/Github_Actions",
+        "repo": "https://github.com/laerdal/Github_Actions",
         "branch": "main"
       },
       "_gitUrlPattern": "github",
@@ -37,7 +37,7 @@
       "https://xref.docs.microsoft.com/query?uid={uid}"
     ],
     "sitemap": {
-      "baseUrl": "https://framinosona.github.io/Github_Actions",
+      "baseUrl": "https://laerdal.github.io/Github_Actions",
       "changefreq": "weekly",
       "priority": 0.5
     }

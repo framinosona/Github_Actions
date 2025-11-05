@@ -118,25 +118,25 @@ runs:
 
     - name: "💯 Normalize arguments"
       id: normalize-arguments
-      uses: framinosona/github_actions/normalize-arguments@main
+      uses: laerdal/github_actions/normalize-arguments@main
       with:
         arguments: ${{ inputs.arguments }}
 
     - name: "📁 Normalize path"
       id: normalize-path
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.path }}
 
     - name: "📁 Normalize output"
       id: normalize-output
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.output }}
 
     - name: "📁 Normalize artifacts-path"
       id: normalize-artifacts
-      uses: framinosona/github_actions/normalize-path@main
+      uses: laerdal/github_actions/normalize-path@main
       with:
         path: ${{ inputs.artifacts-path }}
 
@@ -253,7 +253,7 @@ runs:
 
     - name: "📦 Run .NET pack"
       id: run-dotnet
-      uses: "framinosona/github_actions/dotnet@main"
+      uses: "laerdal/github_actions/dotnet@main"
       with:
         command: "pack"
         path: ${{ steps.normalize-path.outputs.normalized }}
