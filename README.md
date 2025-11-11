@@ -1,5 +1,11 @@
 # 🚀 GitHub Actions Collection
 
+<div align="center">
+
+[![Icon](icon.png)](https://github.com/laerdal/Github_Actions)
+
+</div>
+
 [![CI/CD Pipeline](https://laerdal.github.io/Github_Actions/version-badge.svg)](https://github.com/laerdal/Github_Actions/actions/workflows/ci.yml)
 [![Documentation](https://img.shields.io/badge/docs-github--pages-blue)](https://laerdal.github.io/Github_Actions/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE.md)
