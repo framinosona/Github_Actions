@@ -172,7 +172,7 @@ jobs:
     steps:
 
       - name: "📥 Checkout repository"
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: ${{ inputs.fetch-depth }}
           token: ${{ github.token }}
